@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { COMMUNITY_NAME } from "@/lib/community";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -107,7 +108,7 @@ export function SakhaEndorsement({
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-xs text-muted-foreground">
-          Sakha (L3) status verifies confirmed Khandelwal lineage through elder endorsement.
+          Sakha (L3) status verifies confirmed {COMMUNITY_NAME} lineage through elder endorsement.
           Requires endorsement from existing L3+ community members.
         </p>
 

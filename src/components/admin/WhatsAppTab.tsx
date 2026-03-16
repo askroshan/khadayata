@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { COMMUNITY_FULL_NAME } from "@/lib/community";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -384,7 +385,7 @@ export default function WhatsAppTab() {
             </div>
             <div>
               <Label htmlFor="tpl-footer">Footer (optional)</Label>
-              <Input id="tpl-footer" value={newTemplate.footer_text} onChange={(e) => setNewTemplate((f) => ({ ...f, footer_text: e.target.value }))} placeholder="Khandelwal Heritage Directory" className="mt-1" />
+              <Input id="tpl-footer" value={newTemplate.footer_text} onChange={(e) => setNewTemplate((f) => ({ ...f, footer_text: e.target.value }))} placeholder={COMMUNITY_FULL_NAME} className="mt-1" />
             </div>
             <Button
               onClick={() => createTemplate.mutate()}

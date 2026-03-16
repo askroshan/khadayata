@@ -2,6 +2,7 @@ import { ReactNode, useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRoles } from "@/hooks/useRoles";
+import { COMMUNITY_FULL_NAME } from "@/lib/community";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -212,7 +213,7 @@ export default function AppLayout({ children, title }: { children: ReactNode; ti
         </main>
       </div>
       <footer role="contentinfo" className="sr-only">
-        KhadayataOnline — Khandelwal Heritage Directory
+        KhadayataOnline — {COMMUNITY_FULL_NAME}
       </footer>
     </div>
   );
