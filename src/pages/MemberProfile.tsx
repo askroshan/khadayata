@@ -34,6 +34,8 @@ export default function MemberProfile() {
   const [verifyNote, setVerifyNote] = useState("");
   const [docRequest, setDocRequest] = useState("");
   const [verifyPanelOpen, setVerifyPanelOpen] = useState(false);
+  const [vouchReqMessage, setVouchReqMessage] = useState("");
+  const [vouchReqOpen, setVouchReqOpen] = useState(false);
 
   const { data: member, isLoading } = useQuery({
     queryKey: ["member-profile", id],
@@ -176,6 +178,42 @@ export default function MemberProfile() {
       toast({ title: "Vouch submitted!" });
       setVouchNote("");
       queryClient.invalidateQueries({ queryKey: ["member-vouches", id] });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const { data: existingVouchRequest } = useQuery({
+    queryKey: ["vouch-request", id, currentMember?.id],
+    queryFn: async () => {
+      if (!currentMember || !id) return null;
+      const { data } = await supabase
+        .from("vouch_requests")
+        .select("id, status")
+        .eq("requester_member_id", currentMember.id)
+        .eq("target_member_id", id)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!currentMember && !!id && !!user,
+  });
+
+  const sendVouchRequestMutation = useMutation({
+    mutationFn: async () => {
+      if (!currentMember) throw new Error("Not a member");
+      const { error } = await supabase.from("vouch_requests").insert({
+        requester_member_id: currentMember.id,
+        target_member_id: id!,
+        message: vouchReqMessage.trim() || null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Vouch request sent!", description: `Your request has been sent to ${member?.first_name ?? "this member"}.` });
+      setVouchReqMessage("");
+      setVouchReqOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["vouch-request", id, currentMember?.id] });
     },
     onError: (err: Error) => {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -648,6 +686,39 @@ export default function MemberProfile() {
                 <Button size="sm" className="gradient-warm text-primary-foreground" onClick={() => vouchMutation.mutate()} disabled={vouchMutation.isPending}>
                   Vouch for {member.first_name}
                 </Button>
+              </div>
+            )}
+            {/* Request Vouch — for L0/L1 viewers to ask this member to vouch for them */}
+            {!isOwnProfile && currentMember && (currentMember?.verification_level ?? 0) < 2 && (
+              <div className="border-t border-border pt-3 mt-1">
+                {existingVouchRequest ? (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                    <MessageCircle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                    Vouch request sent — status: <span className="font-semibold capitalize">{existingVouchRequest.status}</span>
+                  </p>
+                ) : vouchReqOpen ? (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-muted-foreground">Ask {member.first_name} to vouch for you</p>
+                    <Textarea
+                      placeholder={`Hi ${member.first_name}, I'm [your name] from [chapter]. Could you vouch for me?`}
+                      value={vouchReqMessage}
+                      onChange={(e) => setVouchReqMessage(e.target.value)}
+                      maxLength={500}
+                      className="text-xs"
+                      rows={3}
+                    />
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => { setVouchReqOpen(false); setVouchReqMessage(""); }} className="text-xs">Cancel</Button>
+                      <Button size="sm" onClick={() => sendVouchRequestMutation.mutate()} disabled={sendVouchRequestMutation.isPending} className="text-xs">
+                        <MessageCircle className="w-3.5 h-3.5 mr-1" /> Send Request
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button size="sm" variant="ghost" className="text-xs text-muted-foreground hover:text-foreground" onClick={() => setVouchReqOpen(true)}>
+                    <MessageCircle className="w-3.5 h-3.5 mr-1" /> Request {member.first_name} to vouch for you
+                  </Button>
+                )}
               </div>
             )}
           </CardContent>

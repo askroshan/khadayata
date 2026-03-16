@@ -38,6 +38,7 @@ export default function Business() {
   const [searchBiz, setSearchBiz] = useState("");
   const [searchJob, setSearchJob] = useState("");
   const [sectorFilter, setSectorFilter] = useState("");
+  const [bizLocationFilter, setBizLocationFilter] = useState("");
   const [verifiedFilter, setVerifiedFilter] = useState<"all" | "verified" | "unverified">("all");
   const [jobTypeFilter, setJobTypeFilter] = useState("");
   const [jobLocationFilter, setJobLocationFilter] = useState("");
@@ -68,13 +69,14 @@ export default function Business() {
   const { data: jobCities } = useCities(job.state_id || undefined);
 
   const { data: businesses } = useQuery({
-    queryKey: ["businesses", searchBiz, sectorFilter, verifiedFilter],
+    queryKey: ["businesses", searchBiz, sectorFilter, verifiedFilter, bizLocationFilter],
     queryFn: async () => {
       let q = supabase.from("businesses").select("*, members:owner_member_id(first_name, last_name), chapters(name), countries(name), states(name), cities(name)").order("created_at", { ascending: false });
       if (searchBiz.trim()) q = q.or(`name.ilike.%${searchBiz}%,sector.ilike.%${searchBiz}%,description.ilike.%${searchBiz}%`);
       if (sectorFilter) q = q.eq("sector", sectorFilter);
       if (verifiedFilter === "verified") q = q.eq("verified", true);
       if (verifiedFilter === "unverified") q = q.eq("verified", false);
+      if (bizLocationFilter.trim()) q = q.or(`address_line1.ilike.%${bizLocationFilter}%,address_line2.ilike.%${bizLocationFilter}%,postal_code.ilike.%${bizLocationFilter}%`);
       const { data } = await q.limit(50);
       return data ?? [];
     },
@@ -221,6 +223,11 @@ export default function Business() {
                     <SelectItem value="unverified">Unverified</SelectItem>
                   </SelectContent>
                 </Select>
+                <div className="relative w-full sm:w-44">
+                  <label htmlFor="biz-location-filter" className="sr-only">Filter by location</label>
+                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
+                  <Input id="biz-location-filter" placeholder="Location..." value={bizLocationFilter} onChange={e => setBizLocationFilter(e.target.value)} className="pl-9" />
+                </div>
                 {(member?.verification_level ?? 0) < 2 ? (
                   <L2GateButton featureName="List Business" />
                 ) : (

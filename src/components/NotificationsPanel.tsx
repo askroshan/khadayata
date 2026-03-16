@@ -78,7 +78,7 @@ export function NotificationsPanel() {
 
       const { data: rsvps } = await supabase
         .from("event_rsvps")
-        .select("id, created_at, status, events(name)")
+        .select("id, created_at, status, event_id, events(name)")
         .eq("member_id", member.id)
         .order("created_at", { ascending: false })
         .limit(5);
@@ -92,19 +92,20 @@ export function NotificationsPanel() {
             description: `Your RSVP for "${event?.name ?? "an event"}" is confirmed as ${r.status}`,
             created_at: r.created_at,
             read: false,
+            href: "/events",
           });
         }
       }
 
       const { data: mentorships } = await supabase
         .from("mentorships")
-        .select("id, created_at, status, mentor:members!mentorships_mentor_member_id_fkey(first_name, last_name)")
+        .select("id, created_at, status, mentor:members!mentorships_mentor_member_id_fkey(id, first_name, last_name)")
         .eq("mentee_member_id", member.id)
         .order("created_at", { ascending: false })
         .limit(3);
       if (mentorships) {
         for (const m of mentorships) {
-          const mentor = m.mentor as { first_name: string; last_name: string } | null;
+          const mentor = m.mentor as { id: string; first_name: string; last_name: string } | null;
           items.push({
             id: `mentorship-${m.id}`,
             type: "mentorship",
@@ -112,6 +113,7 @@ export function NotificationsPanel() {
             description: `${mentor?.first_name ?? "A mentor"} ${mentor?.last_name ?? ""} ${m.status === "active" ? "accepted your request" : "connected with you"}`,
             created_at: m.created_at,
             read: false,
+            href: mentor?.id ? `/member/${mentor.id}` : "/mentorship",
           });
         }
       }
@@ -131,6 +133,7 @@ export function NotificationsPanel() {
             description: `Your verification request status: ${vr.status}`,
             created_at: vr.created_at,
             read: false,
+            href: "/settings?tab=verification",
           });
         }
       }
@@ -176,20 +179,36 @@ export function NotificationsPanel() {
             </div>
           ) : (
             <div className="divide-y divide-border">
-              {notifications.map((n) => (
-                <div key={n.id} className="flex items-start gap-3 px-4 py-3 hover:bg-muted/30 transition-colors">
-                  <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0 mt-0.5">
-                    {notifIcon(n.type)}
+              {notifications.map((n) => {
+                const inner = (
+                  <>
+                    <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0 mt-0.5">
+                      {notifIcon(n.type)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold text-foreground leading-snug">{n.title}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 leading-snug line-clamp-2">{n.description}</p>
+                      <p className="text-[10px] text-muted-foreground/60 mt-1">
+                        {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
+                      </p>
+                    </div>
+                  </>
+                );
+                return n.href ? (
+                  <Link
+                    key={n.id}
+                    to={n.href}
+                    onClick={() => setOpen(false)}
+                    className="flex items-start gap-3 px-4 py-3 hover:bg-muted/30 transition-colors"
+                  >
+                    {inner}
+                  </Link>
+                ) : (
+                  <div key={n.id} className="flex items-start gap-3 px-4 py-3">
+                    {inner}
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-semibold text-foreground leading-snug">{n.title}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5 leading-snug line-clamp-2">{n.description}</p>
-                    <p className="text-[10px] text-muted-foreground/60 mt-1">
-                      {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
