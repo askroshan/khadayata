@@ -40,7 +40,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "Economy",
     items: [
-      { icon: Briefcase, label: "Business & Jobs", path: "/business" },
+      { icon: Briefcase, label: "Business & Jobs", path: "/business/manage" },
       { icon: Handshake, label: "Mentorship", path: "/mentorship" },
       { icon: GraduationCap, label: "Scholarships", path: "/scholarships" },
     ],
@@ -49,7 +49,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Engage",
     items: [
       { icon: Calendar, label: "Events", path: "/events" },
-      { icon: Newspaper, label: "News", path: "/news" },
+      { icon: Newspaper, label: "News", path: "/news/manage" },
       { icon: Building2, label: "Kotyark Temple", path: "/temple" },
       { icon: IndianRupee, label: "Donate", path: "/temple" },
     ],

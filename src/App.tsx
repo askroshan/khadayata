@@ -15,6 +15,7 @@ import Directory from "./pages/Directory";
 import MemberProfile from "./pages/MemberProfile";
 import Events from "./pages/Events";
 import Business from "./pages/Business";
+import PublicBusiness from "./pages/PublicBusiness";
 import Matrimonial from "./pages/Matrimonial";
 import Temple from "./pages/Temple";
 import Archives from "./pages/Archives";
@@ -23,6 +24,7 @@ import Admin from "./pages/Admin";
 import ModeratorDashboard from "./pages/ModeratorDashboard";
 import Settings from "./pages/Settings";
 import News from "./pages/News";
+import PublicNews from "./pages/PublicNews";
 import NewsDetail from "./pages/NewsDetail";
 import Profile from "./pages/Profile";
 import Mentorship from "./pages/Mentorship";
@@ -59,7 +61,11 @@ const App = () => (
               <Route path="/directory" element={<Directory />} />
               <Route path="/member/:id" element={<MemberProfile />} />
               <Route path="/events" element={<Events />} />
-              <Route path="/business" element={<Business />} />
+
+              {/* Business: public listing at /business, management at /business/manage */}
+              <Route path="/business" element={<PublicBusiness />} />
+              <Route path="/business/manage" element={<Business />} />
+
               <Route path="/matrimonial" element={<Matrimonial />} />
               <Route path="/temple" element={<Temple />} />
               <Route path="/archives" element={<Archives />} />
@@ -67,8 +73,12 @@ const App = () => (
               <Route path="/admin" element={<Admin />} />
               <Route path="/moderation" element={<ModeratorDashboard />} />
               <Route path="/settings" element={<Settings />} />
-              <Route path="/news" element={<News />} />
+
+              {/* News: public listing at /news, management at /news/manage */}
+              <Route path="/news" element={<PublicNews />} />
+              <Route path="/news/manage" element={<News />} />
               <Route path="/news/:id" element={<NewsDetail />} />
+
               <Route path="/profile" element={<Profile />} />
               <Route path="/mentorship" element={<Mentorship />} />
               <Route path="/scholarships" element={<Scholarships />} />
