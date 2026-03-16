@@ -36,7 +36,6 @@ import EldersCouncil from "./pages/EldersCouncil";
 import Contact from "./pages/Contact";
 import Terms from "./pages/Terms";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
-import CookiePolicy from "./pages/CookiePolicy";
 import Accessibility from "./pages/Accessibility";
 import NotFound from "./pages/NotFound";
 
@@ -82,7 +81,6 @@ const App = () => (
               <Route path="/contact" element={<Contact />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy" element={<PrivacyPolicy />} />
-              <Route path="/cookie-policy" element={<CookiePolicy />} />
               <Route path="/accessibility" element={<Accessibility />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
