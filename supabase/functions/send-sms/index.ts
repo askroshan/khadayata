@@ -6,6 +6,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
+const EASIFY_BASE = "https://backend.easify.app/api/v2";
+const EASIFY_FROM = "6824329400";
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
@@ -22,13 +25,11 @@ Deno.serve(async (req: Request) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const twilioSid = Deno.env.get("TWILIO_ACCOUNT_SID");
-    const twilioToken = Deno.env.get("TWILIO_AUTH_TOKEN");
-    const twilioFrom = Deno.env.get("TWILIO_FROM_NUMBER");
+    const easifyToken = Deno.env.get("EASIFY_API_TOKEN");
 
-    if (!twilioSid || !twilioToken || !twilioFrom) {
+    if (!easifyToken) {
       return new Response(
-        JSON.stringify({ error: "SMS not configured. Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER secrets." }),
+        JSON.stringify({ error: "SMS not configured. Add EASIFY_API_TOKEN secret." }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -57,7 +58,7 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const { to, body, recipient_member_id } = await req.json();
+    const { to, body, recipient_member_id, country_code } = await req.json();
     if (!to || !body) {
       return new Response(JSON.stringify({ error: "to and body are required" }), {
         status: 400,
@@ -71,48 +72,51 @@ Deno.serve(async (req: Request) => {
       .eq("user_id", user.id)
       .maybeSingle();
 
-    const twilioPayload = new URLSearchParams({
-      To: to,
-      From: twilioFrom,
-      Body: body,
+    const cleanNumber = String(to).replace(/^\+/, "").replace(/^1/, "");
+    const resolvedCountryCode = country_code ?? "1";
+
+    const easifyPayload = {
+      from_number: EASIFY_FROM,
+      to_number: cleanNumber,
+      country_code: resolvedCountryCode,
+      message: body,
+      media: "",
+      force_send: 0,
+    };
+
+    const easifyResponse = await fetch(`${EASIFY_BASE}/sms/send`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${easifyToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(easifyPayload),
     });
 
-    const twilioResponse = await fetch(
-      `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Basic ${btoa(`${twilioSid}:${twilioToken}`)}`,
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: twilioPayload.toString(),
-      }
-    );
-
-    const twilioResult = await twilioResponse.json();
-    const success = twilioResponse.ok;
+    const easifyResult = await easifyResponse.json();
+    const success = easifyResponse.ok;
 
     await adminClient.from("sms_messages").insert({
       recipient_phone: to,
       recipient_member_id: recipient_member_id || null,
       body,
       status: success ? "sent" : "failed",
-      provider: "twilio",
-      provider_sid: twilioResult.sid ?? null,
-      error: success ? null : JSON.stringify(twilioResult),
+      provider: "easify",
+      provider_sid: easifyResult?.id ?? easifyResult?.message_id ?? null,
+      error: success ? null : JSON.stringify(easifyResult),
       sent_by: senderMember?.id ?? null,
       sent_at: success ? new Date().toISOString() : null,
     });
 
     if (!success) {
       return new Response(
-        JSON.stringify({ error: "Twilio error", details: twilioResult }),
+        JSON.stringify({ error: "Easify error", details: easifyResult }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     return new Response(
-      JSON.stringify({ success: true, sid: twilioResult.sid }),
+      JSON.stringify({ success: true, result: easifyResult }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {

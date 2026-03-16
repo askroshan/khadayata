@@ -23,15 +23,22 @@ interface SmsMessage {
   created_at: string;
 }
 
+async function getToken() {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.access_token;
+}
+
 export default function SMSTab() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const [singlePhone, setSinglePhone] = useState("");
+  const [singleCountryCode, setSingleCountryCode] = useState("1");
   const [singleBody, setSingleBody] = useState("");
+  const [blastGroupId, setBlastGroupId] = useState("");
+  const [blastCampaignName, setBlastCampaignName] = useState("");
   const [blastBody, setBlastBody] = useState("");
-  const [sending, setSending] = useState(false);
 
   const { data: history } = useQuery({
     queryKey: ["sms-history"],
@@ -46,43 +53,25 @@ export default function SMSTab() {
     enabled: !!user,
   });
 
-  const { data: members } = useQuery({
-    queryKey: ["sms-member-phones"],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("members")
-        .select("id, first_name, last_name, phone")
-        .not("phone", "is", null)
-        .eq("onboarding_completed", true)
-        .limit(500);
-      return data ?? [];
-    },
-    enabled: !!user,
-  });
-
-  const sendSms = async (to: string, body: string, memberId?: string) => {
-    const session = await supabase.auth.getSession();
-    const token = session.data.session?.access_token;
-    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-sms`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ to, body, recipient_member_id: memberId }),
-    });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error || "Failed to send SMS");
-    return json;
-  };
-
   const sendSingle = useMutation({
     mutationFn: async () => {
       if (!singlePhone.trim() || !singleBody.trim()) throw new Error("Phone and message are required");
-      await sendSms(singlePhone.trim(), singleBody.trim());
+      const token = await getToken();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-sms`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          to: singlePhone.trim(),
+          body: singleBody.trim(),
+          country_code: singleCountryCode.trim() || "1",
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed to send SMS");
+      return json;
     },
     onSuccess: () => {
-      toast({ title: "SMS sent!" });
+      toast({ title: "SMS sent successfully" });
       setSinglePhone("");
       setSingleBody("");
       queryClient.invalidateQueries({ queryKey: ["sms-history"] });
@@ -90,26 +79,32 @@ export default function SMSTab() {
     onError: (err: Error) => toast({ title: "Failed to send", description: err.message, variant: "destructive" }),
   });
 
-  const sendBlast = async () => {
-    if (!blastBody.trim() || !members?.length) return;
-    setSending(true);
-    let sent = 0;
-    let failed = 0;
-    for (const m of members) {
-      if (m.phone) {
-        try {
-          await sendSms(m.phone, blastBody.trim(), m.id);
-          sent++;
-        } catch {
-          failed++;
-        }
-      }
-    }
-    setSending(false);
-    toast({ title: `Blast complete — ${sent} sent, ${failed} failed` });
-    setBlastBody("");
-    queryClient.invalidateQueries({ queryKey: ["sms-history"] });
-  };
+  const sendCampaign = useMutation({
+    mutationFn: async () => {
+      if (!blastGroupId.trim() || !blastBody.trim()) throw new Error("Group ID and message are required");
+      const token = await getToken();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-sms-campaign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          group_id: blastGroupId.trim(),
+          message: blastBody.trim(),
+          campaign_name: blastCampaignName.trim() || undefined,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed to send campaign");
+      return json;
+    },
+    onSuccess: () => {
+      toast({ title: "Campaign sent via Easify" });
+      setBlastGroupId("");
+      setBlastCampaignName("");
+      setBlastBody("");
+      queryClient.invalidateQueries({ queryKey: ["sms-history"] });
+    },
+    onError: (err: Error) => toast({ title: "Campaign failed", description: err.message, variant: "destructive" }),
+  });
 
   const statusIcon = (status: string) => {
     if (status === "sent") return <CheckCircle className="w-3.5 h-3.5 text-success" />;
@@ -123,7 +118,7 @@ export default function SMSTab() {
         <MessageSquare className="w-5 h-5 text-blue-600" />
         <div>
           <h2 className="text-base font-display font-semibold">SMS Alerts</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">Send urgent alerts to community members via SMS (Twilio).</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Send SMS alerts and blasts via Easify from +1 (682) 432-9400.</p>
         </div>
       </div>
 
@@ -131,7 +126,8 @@ export default function SMSTab() {
         <CardContent className="p-4 flex gap-3">
           <Info className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
           <p className="text-sm text-blue-700">
-            Requires <strong>TWILIO_ACCOUNT_SID</strong>, <strong>TWILIO_AUTH_TOKEN</strong>, and <strong>TWILIO_FROM_NUMBER</strong> secrets configured in the Supabase project.
+            Requires <strong>EASIFY_API_TOKEN</strong> configured in Supabase secrets (Settings &rarr; API Settings in your Easify dashboard).
+            Messages are sent from <strong>+1 (682) 432-9400</strong>.
           </p>
         </CardContent>
       </Card>
@@ -140,7 +136,7 @@ export default function SMSTab() {
         <TabsList>
           <TabsTrigger value="single">Single Message</TabsTrigger>
           <TabsTrigger value="blast">
-            <Users className="w-3.5 h-3.5 mr-1" /> Blast All Members
+            <Users className="w-3.5 h-3.5 mr-1" /> Campaign Blast
           </TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
         </TabsList>
@@ -151,15 +147,27 @@ export default function SMSTab() {
               <CardTitle className="text-sm font-display">Send to Single Recipient</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div>
-                <Label htmlFor="single-phone">Phone Number (with country code) *</Label>
-                <Input
-                  id="single-phone"
-                  value={singlePhone}
-                  onChange={(e) => setSinglePhone(e.target.value)}
-                  placeholder="+919876543210"
-                  className="mt-1"
-                />
+              <div className="flex gap-2">
+                <div className="w-24">
+                  <Label htmlFor="single-cc">Country Code</Label>
+                  <Input
+                    id="single-cc"
+                    value={singleCountryCode}
+                    onChange={(e) => setSingleCountryCode(e.target.value)}
+                    placeholder="1"
+                    className="mt-1"
+                  />
+                </div>
+                <div className="flex-1">
+                  <Label htmlFor="single-phone">Phone Number (digits only) *</Label>
+                  <Input
+                    id="single-phone"
+                    value={singlePhone}
+                    onChange={(e) => setSinglePhone(e.target.value)}
+                    placeholder="9876543210"
+                    className="mt-1"
+                  />
+                </div>
               </div>
               <div>
                 <Label htmlFor="single-body">Message *</Label>
@@ -179,7 +187,7 @@ export default function SMSTab() {
                 disabled={!singlePhone.trim() || !singleBody.trim() || sendSingle.isPending}
                 className="gradient-hero text-primary-foreground"
               >
-                <Send className="w-4 h-4 mr-1" /> Send SMS
+                <Send className="w-4 h-4 mr-1" /> {sendSingle.isPending ? "Sending..." : "Send SMS"}
               </Button>
             </CardContent>
           </Card>
@@ -189,11 +197,31 @@ export default function SMSTab() {
           <Card className="shadow-card">
             <CardHeader>
               <CardTitle className="text-sm font-display flex items-center gap-2">
-                <Users className="w-4 h-4 text-primary" /> Send to All Members
-                <Badge variant="outline" className="ml-auto text-xs">{members?.length ?? 0} with phones</Badge>
+                <Users className="w-4 h-4 text-primary" /> Send Campaign to Easify Contact Group
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
+              <div>
+                <Label htmlFor="blast-group">Easify Contact Group ID *</Label>
+                <Input
+                  id="blast-group"
+                  value={blastGroupId}
+                  onChange={(e) => setBlastGroupId(e.target.value)}
+                  placeholder="e.g. 12345"
+                  className="mt-1"
+                />
+                <p className="text-xs text-muted-foreground mt-1">Find this in your Easify dashboard under Contact Groups.</p>
+              </div>
+              <div>
+                <Label htmlFor="blast-name">Campaign Name (optional)</Label>
+                <Input
+                  id="blast-name"
+                  value={blastCampaignName}
+                  onChange={(e) => setBlastCampaignName(e.target.value)}
+                  placeholder="e.g. Diwali Announcement 2026"
+                  className="mt-1"
+                />
+              </div>
               <div>
                 <Label htmlFor="blast-body">Message *</Label>
                 <Textarea
@@ -208,12 +236,12 @@ export default function SMSTab() {
                 <p className="text-xs text-muted-foreground mt-1 text-right">{blastBody.length}/160</p>
               </div>
               <Button
-                onClick={sendBlast}
-                disabled={!blastBody.trim() || sending || !members?.length}
+                onClick={() => sendCampaign.mutate()}
+                disabled={!blastGroupId.trim() || !blastBody.trim() || sendCampaign.isPending}
                 className="gradient-hero text-primary-foreground"
               >
                 <Send className="w-4 h-4 mr-1" />
-                {sending ? "Sending..." : `Send to ${members?.length ?? 0} Members`}
+                {sendCampaign.isPending ? "Sending Campaign..." : "Send Campaign"}
               </Button>
             </CardContent>
           </Card>
