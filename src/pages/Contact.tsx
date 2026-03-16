@@ -2,6 +2,8 @@ import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { MapPin, Phone, Mail, Clock, ArrowRight } from "lucide-react";
 import patternOrnament from "@/assets/pattern-ornament.png";
+import PublicLayout from "@/components/PublicLayout";
+import SEOMeta from "@/components/SEOMeta";
 
 const CONTACT_INFO = [
   {
@@ -54,20 +56,9 @@ export default function Contact() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Nav */}
-      <nav className="border-b border-border bg-card/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="container flex items-center justify-between py-3 sm:py-4">
-          <Link to="/" className="flex items-center gap-2 min-w-0">
-            <img src={patternOrnament} alt="" className="w-7 h-7 opacity-80 shrink-0" />
-            <span className="text-base sm:text-xl font-display font-bold text-gradient-hero truncate">KhadayataOnline</span>
-          </Link>
-          <Link to="/auth" className="text-sm font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-1">
-            Sign In <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-      </nav>
-
+    <PublicLayout title="Contact Us">
+    <SEOMeta title="Contact Us" description="Get in touch with Khadayata Online. Reach our support team in Fort Worth, TX for questions about membership, chapters, events, or the platform." url="/contact" keywords="contact Khadayata, Khadayata support, Khadayata help, community contact" />
+    <div className="bg-background">
       {/* Hero */}
       <section className="relative py-16 sm:py-24 overflow-hidden">
         <div className="absolute inset-0 gradient-hero opacity-10" />
@@ -147,15 +138,7 @@ export default function Contact() {
         </div>
       </section>
 
-      {/* Footer strip */}
-      <div className="border-t border-border py-6 bg-card">
-        <div className="container text-center text-xs text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} KhadayataOnline. All rights reserved. &bull;{" "}
-            <Link to="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link> &bull;{" "}
-            <Link to="/terms" className="hover:text-primary transition-colors">Terms of Use</Link>
-          </p>
-        </div>
-      </div>
     </div>
+    </PublicLayout>
   );
 }

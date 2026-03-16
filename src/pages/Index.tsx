@@ -7,6 +7,7 @@ import {
   ChevronRight, Newspaper, UserCheck, Music, Sparkles,
 } from "lucide-react";
 import { useTotalMemberCount, useTotalChapterCount, useTotalBusinessCount } from "@/hooks/useChapter";
+import SEOMeta from "@/components/SEOMeta";
 
 const LOGO = "/Screenshot_2026-03-16_at_9.18.14_AM.png";
 
@@ -102,6 +103,22 @@ export default function Index() {
 
   return (
     <div style={{ fontFamily: "'Poppins', sans-serif", background: "#FFF7E6", color: "#2E2E2E" }}>
+      <SEOMeta
+        title={undefined}
+        description="Khadayata Online — the global digital home for the Khadayata community. Verified member directory, events, business network, matrimonial, heritage archives, and Kotyark Temple across 28 countries."
+        keywords="Khadayata, Khadayata community, Khadayata Online, Gujarati community, Indian community, Kotyark Temple, Khadayata chapters, Khadayata members, Hindu community, Indian diaspora"
+        url="/"
+        schema={{
+          "@type": "CommunityWebsite",
+          name: "Khadayata Online",
+          description: "Global community platform for Khadayata families worldwide",
+          audience: {
+            "@type": "Audience",
+            audienceType: "Khadayata community members",
+            geographicArea: { "@type": "Place", name: "Worldwide" },
+          },
+        }}
+      />
 
       {/* ─── NAVBAR ─── */}
       <header style={{

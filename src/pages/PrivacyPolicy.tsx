@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, Shield } from "lucide-react";
-import patternOrnament from "@/assets/pattern-ornament.png";
+import { Shield } from "lucide-react";
+import PublicLayout from "@/components/PublicLayout";
+import SEOMeta from "@/components/SEOMeta";
 
 const LAST_UPDATED = "March 16, 2026";
 
@@ -24,19 +25,9 @@ function DataRow({ label, detail }: { label: string; detail: string }) {
 
 export default function PrivacyPolicy() {
   return (
-    <div className="min-h-screen bg-background">
-      <nav className="border-b border-border bg-card/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="container flex items-center justify-between py-3 sm:py-4">
-          <Link to="/" className="flex items-center gap-2 min-w-0">
-            <img src={patternOrnament} alt="" className="w-7 h-7 opacity-80 shrink-0" />
-            <span className="text-base sm:text-xl font-display font-bold text-gradient-hero truncate">KhadayataOnline</span>
-          </Link>
-          <Link to="/auth" className="text-sm font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-1">
-            Sign In <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-      </nav>
-
+    <PublicLayout title="Privacy Policy">
+    <SEOMeta title="Privacy Policy" description="Khadayata Online's Privacy Policy explains how we collect, use, and protect your personal data in compliance with CCPA and applicable privacy laws." url="/privacy" />
+    <div className="bg-background">
       <div className="container py-12 px-4 max-w-3xl mx-auto">
         <div className="flex items-center gap-3 mb-8">
           <div className="w-12 h-12 rounded-xl gradient-hero flex items-center justify-center shrink-0">
@@ -174,15 +165,7 @@ export default function PrivacyPolicy() {
         </Section>
       </div>
 
-      <div className="border-t border-border py-6 bg-card">
-        <div className="container text-center text-xs text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} KhadayataOnline. &bull;{" "}
-            <Link to="/terms" className="hover:text-primary transition-colors">Terms of Use</Link> &bull;{" "}
-            <Link to="/cookie-policy" className="hover:text-primary transition-colors">Cookie Policy</Link> &bull;{" "}
-            <Link to="/accessibility" className="hover:text-primary transition-colors">Accessibility</Link>
-          </p>
-        </div>
-      </div>
     </div>
+    </PublicLayout>
   );
 }

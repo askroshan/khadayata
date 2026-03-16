@@ -4,12 +4,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MapPin, ChevronRight, Globe } from "lucide-react";
+import PublicLayout from "@/components/PublicLayout";
+import SEOMeta from "@/components/SEOMeta";
 
 export default function Chapters() {
   const { data: chapters, isLoading } = useChapters();
 
   return (
-    <div className="min-h-screen bg-background">
+    <PublicLayout title="Chapters">
+    <SEOMeta title="Chapters" description="Explore Khadayata community chapters across 28 countries. Find your local chapter in India, USA, UK, Kenya, Australia and more." url="/chapters" keywords="Khadayata chapters, Khadayata community worldwide, Indian community chapters, Gujarati community chapters" />
+    <div className="bg-background">
       <div className="gradient-hero py-10 sm:py-14">
         <div className="container max-w-6xl">
           <div className="flex items-center gap-2 mb-2">
@@ -61,5 +65,6 @@ export default function Chapters() {
         )}
       </div>
     </div>
+    </PublicLayout>
   );
 }

@@ -8,8 +8,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import heroTemple from "@/assets/hero-temple.jpg";
-import patternOrnament from "@/assets/pattern-ornament.png";
 import diyaLamp from "@/assets/diya-lamp.png";
+import PublicLayout from "@/components/PublicLayout";
+import SEOMeta from "@/components/SEOMeta";
+
+const LOGO = "/Screenshot_2026-03-16_at_9.18.14_AM.png";
 
 const emailSchema = z.string().trim().email("Please enter a valid email");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
@@ -23,7 +26,11 @@ export default function Auth() {
   const { toast } = useToast();
   const { signUp, signIn } = useAuth();
 
-  if (loading) return <div className="flex min-h-screen items-center justify-center bg-background"><img src={diyaLamp} alt="" className="w-16 h-16 animate-pulse" /></div>;
+  if (loading) return (
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <img src={diyaLamp} alt="" className="w-16 h-16 animate-pulse" />
+    </div>
+  );
   if (user) return <Navigate to="/dashboard" replace />;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -40,70 +47,78 @@ export default function Auth() {
   };
 
   return (
-    <div className="flex min-h-screen">
-      {/* Left side - immersive branding */}
-      <div className="hidden lg:flex lg:w-1/2 relative items-center justify-center">
-        <img src={heroTemple} alt="Kotyark Temple" className="absolute inset-0 w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-br from-foreground/80 via-foreground/60 to-foreground/40" />
-        <div className="relative z-10 max-w-md text-center p-12">
-          <img src={patternOrnament} alt="" className="w-20 h-20 mx-auto mb-6 opacity-60" />
-          <h1 className="text-5xl font-display font-bold text-primary-foreground mb-4">
-            KhadayataOnline
-          </h1>
-          <p className="text-lg text-primary-foreground/80 font-body leading-relaxed">
-            Connecting the Khadayata community worldwide. One identity, one platform, one family.
-          </p>
-          <div className="mt-10 grid grid-cols-3 gap-4 text-center">
-            {[{ val: "10K+", label: "Members" }, { val: "25+", label: "Chapters" }, { val: "500+", label: "Businesses" }].map((s) => (
-              <div key={s.label} className="p-3 rounded-xl bg-primary-foreground/10 backdrop-blur-sm">
-                <p className="text-xl font-display font-bold text-primary-foreground">{s.val}</p>
-                <p className="text-xs text-primary-foreground/60">{s.label}</p>
-              </div>
-            ))}
+    <PublicLayout title={isSignUp ? "Join the Community" : "Sign In"}>
+      <SEOMeta
+        title={isSignUp ? "Join the Community" : "Sign In"}
+        description="Sign in or create your Khadayata Online account to connect with 50,000+ community members worldwide."
+        url="/auth"
+        noIndex={true}
+      />
+      <div className="flex min-h-[calc(100vh-68px)]">
+        {/* Left side - immersive branding */}
+        <div className="hidden lg:flex lg:w-1/2 relative items-center justify-center">
+          <img src={heroTemple} alt="Kotyark Temple — Khadayata Heritage" className="absolute inset-0 w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-br from-[#2E2E2E]/85 via-[#2E2E2E]/65 to-[rgba(243,156,18,0.2)]" />
+          <div className="relative z-10 max-w-md text-center p-12">
+            <img
+              src={LOGO}
+              alt="Khadayata"
+              style={{ height: 80, width: "auto", mixBlendMode: "screen", margin: "0 auto 24px" }}
+            />
+            <p className="text-lg text-white/80 font-body leading-relaxed">
+              Connecting the Khadayata community worldwide.<br />One identity, one platform, one family.
+            </p>
+            <div className="mt-10 grid grid-cols-3 gap-4 text-center">
+              {[{ val: "50K+", label: "Members" }, { val: "67", label: "Chapters" }, { val: "28", label: "Countries" }].map((s) => (
+                <div key={s.label} className="p-3 rounded-xl bg-white/10 backdrop-blur-sm border border-white/15">
+                  <p className="text-xl font-display font-bold text-white">{s.val}</p>
+                  <p className="text-xs text-white/55">{s.label}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Right side - form */}
-      <div className="flex w-full lg:w-1/2 items-center justify-center p-6 lg:p-12 bg-background">
-        <Card className="w-full max-w-md shadow-elevated border-border/50">
-          <CardHeader className="text-center pb-2">
-            <div className="lg:hidden mb-4 flex items-center justify-center gap-2">
-              <img src={patternOrnament} alt="" className="w-8 h-8 opacity-70" />
-              <h2 className="text-2xl font-display font-bold text-gradient-hero">KhadayataOnline</h2>
-            </div>
-            <CardTitle className="text-2xl font-display">
-              {isSignUp ? "Join the Community" : "Welcome Back"}
-            </CardTitle>
-            <CardDescription>
-              {isSignUp ? "Create your account to connect with the Khadayata family" : "Sign in to your KhadayataOnline account"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required maxLength={255} className="h-11" />
+        {/* Right side - form */}
+        <div className="flex w-full lg:w-1/2 items-center justify-center p-6 lg:p-12 bg-background">
+          <Card className="w-full max-w-md shadow-elevated border-border/50">
+            <CardHeader className="text-center pb-2">
+              <div className="lg:hidden mb-4 flex justify-center">
+                <img src={LOGO} alt="Khadayata" style={{ height: 52, mixBlendMode: "multiply" }} />
               </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Password</Label>
-                  {!isSignUp && <Link to="/reset-password" className="text-xs text-primary hover:underline">Forgot password?</Link>}
+              <CardTitle className="text-2xl font-display">
+                {isSignUp ? "Join the Community" : "Welcome Back"}
+              </CardTitle>
+              <CardDescription>
+                {isSignUp ? "Create your account to connect with the Khadayata family" : "Sign in to your Khadayata Online account"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input id="email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required maxLength={255} className="h-11" />
                 </div>
-                <Input id="password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} maxLength={128} className="h-11" />
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password">Password</Label>
+                    {!isSignUp && <Link to="/reset-password" className="text-xs text-primary hover:underline">Forgot password?</Link>}
+                  </div>
+                  <Input id="password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} maxLength={128} className="h-11" />
+                </div>
+                <Button type="submit" className="w-full h-12 gradient-hero text-primary-foreground shadow-glow text-base" disabled={submitting}>
+                  {submitting ? "Please wait..." : isSignUp ? "Create Account" : "Sign In"}
+                </Button>
+              </form>
+              <div className="mt-6 text-center">
+                <button type="button" onClick={() => setIsSignUp(!isSignUp)} className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Sign up free"}
+                </button>
               </div>
-              <Button type="submit" className="w-full h-12 gradient-hero text-primary-foreground shadow-glow text-base" disabled={submitting}>
-                {submitting ? "Please wait..." : isSignUp ? "Create Account" : "Sign In"}
-              </Button>
-            </form>
-            <div className="mt-6 text-center">
-              <button type="button" onClick={() => setIsSignUp(!isSignUp)} className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Sign up"}
-              </button>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </div>
+    </PublicLayout>
   );
 }

@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, CircleCheck as CheckCircle, Circle as XCircle, Lock } from "lucide-react";
+import PublicLayout from "@/components/PublicLayout";
+import SEOMeta from "@/components/SEOMeta";
 
 const RULES = [
   { label: "At least 8 characters", test: (p: string) => p.length >= 8 },
@@ -67,23 +69,28 @@ export default function ResetPassword() {
 
   if (!isRecovery) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-md shadow-elevated">
-          <CardContent className="py-12 text-center">
-            <Lock className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
-            <p className="font-display font-semibold text-lg">Invalid Reset Link</p>
-            <p className="text-sm text-muted-foreground mt-1">This link may have expired or already been used.</p>
-            <Button className="mt-6 gradient-hero text-primary-foreground" onClick={() => navigate("/auth")}>
-              Back to Sign In
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      <PublicLayout title="Reset Password">
+        <SEOMeta title="Reset Password" noIndex={true} />
+        <div className="flex min-h-[60vh] items-center justify-center bg-background p-4">
+          <Card className="w-full max-w-md shadow-elevated">
+            <CardContent className="py-12 text-center">
+              <Lock className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
+              <p className="font-display font-semibold text-lg">Invalid Reset Link</p>
+              <p className="text-sm text-muted-foreground mt-1">This link may have expired or already been used.</p>
+              <Button className="mt-6 gradient-hero text-primary-foreground" onClick={() => navigate("/auth")}>
+                Back to Sign In
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </PublicLayout>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+    <PublicLayout title="Reset Password">
+    <SEOMeta title="Reset Password" noIndex={true} />
+    <div className="flex min-h-[60vh] items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md shadow-elevated">
         <CardHeader>
           <CardTitle className="font-display">Set New Password</CardTitle>
@@ -175,5 +182,6 @@ export default function ResetPassword() {
         </CardContent>
       </Card>
     </div>
+    </PublicLayout>
   );
 }

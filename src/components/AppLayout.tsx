@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { LogOut, Chrome as Home, Users, Calendar, Briefcase, Heart, BookOpen, Building2, Shield, Bell, Search, Menu, Newspaper, User, Handshake, GraduationCap, TriangleAlert as AlertTriangle, MapPin, BookMarked, IndianRupee, Library, Mic, HeartPulse, Settings, Flag } from "lucide-react";
-import patternOrnament from "@/assets/pattern-ornament.png";
+const LOGO = "/Screenshot_2026-03-16_at_9.18.14_AM.png";
 import { NotificationsPanel } from "@/components/NotificationsPanel";
 
 type NavItem = {
@@ -153,7 +153,7 @@ export default function AppLayout({ children, title }: { children: ReactNode; ti
               <SheetContent side="left" className="w-64 p-0 bg-card overflow-y-auto">
                 <div className="p-4 border-b border-border">
                   <div className="flex items-center gap-2">
-                    <img src={patternOrnament} alt="" className="w-7 h-7 opacity-70" />
+                    <img src={LOGO} alt="Khadayata" style={{ height: 32, width: "auto", mixBlendMode: "multiply" }} />
                     <span className="text-lg font-display font-bold text-gradient-hero">KhadayataOnline</span>
                   </div>
                   {!rolesLoading && isAnyAdmin && (
@@ -169,7 +169,7 @@ export default function AppLayout({ children, title }: { children: ReactNode; ti
             </Sheet>
 
             <Link to="/dashboard" className="flex items-center gap-2 min-w-0">
-              <img src={patternOrnament} alt="" className="w-7 h-7 opacity-70 shrink-0" />
+              <img src={LOGO} alt="Khadayata" style={{ height: 32, width: "auto", mixBlendMode: "multiply", flexShrink: 0 }} />
               <span className="text-lg font-display font-bold text-gradient-hero truncate">{title || "KhadayataOnline"}</span>
             </Link>
             {title && <span className="hidden sm:inline text-sm text-muted-foreground shrink-0">/ {title}</span>}
