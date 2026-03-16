@@ -86,7 +86,6 @@ export default function CookiePolicy() {
 
         <Section title="2. Types of Cookies We Use">
           <p>We use the following categories of cookies:</p>
-
           <div className="space-y-4 mt-2">
             <div className="bg-green-50 border border-green-200 rounded-xl p-4">
               <p className="font-semibold text-green-800 mb-1">Essential Cookies (Always Active)</p>
@@ -135,7 +134,7 @@ export default function CookiePolicy() {
           <p>You can control cookies through:</p>
           <ul className="list-disc pl-5 space-y-2">
             <li><strong>Browser settings:</strong> Most browsers allow you to view, delete, and block cookies. Note that blocking essential cookies will prevent you from logging in.</li>
-            <li><strong>Platform settings:</strong> Visit <strong>Settings → Privacy</strong> to manage notification and communication preferences.</li>
+            <li><strong>Platform settings:</strong> Visit <strong>Settings &rarr; Privacy</strong> to manage notification and communication preferences.</li>
             <li><strong>Opt-out tools:</strong> For analytics opt-out, you may use the <a href="https://tools.google.com/dlpage/gaoptout" target=\"_blank" rel="noopener noreferrer\" className="text-primary hover:underline">Google Analytics Opt-out Browser Add-on</a>.</li>
           </ul>
           <p className="mt-2">Browser-specific instructions for managing cookies:</p>
