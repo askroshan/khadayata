@@ -5,7 +5,7 @@ import { useRoles } from "@/hooks/useRoles";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { LogOut, Chrome as Home, Users, Calendar, Briefcase, Heart, BookOpen, Building2, Shield, Bell, Search, Menu, Newspaper, User, Handshake, GraduationCap, TriangleAlert as AlertTriangle, MapPin, BookMarked, IndianRupee, Library, Mic, HeartPulse, Settings } from "lucide-react";
+import { LogOut, Chrome as Home, Users, Calendar, Briefcase, Heart, BookOpen, Building2, Shield, Bell, Search, Menu, Newspaper, User, Handshake, GraduationCap, TriangleAlert as AlertTriangle, MapPin, BookMarked, IndianRupee, Library, Mic, HeartPulse, Settings, Flag } from "lucide-react";
 import patternOrnament from "@/assets/pattern-ornament.png";
 import { NotificationsPanel } from "@/components/NotificationsPanel";
 
@@ -72,6 +72,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Account",
     items: [
       { icon: User, label: "My Profile", path: "/profile" },
+      { icon: Flag, label: "Moderation", path: "/moderation", adminOnly: true },
       { icon: Shield, label: "Admin", path: "/admin", adminOnly: true },
       { icon: Settings, label: "Settings", path: "/settings" },
     ],
@@ -131,8 +132,14 @@ export default function AppLayout({ children, title }: { children: ReactNode; ti
 
   return (
     <div className="min-h-screen bg-background">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-lg focus:bg-primary focus:text-primary-foreground focus:text-sm focus:font-semibold"
+      >
+        Skip to main content
+      </a>
       {/* Top bar */}
-      <header className="border-b border-border bg-card/95 backdrop-blur-md sticky top-0 z-50">
+      <header role="banner" className="border-b border-border bg-card/95 backdrop-blur-md sticky top-0 z-50">
         <div className="flex items-center justify-between py-3 px-3 sm:px-4 lg:px-6">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -199,10 +206,13 @@ export default function AppLayout({ children, title }: { children: ReactNode; ti
         </aside>
 
         {/* Content */}
-        <main className="flex-1 min-w-0">
+        <main id="main-content" className="flex-1 min-w-0" tabIndex={-1}>
           {children}
         </main>
       </div>
+      <footer role="contentinfo" className="sr-only">
+        KhadayataOnline — Khandelwal Heritage Directory
+      </footer>
     </div>
   );
 }

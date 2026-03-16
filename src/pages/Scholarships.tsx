@@ -29,7 +29,7 @@ export default function Scholarships() {
   const [selectedScholarship, setSelectedScholarship] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [newScholarship, setNewScholarship] = useState({
-    name: "", description: "", amount: "", currency: "INR", deadline: "", chapter_id: "", eligibility_criteria: "",
+    name: "", description: "", amount: "", currency: "INR", deadline: "", chapter_id: "", eligibility: "",
   });
   const { data: chapters } = useChapters();
 
@@ -38,7 +38,7 @@ export default function Scholarships() {
     queryFn: async () => {
       const { data } = await supabase
         .from("scholarships")
-        .select("*, chapters(name)")
+        .select("id, name, description, amount, currency, deadline, chapter_id, eligibility, chapters(name)")
         .eq("status", "active")
         .order("deadline", { ascending: true });
       return data ?? [];
@@ -88,14 +88,14 @@ export default function Scholarships() {
         currency: newScholarship.currency,
         deadline: newScholarship.deadline || null,
         chapter_id: newScholarship.chapter_id || null,
-        eligibility_criteria: newScholarship.eligibility_criteria.trim() || null,
+        eligibility: newScholarship.eligibility.trim() || null,
         status: "active",
       });
       if (error) throw error;
     },
     onSuccess: () => {
       toast({ title: "Scholarship created!" });
-      setNewScholarship({ name: "", description: "", amount: "", currency: "INR", deadline: "", chapter_id: "", eligibility_criteria: "" });
+      setNewScholarship({ name: "", description: "", amount: "", currency: "INR", deadline: "", chapter_id: "", eligibility: "" });
       setCreateOpen(false);
       queryClient.invalidateQueries({ queryKey: ["scholarships"] });
     },
@@ -136,7 +136,7 @@ export default function Scholarships() {
                   <div className="space-y-3">
                     <div><Label>Name *</Label><Input value={newScholarship.name} onChange={e => setNewScholarship({...newScholarship, name: e.target.value})} maxLength={200} /></div>
                     <div><Label>Description</Label><Textarea value={newScholarship.description} onChange={e => setNewScholarship({...newScholarship, description: e.target.value})} rows={3} maxLength={2000} /></div>
-                    <div><Label>Eligibility Criteria</Label><Textarea value={newScholarship.eligibility_criteria} onChange={e => setNewScholarship({...newScholarship, eligibility_criteria: e.target.value})} rows={2} maxLength={2000} /></div>
+                    <div><Label>Eligibility Criteria</Label><Textarea value={newScholarship.eligibility} onChange={e => setNewScholarship({...newScholarship, eligibility: e.target.value})} rows={2} maxLength={2000} /></div>
                     <div className="grid grid-cols-2 gap-3">
                       <div><Label>Amount</Label><Input type="number" value={newScholarship.amount} onChange={e => setNewScholarship({...newScholarship, amount: e.target.value})} /></div>
                       <div><Label>Currency</Label>
@@ -205,6 +205,9 @@ export default function Scholarships() {
                           </div>
                           {s.description && (
                             <p className="text-sm text-muted-foreground mt-3 line-clamp-2">{s.description}</p>
+                          )}
+                          {(s as { eligibility?: string }).eligibility && (
+                            <p className="text-xs text-muted-foreground/70 mt-2 line-clamp-2 italic">{(s as { eligibility?: string }).eligibility}</p>
                           )}
                           <div className="flex items-center gap-3 mt-4 text-xs text-muted-foreground">
                             {s.deadline && (

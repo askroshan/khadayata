@@ -37,6 +37,9 @@ export default function Business() {
   const [searchBiz, setSearchBiz] = useState("");
   const [searchJob, setSearchJob] = useState("");
   const [sectorFilter, setSectorFilter] = useState("");
+  const [verifiedFilter, setVerifiedFilter] = useState<"all" | "verified" | "unverified">("all");
+  const [jobTypeFilter, setJobTypeFilter] = useState("");
+  const [jobLocationFilter, setJobLocationFilter] = useState("");
 
   // Business form
   const [biz, setBiz] = useState({
@@ -64,11 +67,13 @@ export default function Business() {
   const { data: jobCities } = useCities(job.state_id || undefined);
 
   const { data: businesses } = useQuery({
-    queryKey: ["businesses", searchBiz, sectorFilter],
+    queryKey: ["businesses", searchBiz, sectorFilter, verifiedFilter],
     queryFn: async () => {
       let q = supabase.from("businesses").select("*, members:owner_member_id(first_name, last_name), chapters(name), countries(name), states(name), cities(name)").order("created_at", { ascending: false });
       if (searchBiz.trim()) q = q.or(`name.ilike.%${searchBiz}%,sector.ilike.%${searchBiz}%,description.ilike.%${searchBiz}%`);
       if (sectorFilter) q = q.eq("sector", sectorFilter);
+      if (verifiedFilter === "verified") q = q.eq("verified", true);
+      if (verifiedFilter === "unverified") q = q.eq("verified", false);
       const { data } = await q.limit(50);
       return data ?? [];
     },
@@ -76,10 +81,12 @@ export default function Business() {
   });
 
   const { data: jobs } = useQuery({
-    queryKey: ["jobs", searchJob],
+    queryKey: ["jobs", searchJob, jobTypeFilter, jobLocationFilter],
     queryFn: async () => {
       let q = supabase.from("jobs").select("*, businesses:employer_business_id(name), members:employer_member_id(first_name, last_name), countries(name), states(name), cities(name)").eq("status", "open").order("created_at", { ascending: false });
       if (searchJob.trim()) q = q.or(`title.ilike.%${searchJob}%,description.ilike.%${searchJob}%,location.ilike.%${searchJob}%`);
+      if (jobTypeFilter) q = q.eq("employment_type", jobTypeFilter);
+      if (jobLocationFilter.trim()) q = q.ilike("location", `%${jobLocationFilter}%`);
       const { data } = await q.limit(50);
       return data ?? [];
     },
@@ -192,16 +199,25 @@ export default function Business() {
 
             {/* ===== BUSINESSES TAB ===== */}
             <TabsContent value="businesses" className="space-y-4 mt-4">
-              <div className="flex flex-col sm:flex-row gap-3">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input placeholder="Search businesses..." value={searchBiz} onChange={(e) => setSearchBiz(e.target.value)} className="pl-10" />
+              <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+                <div className="relative flex-1 min-w-48">
+                  <label htmlFor="biz-search" className="sr-only">Search businesses</label>
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
+                  <Input id="biz-search" placeholder="Search businesses..." value={searchBiz} onChange={(e) => setSearchBiz(e.target.value)} className="pl-10" />
                 </div>
                 <Select value={sectorFilter || "__all__"} onValueChange={v => setSectorFilter(v === "__all__" ? "" : v)}>
-                  <SelectTrigger className="w-44"><SelectValue placeholder="All Sectors" /></SelectTrigger>
+                  <SelectTrigger className="w-44" aria-label="Filter by sector"><SelectValue placeholder="All Sectors" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__all__">All Sectors</SelectItem>
                     {SECTORS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Select value={verifiedFilter} onValueChange={v => setVerifiedFilter(v as "all" | "verified" | "unverified")}>
+                  <SelectTrigger className="w-40" aria-label="Filter by verification"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Listings</SelectItem>
+                    <SelectItem value="verified">Verified Only</SelectItem>
+                    <SelectItem value="unverified">Unverified</SelectItem>
                   </SelectContent>
                 </Select>
                 <Dialog>
@@ -306,10 +322,23 @@ export default function Business() {
 
             {/* ===== JOBS TAB ===== */}
             <TabsContent value="jobs" className="space-y-4 mt-4">
-              <div className="flex flex-col sm:flex-row gap-3">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input placeholder="Search jobs by title, skill, location..." value={searchJob} onChange={(e) => setSearchJob(e.target.value)} className="pl-10" />
+              <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+                <div className="relative flex-1 min-w-48">
+                  <label htmlFor="job-search" className="sr-only">Search jobs by title, skill or location</label>
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
+                  <Input id="job-search" placeholder="Search jobs by title, skill, location..." value={searchJob} onChange={(e) => setSearchJob(e.target.value)} className="pl-10" />
+                </div>
+                <Select value={jobTypeFilter || "__all__"} onValueChange={v => setJobTypeFilter(v === "__all__" ? "" : v)}>
+                  <SelectTrigger className="w-40" aria-label="Filter by employment type"><SelectValue placeholder="All Types" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all__">All Types</SelectItem>
+                    {EMPLOYMENT_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <div className="relative w-full sm:w-44">
+                  <label htmlFor="job-location-filter" className="sr-only">Filter by location</label>
+                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
+                  <Input id="job-location-filter" placeholder="Location..." value={jobLocationFilter} onChange={e => setJobLocationFilter(e.target.value)} className="pl-9" />
                 </div>
                 <Dialog>
                   <DialogTrigger asChild>

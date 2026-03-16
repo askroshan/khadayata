@@ -100,17 +100,17 @@ export function usePermissions() {
     canManageAnnouncements: isGlobalAdmin || isChapterAdmin,
     
     // Members
-    canVerifyMembers: isGlobalAdmin || isDataSteward || isChapterAdmin,
-    canEditAnyMember: isGlobalAdmin || isDataSteward || isChapterAdmin,
+    canVerifyMembers: isGlobalAdmin || isDataSteward || isChapterAdmin || isModerator,
+    canEditAnyMember: isGlobalAdmin || isDataSteward || isChapterAdmin || isModerator,
     
     // Events
-    canManageEvents: isGlobalAdmin || isEventManager,
-    canDeleteEvents: isGlobalAdmin || isEventManager,
-    
+    canManageEvents: isGlobalAdmin || isEventManager || isModerator,
+    canDeleteEvents: isGlobalAdmin || isEventManager || isModerator,
+
     // News
-    canPublishNews: isGlobalAdmin || isPublisher,
+    canPublishNews: isGlobalAdmin || isPublisher || isModerator,
     canModerateNews: isGlobalAdmin || isPublisher || isModerator,
-    canDeleteNews: isGlobalAdmin || isPublisher,
+    canDeleteNews: isGlobalAdmin || isPublisher || isModerator,
     
     // Business & Jobs
     canManageDirectory: isGlobalAdmin || isDirectoryManager,

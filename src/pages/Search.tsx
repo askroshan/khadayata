@@ -186,9 +186,10 @@ export default function GlobalSearch() {
         <div className="gradient-hero rounded-2xl p-6 sm:p-8 text-primary-foreground">
           <h1 className="text-2xl sm:text-3xl font-display font-bold flex items-center gap-2"><Sparkles className="w-6 sm:w-7 h-6 sm:h-7 text-gold" /> Global Search</h1>
           <p className="text-primary-foreground/70 mt-1 text-sm">Search across people, events, businesses, jobs, news, scholarships, mentorship & archives</p>
-          <div className="relative mt-4">
-            <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <Input placeholder="Search by name, Global ID, keyword..." value={query} onChange={(e) => setQuery(e.target.value)} className="pl-12 text-lg h-14 bg-primary-foreground text-foreground border-0 rounded-xl" maxLength={200} autoFocus />
+          <div role="search" aria-label="Global community search" className="relative mt-4">
+            <label htmlFor="global-search-input" className="sr-only">Search community members, events, businesses and more</label>
+            <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" aria-hidden="true" />
+            <Input id="global-search-input" placeholder="Search by name, Global ID, keyword..." value={query} onChange={(e) => setQuery(e.target.value)} className="pl-12 text-lg h-14 bg-primary-foreground text-foreground border-0 rounded-xl" maxLength={200} autoFocus aria-label="Search" />
           </div>
 
           {/* Advanced filter toggle */}

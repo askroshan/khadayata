@@ -48,13 +48,14 @@ export default function Directory() {
             <Users className="w-5 sm:w-7 h-5 sm:h-7" /> Member Directory
           </h1>
           <p className="text-primary-foreground/70 mt-1 text-sm sm:text-base">Browse and connect with community members</p>
-          <div className="flex flex-col sm:flex-row gap-3 mt-4 sm:mt-6">
+          <div role="search" aria-label="Member directory search" className="flex flex-col sm:flex-row gap-3 mt-4 sm:mt-6">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input placeholder="Search by name..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 bg-primary-foreground text-foreground border-0" maxLength={100} />
+              <label htmlFor="directory-search" className="sr-only">Search members by name</label>
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
+              <Input id="directory-search" placeholder="Search by name..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 bg-primary-foreground text-foreground border-0" maxLength={100} />
             </div>
             <Select value={chapterFilter} onValueChange={setChapterFilter}>
-              <SelectTrigger className="w-full sm:w-56 bg-primary-foreground text-foreground border-0"><SelectValue placeholder="All chapters" /></SelectTrigger>
+              <SelectTrigger className="w-full sm:w-56 bg-primary-foreground text-foreground border-0" aria-label="Filter by chapter"><SelectValue placeholder="All chapters" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Chapters</SelectItem>
                 {chapters?.map((ch) => <SelectItem key={ch.id} value={ch.id}>{ch.name}</SelectItem>)}

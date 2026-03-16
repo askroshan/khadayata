@@ -20,6 +20,7 @@ import Temple from "./pages/Temple";
 import Archives from "./pages/Archives";
 import GlobalSearch from "./pages/Search";
 import Admin from "./pages/Admin";
+import ModeratorDashboard from "./pages/ModeratorDashboard";
 import Settings from "./pages/Settings";
 import News from "./pages/News";
 import NewsDetail from "./pages/NewsDetail";
@@ -59,6 +60,7 @@ const App = () => (
               <Route path="/archives" element={<Archives />} />
               <Route path="/search" element={<GlobalSearch />} />
               <Route path="/admin" element={<Admin />} />
+              <Route path="/moderation" element={<ModeratorDashboard />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/news" element={<News />} />
               <Route path="/news/:id" element={<NewsDetail />} />

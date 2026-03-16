@@ -75,9 +75,10 @@ export default function Archives() {
         </div>
 
         <div className="px-3 sm:px-6 pb-4 sm:pb-6 space-y-4 sm:space-y-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <Input placeholder="Search archives..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-11 h-12 text-base" maxLength={200} />
+          <div role="search" aria-label="Search heritage archives" className="relative">
+            <label htmlFor="archives-search" className="sr-only">Search archives</label>
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" aria-hidden="true" />
+            <Input id="archives-search" placeholder="Search archives..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-11 h-12 text-base" maxLength={200} />
           </div>
 
           <Tabs defaultValue="magazines">

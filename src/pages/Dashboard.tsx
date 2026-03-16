@@ -79,27 +79,31 @@ export default function Dashboard() {
   const { data: upcomingEvents } = useQuery({
     queryKey: ["upcoming-events-dash", member?.chapter_id],
     queryFn: async () => {
-      let q = supabase.from("events").select("id, name, starts_at, venue, chapter_id").eq("status", "published").gte("starts_at", new Date().toISOString()).order("starts_at").limit(3);
-      if (member?.chapter_id) {
-        q = q.or(`chapter_id.eq.${member.chapter_id},chapter_id.is.null`);
-      }
+      const q = supabase
+        .from("events")
+        .select("id, name, starts_at, venue, chapter_id")
+        .eq("status", "published")
+        .gte("starts_at", new Date().toISOString())
+        .order("starts_at")
+        .limit(3);
       const { data } = await q;
       return data ?? [];
     },
-    enabled: !!user && !!member,
+    enabled: !!user,
   });
 
   const { data: recentNews } = useQuery({
-    queryKey: ["recent-news-dash", member?.chapter_id],
+    queryKey: ["recent-news-dash"],
     queryFn: async () => {
-      let q = supabase.from("content_news").select("id, title, published_at, summary").eq("status", "published").order("published_at", { ascending: false }).limit(3);
-      if (member?.chapter_id) {
-        q = q.or(`chapter_id.eq.${member.chapter_id},chapter_id.is.null`);
-      }
-      const { data } = await q;
+      const { data } = await supabase
+        .from("content_news")
+        .select("id, title, published_at, summary")
+        .eq("status", "published")
+        .order("published_at", { ascending: false })
+        .limit(3);
       return data ?? [];
     },
-    enabled: !!user && !!member,
+    enabled: !!user,
   });
 
   if (authLoading || isLoading) {

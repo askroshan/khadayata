@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMember } from "@/hooks/useMember";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,6 +17,7 @@ interface NotificationItem {
   description: string;
   created_at: string;
   read: boolean;
+  href?: string;
 }
 
 function notifIcon(type: NotificationItem["type"]) {
@@ -32,6 +34,20 @@ export function NotificationsPanel() {
   const { user } = useAuth();
   const { member } = useMember();
   const [open, setOpen] = useState(false);
+
+  const { data: unreadCount } = useQuery({
+    queryKey: ["notifications-count", member?.id],
+    queryFn: async (): Promise<number> => {
+      if (!member) return 0;
+      const [vouches, rsvps, verReqs] = await Promise.all([
+        supabase.from("vouches").select("id", { count: "exact", head: true }).eq("member_id", member.id),
+        supabase.from("event_rsvps").select("id", { count: "exact", head: true }).eq("member_id", member.id),
+        supabase.from("verification_requests").select("id", { count: "exact", head: true }).eq("member_id", member.id).eq("status", "pending"),
+      ]);
+      return Math.min((vouches.count ?? 0) + (rsvps.count ?? 0) + (verReqs.count ?? 0), 99);
+    },
+    enabled: !!member && !!user,
+  });
 
   const { data: notifications } = useQuery({
     queryKey: ["notifications-panel", member?.id],
@@ -55,6 +71,7 @@ export function NotificationsPanel() {
             description: `${voucher?.first_name ?? "Someone"} ${voucher?.last_name ?? ""} vouched for you`,
             created_at: v.created_at,
             read: false,
+            href: "/profile",
           });
         }
       }
@@ -72,7 +89,7 @@ export function NotificationsPanel() {
             id: `rsvp-${r.id}`,
             type: "rsvp",
             title: "Event RSVP Confirmed",
-            description: `Your RSVP for "${event?.name ?? "an event"}" is confirmed`,
+            description: `Your RSVP for "${event?.name ?? "an event"}" is confirmed as ${r.status}`,
             created_at: r.created_at,
             read: false,
           });
@@ -111,7 +128,7 @@ export function NotificationsPanel() {
             id: `ver-${vr.id}`,
             type: "verification",
             title: "Verification Update",
-            description: `Your verification request is: ${vr.status}`,
+            description: `Your verification request status: ${vr.status}`,
             created_at: vr.created_at,
             read: false,
           });
@@ -125,7 +142,7 @@ export function NotificationsPanel() {
     enabled: !!member && !!user && open,
   });
 
-  const count = notifications?.length ?? 0;
+  const displayCount = unreadCount ?? 0;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -133,13 +150,13 @@ export function NotificationsPanel() {
         <Button
           variant="outline"
           size="sm"
-          aria-label={count > 0 ? `Notifications (${count} unread)` : "Notifications"}
+          aria-label={displayCount > 0 ? `Notifications (${displayCount} unread)` : "Notifications"}
           className="h-8 relative"
         >
           <Bell className="w-3.5 h-3.5" />
-          {count > 0 && (
+          {displayCount > 0 && (
             <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center">
-              {count > 9 ? "9+" : count}
+              {displayCount > 9 ? "9+" : displayCount}
             </span>
           )}
         </Button>
@@ -147,8 +164,8 @@ export function NotificationsPanel() {
       <PopoverContent align="end" className="w-80 p-0 shadow-elevated">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <h3 className="font-display font-semibold text-sm">Notifications</h3>
-          {count > 0 && (
-            <Badge variant="secondary" className="text-xs">{count} recent</Badge>
+          {displayCount > 0 && (
+            <Badge variant="secondary" className="text-xs">{displayCount} recent</Badge>
           )}
         </div>
         <div className="max-h-80 overflow-y-auto">

@@ -337,26 +337,7 @@ export default function Matrimonial() {
         </div>
 
         <div className="px-3 sm:px-6 pb-4 sm:pb-6 space-y-4 sm:space-y-6">
-          {/* No profile yet — but moderators see the moderation panel directly */}
-          {!myProfile && !showForm && canManageMatrimonial && (
-            <MatrimonialModerationPanel allProfiles={allProfiles} />
-          )}
-          {!myProfile && !showForm && !canManageMatrimonial && (
-            <Card className="shadow-elevated border-secondary/20 overflow-hidden">
-              <div className="gradient-jewel p-8 sm:p-12 text-center">
-                <Heart className="w-16 h-16 text-primary-foreground mx-auto mb-4 opacity-80" />
-                <h3 className="font-display font-bold text-2xl sm:text-3xl text-primary-foreground">Begin Your Journey</h3>
-                <p className="text-primary-foreground/70 mt-2 max-w-md mx-auto">
-                  Create your detailed matrimonial profile with personal details, kundali information, family background, and partner preferences.
-                </p>
-                <Button onClick={() => setShowForm(true)} className="mt-6 bg-primary-foreground text-foreground hover:bg-primary-foreground/90 h-12 px-8 text-base">
-                  <Sparkles className="w-5 h-5 mr-2" /> Create My Profile
-                </Button>
-              </div>
-            </Card>
-          )}
-
-          {/* Profile creation form */}
+            {/* Profile creation form (when requested) */}
           {!myProfile && showForm && (
             <Card className="shadow-elevated">
               <CardHeader>
@@ -371,8 +352,27 @@ export default function Matrimonial() {
             </Card>
           )}
 
-          {/* Has profile — show tabs */}
-          {myProfile && (
+          {/* No profile CTA banner (shown above browse, not instead of it) */}
+          {!myProfile && !showForm && !canManageMatrimonial && (
+            <Card className="shadow-elevated border-secondary/20 overflow-hidden">
+              <div className="gradient-jewel px-6 py-5 sm:py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="text-center sm:text-left">
+                  <h3 className="font-display font-bold text-lg sm:text-xl text-primary-foreground flex items-center gap-2 justify-center sm:justify-start">
+                    <Sparkles className="w-5 h-5" /> Create Your Profile to Connect
+                  </h3>
+                  <p className="text-primary-foreground/70 mt-1 text-sm max-w-lg">
+                    Browse community profiles below. Create your own profile to send introductions and show your match score.
+                  </p>
+                </div>
+                <Button onClick={() => setShowForm(true)} className="shrink-0 bg-primary-foreground text-foreground hover:bg-primary-foreground/90 h-10 px-6">
+                  <Heart className="w-4 h-4 mr-2" /> Create My Profile
+                </Button>
+              </div>
+            </Card>
+          )}
+
+          {/* Has profile — show tabs; no profile — show moderator panel or browse-only view */}
+          {myProfile ? (
             <Tabs defaultValue="matches" className="space-y-4">
               <TabsList className={`w-full grid ${canManageMatrimonial ? "grid-cols-4" : "grid-cols-3"}`}>
                 <TabsTrigger value="matches" className="text-xs sm:text-sm">
@@ -687,6 +687,36 @@ export default function Matrimonial() {
                 </TabsContent>
               )}
             </Tabs>
+          ) : !showForm && (
+            /* No profile: browse-only view */
+            <div className="space-y-4">
+              {canManageMatrimonial && <MatrimonialModerationPanel allProfiles={allProfiles} />}
+              <SearchFilters filters={filters} onChange={setFilters} />
+              {filteredProfiles.length === 0 ? (
+                <Card className="shadow-card">
+                  <CardContent className="text-center py-16">
+                    <Heart className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+                    <h3 className="font-display font-semibold text-lg">No profiles found</h3>
+                    <p className="text-muted-foreground text-sm mt-1">
+                      {filters.search || Object.values(filters).some(v => v) ? "Try adjusting your filters." : "New profiles will appear here as community members join."}
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <>
+                  <p className="text-xs text-muted-foreground">{filteredProfiles.length} profile{filteredProfiles.length !== 1 ? 's' : ''} found</p>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {filteredProfiles.map((p) => (
+                      <ProfileCard
+                        key={p.id} profile={p} score={null} alreadySent={false}
+                        onSendIntro={() => setShowForm(true)} sending={false}
+                        myProfile={null}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           )}
         </div>
       </div>

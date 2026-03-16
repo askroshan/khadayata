@@ -32,6 +32,16 @@ export default function Settings() {
   const [passwordError, setPasswordError] = useState("");
   const [notifLocal, setNotifLocal] = useState<{ email_enabled: boolean; whatsapp_enabled: boolean; push_enabled: boolean } | null>(null);
 
+  const { data: notifPrefs } = useQuery({
+    queryKey: ["notif-prefs"],
+    queryFn: async () => {
+      if (!member) return null;
+      const { data } = await supabase.from("notification_preferences").select("*").eq("member_id", member.id).maybeSingle();
+      return data;
+    },
+    enabled: !!member,
+  });
+
   useEffect(() => {
     if (member) {
       setPrivacy((member.privacy as Record<string, string>) ?? {});
@@ -43,16 +53,6 @@ export default function Settings() {
       setNotifLocal({ email_enabled: notifPrefs.email_enabled ?? true, whatsapp_enabled: notifPrefs.whatsapp_enabled ?? false, push_enabled: notifPrefs.push_enabled ?? false });
     }
   }, [notifPrefs]);
-
-  const { data: notifPrefs } = useQuery({
-    queryKey: ["notif-prefs"],
-    queryFn: async () => {
-      if (!member) return null;
-      const { data } = await supabase.from("notification_preferences").select("*").eq("member_id", member.id).maybeSingle();
-      return data;
-    },
-    enabled: !!member,
-  });
 
   const savePrivacy = useMutation({
     mutationFn: async () => {
