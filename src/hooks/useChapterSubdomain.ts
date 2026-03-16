@@ -18,7 +18,7 @@ export function useChapterSubdomain() {
     return null;
   }, []);
 
-  const { data: chapter, isLoading } = useQuery({
+  const { data: chapter, isPending } = useQuery({
     queryKey: ["chapter-subdomain", subdomain],
     queryFn: async () => {
       if (!subdomain) return null;
@@ -37,7 +37,7 @@ export function useChapterSubdomain() {
     subdomain,
     chapter,
     isChapterSite: !!subdomain,
-    isLoading,
+    isLoading: !!subdomain && isPending,
   };
 }
 
