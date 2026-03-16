@@ -280,6 +280,14 @@ export default function Matrimonial() {
     }
     if (filters.visaType) list = list.filter(p => p.visa_type === filters.visaType);
 
+    // Gotra filter
+    if (filters.gotra) list = list.filter(p => p.gotra?.toLowerCase() === filters.gotra.toLowerCase());
+
+    // Exclude same gotra
+    if (filters.excludeSameGotra && myProfile?.gotra) {
+      list = list.filter(p => !hasGotraConflict(myProfile, p));
+    }
+
     // Sort by match score
     if (myProfile) {
       list.sort((a, b) => matchScore(myProfile, b, member) - matchScore(myProfile, a, member));

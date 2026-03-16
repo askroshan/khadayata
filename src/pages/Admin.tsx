@@ -25,6 +25,7 @@ import NewsPublisherTab from "@/components/admin/NewsPublisherTab";
 import WhatsAppTab from "@/components/admin/WhatsAppTab";
 import SMSTab from "@/components/admin/SMSTab";
 import BannedKeywordsTab from "@/components/admin/BannedKeywordsTab";
+import ChaptersTab from "@/components/admin/ChaptersTab";
 
 export default function Admin() {
   const { user, loading } = useAuth();
@@ -34,7 +35,7 @@ export default function Admin() {
   const { data: allMembers } = useQuery({
     queryKey: ["admin-members", myChapterId],
     queryFn: async () => {
-      let q = supabase.from("members").select("id, first_name, last_name, verification_level, onboarding_completed, chapter_id, chapters(name)").order("created_at", { ascending: false }).limit(200);
+      let q = supabase.from("members").select("id, first_name, last_name, verification_level, onboarding_completed, chapter_id, created_at, chapters(name)").order("created_at", { ascending: false }).limit(200);
       if (myChapterId) q = q.eq("chapter_id", myChapterId);
       const { data, error } = await q;
       if (error) throw error;
@@ -128,7 +129,7 @@ export default function Admin() {
           </div>
         </div>
 
-        {canVerifyMembers && <AdminStats members={allMembers} isChapterScoped={!!myChapterId} />}
+        {canVerifyMembers && <AdminStats members={allMembers} isChapterScoped={!!myChapterId} myChapterId={myChapterId} />}
 
         <Tabs defaultValue={isDataSteward && !isGlobalAdmin ? "verification" : isDirectoryManager && !isGlobalAdmin ? "directory" : isEventManager && !isGlobalAdmin ? "events" : isFinanceAdmin && !isGlobalAdmin ? "finance" : isPublisher && !isGlobalAdmin ? "publisher" : isModerator && !isGlobalAdmin ? "reports" : "members"}>
           <div className="overflow-x-auto pb-1 -mb-1">
@@ -145,6 +146,7 @@ export default function Admin() {
               {canManageEvents && <TabsTrigger value="events" className="gap-1 text-xs sm:text-sm"><Calendar className="w-3.5 h-3.5" />Events</TabsTrigger>}
               {canManageFunds && <TabsTrigger value="finance" className="gap-1 text-xs sm:text-sm"><DollarSign className="w-3.5 h-3.5" />Finance</TabsTrigger>}
               {canPublishNews && <TabsTrigger value="publisher" className="gap-1 text-xs sm:text-sm"><Newspaper className="w-3.5 h-3.5" />My Content</TabsTrigger>}
+              {isGlobalAdmin && <TabsTrigger value="chapters" className="gap-1 text-xs sm:text-sm"><Building2 className="w-3.5 h-3.5" />Chapters</TabsTrigger>}
               {(isGlobalAdmin || isChapterAdmin) && <TabsTrigger value="samiti" className="text-xs sm:text-sm">Samiti</TabsTrigger>}
               {isGlobalAdmin && <TabsTrigger value="whatsapp" className="text-xs sm:text-sm">WhatsApp</TabsTrigger>}
               {isGlobalAdmin && <TabsTrigger value="sms" className="text-xs sm:text-sm">SMS</TabsTrigger>}
@@ -210,6 +212,11 @@ export default function Admin() {
           {canPublishNews && (
             <TabsContent value="publisher" className="mt-4">
               <NewsPublisherTab myChapterId={myChapterId} />
+            </TabsContent>
+          )}
+          {isGlobalAdmin && (
+            <TabsContent value="chapters" className="mt-4">
+              <ChaptersTab />
             </TabsContent>
           )}
           {(isGlobalAdmin || isChapterAdmin) && (

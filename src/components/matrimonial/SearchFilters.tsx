@@ -1,9 +1,17 @@
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import { useState } from "react";
 import { MARITAL_STATUS, DIETS, EDUCATION_LEVELS, MANGLIK, VISA_TYPES } from "./constants";
+
+export const GOTRAS = [
+  "Garg", "Kashyap", "Bharadwaj", "Vashishtha", "Atreya", "Sandilya",
+  "Parashar", "Gautam", "Angiras", "Kaushik", "Shandilya", "Agastya",
+  "Mudgal", "Dhananjay", "Kaundinya", "Mandavya", "Shringi",
+];
 
 export type Filters = {
   search: string;
@@ -17,12 +25,14 @@ export type Filters = {
   city: string;
   country: string;
   visaType: string;
+  gotra: string;
+  excludeSameGotra: boolean;
 };
 
 const EMPTY_FILTERS: Filters = {
   search: "", gender: "", minAge: "", maxAge: "", diet: "",
   maritalStatus: "", education: "", manglik: "", city: "",
-  country: "", visaType: "",
+  country: "", visaType: "", gotra: "", excludeSameGotra: false,
 };
 
 export function SearchFilters({ filters, onChange }: { filters: Filters; onChange: (f: Filters) => void }) {
@@ -118,6 +128,23 @@ export function SearchFilters({ filters, onChange }: { filters: Filters; onChang
               <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Any" /></SelectTrigger>
               <SelectContent>{VISA_TYPES.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent>
             </Select>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Gotra</p>
+            <Select value={filters.gotra} onValueChange={(v) => onChange({ ...filters, gotra: v })}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Any" /></SelectTrigger>
+              <SelectContent>
+                {GOTRAS.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="col-span-2 flex items-center gap-2 pt-1">
+            <Switch
+              id="exclude-same-gotra"
+              checked={filters.excludeSameGotra}
+              onCheckedChange={(v) => onChange({ ...filters, excludeSameGotra: v })}
+            />
+            <Label htmlFor="exclude-same-gotra" className="text-xs cursor-pointer">Exclude same Gotra (traditionally incompatible)</Label>
           </div>
         </div>
       )}

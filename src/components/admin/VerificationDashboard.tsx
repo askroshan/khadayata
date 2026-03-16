@@ -1,11 +1,16 @@
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
+import { useMember } from "@/hooks/useMember";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { UserCheck, Tag, Heart, Mic, ArrowRight, Clock } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { UserCheck, Tag, Heart, Mic, ArrowRight, Clock, CircleCheck as CheckCircle, Circle as XCircle, CircleAlert as AlertCircle } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 interface VerificationDashboardProps {
   myChapterId: string | null;
@@ -13,6 +18,10 @@ interface VerificationDashboardProps {
 
 export default function VerificationDashboard({ myChapterId }: VerificationDashboardProps) {
   const { user } = useAuth();
+  const { member } = useMember();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [notes, setNotes] = useState<Record<string, string>>({});
 
   const { data: pendingMembers } = useQuery({
     queryKey: ["vd-pending-members", myChapterId],
@@ -35,10 +44,10 @@ export default function VerificationDashboard({ myChapterId }: VerificationDashb
     queryFn: async () => {
       const { data } = await supabase
         .from("verification_requests")
-        .select("id, member_id, requested_level, status, created_at, notes, members(first_name, last_name, chapter_id)")
+        .select("id, member_id, requested_level, status, created_at, notes, members(first_name, last_name, chapter_id, verification_level)")
         .eq("status", "pending")
         .order("created_at", { ascending: false })
-        .limit(10);
+        .limit(20);
       return (data ?? []).filter((r) => {
         if (!myChapterId) return true;
         const m = r.members as { chapter_id: string | null } | null;
@@ -65,7 +74,7 @@ export default function VerificationDashboard({ myChapterId }: VerificationDashb
   const { data: pendingMatrimonial } = useQuery({
     queryKey: ["vd-matrimonial", myChapterId],
     queryFn: async () => {
-      let q = supabase
+      const q = supabase
         .from("matrimonial_profiles")
         .select("id, created_at, members!matrimonial_profiles_member_id_fkey(first_name, last_name, chapter_id)")
         .eq("verified", false)
@@ -94,6 +103,28 @@ export default function VerificationDashboard({ myChapterId }: VerificationDashb
       return data ?? [];
     },
     enabled: !!user,
+  });
+
+  const resolveVerification = useMutation({
+    mutationFn: async ({ requestId, memberId, requestedLevel, action, note }: { requestId: string; memberId: string; requestedLevel: number; action: "approve" | "reject" | "needs_info"; note?: string }) => {
+      if (!member) throw new Error("Not authenticated");
+      const newStatus = action === "approve" ? "approved" : action === "reject" ? "rejected" : "needs_info";
+      const { error } = await supabase
+        .from("verification_requests")
+        .update({ status: newStatus, reviewed_by: member.id, reviewed_at: new Date().toISOString(), notes: note || null })
+        .eq("id", requestId);
+      if (error) throw error;
+      if (action === "approve") {
+        const { error: memberError } = await supabase.from("members").update({ verification_level: requestedLevel }).eq("id", memberId);
+        if (memberError) throw memberError;
+      }
+    },
+    onSuccess: (_, vars) => {
+      toast({ title: vars.action === "approve" ? "Verification approved!" : vars.action === "reject" ? "Verification rejected." : "Requested more info." });
+      queryClient.invalidateQueries({ queryKey: ["vd-verification-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-members"] });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
   const totalPending =
@@ -151,17 +182,77 @@ export default function VerificationDashboard({ myChapterId }: VerificationDashb
           </CardHeader>
           <CardContent className="p-4 pt-0 space-y-1">
             {pendingVerifications!.map((r) => {
-              const m = r.members as { first_name: string; last_name: string } | null;
+              const m = r.members as { first_name: string; last_name: string; verification_level: number } | null;
               return (
-                <div key={r.id} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
-                  <div>
-                    <span className="text-sm font-medium">{m?.first_name} {m?.last_name}</span>
-                    <span className="ml-2 text-xs text-muted-foreground">→ L{r.requested_level}</span>
-                    {r.notes && <p className="text-xs text-muted-foreground truncate max-w-[200px]">{r.notes}</p>}
+                <div key={r.id} className="flex items-center justify-between py-2 border-b border-border last:border-0 gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">{m?.first_name} {m?.last_name}</span>
+                      <span className="text-xs text-muted-foreground">L{m?.verification_level ?? 0} → L{r.requested_level}</span>
+                    </div>
+                    {r.notes && <p className="text-xs text-muted-foreground truncate max-w-[250px] mt-0.5">{r.notes}</p>}
                   </div>
-                  <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" asChild>
-                    <Link to={`/member/${r.member_id}?verify=1`}>Review <ArrowRight className="w-3 h-3" /></Link>
-                  </Button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      size="sm"
+                      className="h-7 text-xs bg-success hover:bg-success/80 text-success-foreground"
+                      onClick={() => resolveVerification.mutate({ requestId: r.id, memberId: r.member_id, requestedLevel: r.requested_level, action: "approve" })}
+                      disabled={resolveVerification.isPending}
+                    >
+                      <CheckCircle className="w-3 h-3 mr-1" /> Approve
+                    </Button>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button size="sm" variant="outline" className="h-7 text-xs">
+                          <AlertCircle className="w-3 h-3 mr-1" /> More
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>Verification Decision</DialogTitle>
+                          <DialogDescription>
+                            Review {m?.first_name} {m?.last_name}'s request for L{r.requested_level} verification.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-3">
+                          <Textarea
+                            placeholder="Notes (shown to member)..."
+                            value={notes[r.id] ?? ""}
+                            onChange={e => setNotes(prev => ({ ...prev, [r.id]: e.target.value }))}
+                            rows={3}
+                          />
+                          <div className="flex gap-2">
+                            <Button
+                              className="flex-1 bg-success hover:bg-success/80 text-success-foreground"
+                              onClick={() => resolveVerification.mutate({ requestId: r.id, memberId: r.member_id, requestedLevel: r.requested_level, action: "approve", note: notes[r.id] })}
+                              disabled={resolveVerification.isPending}
+                            >
+                              <CheckCircle className="w-3.5 h-3.5 mr-1" /> Approve
+                            </Button>
+                            <Button
+                              variant="outline"
+                              className="flex-1"
+                              onClick={() => resolveVerification.mutate({ requestId: r.id, memberId: r.member_id, requestedLevel: r.requested_level, action: "needs_info", note: notes[r.id] })}
+                              disabled={resolveVerification.isPending}
+                            >
+                              <AlertCircle className="w-3.5 h-3.5 mr-1" /> Need Info
+                            </Button>
+                            <Button
+                              variant="outline"
+                              className="flex-1 text-destructive border-destructive/30"
+                              onClick={() => resolveVerification.mutate({ requestId: r.id, memberId: r.member_id, requestedLevel: r.requested_level, action: "reject", note: notes[r.id] })}
+                              disabled={resolveVerification.isPending}
+                            >
+                              <XCircle className="w-3.5 h-3.5 mr-1" /> Reject
+                            </Button>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                    <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" asChild>
+                      <Link to={`/member/${r.member_id}?verify=1`}><ArrowRight className="w-3 h-3" /></Link>
+                    </Button>
+                  </div>
                 </div>
               );
             })}

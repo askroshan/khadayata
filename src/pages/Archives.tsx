@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import { Search, BookOpen, FileText, Library, Mic, Upload } from "lucide-react";
+import { Search, BookOpen, FileText, Library, Mic, Upload, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
 import { HeritageTagging } from "@/components/heritage/HeritageTagging";
 import archivesHero from "@/assets/archives-hero.jpg";
@@ -44,11 +44,30 @@ export default function Archives() {
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
-  const { data: magazines } = useQuery({
-    queryKey: ["magazines", search], queryFn: async () => { let q = supabase.from("magazine_issues").select("*").order("issue_date", { ascending: false }); if (search.trim()) q = q.ilike("title", `%${search}%`); const { data } = await q.limit(50); return data ?? []; },
+  const { data: magazines, isLoading: magazinesLoading, isError: magazinesError, refetch: refetchMagazines } = useQuery({
+    queryKey: ["magazines", search],
+    queryFn: async () => {
+      let q = supabase.from("magazine_issues").select("*").order("issue_date", { ascending: false });
+      if (search.trim()) q = q.ilike("title", `%${search}%`);
+      const { data, error } = await q.limit(50);
+      if (error) throw error;
+      return data ?? [];
+    },
+    retry: 1,
+    staleTime: 60_000,
   });
-  const { data: bookPages } = useQuery({
-    queryKey: ["book-pages", search], queryFn: async () => { let q = supabase.from("book_pages").select("*").order("page_number"); if (search.trim()) q = q.ilike("ocr_text", `%${search}%`); const { data } = await q.limit(50); return data ?? []; },
+
+  const { data: bookPages, isLoading: bookPagesLoading, isError: bookPagesError, refetch: refetchBookPages } = useQuery({
+    queryKey: ["book-pages", search],
+    queryFn: async () => {
+      let q = supabase.from("book_pages").select("*").order("page_number");
+      if (search.trim()) q = q.ilike("ocr_text", `%${search}%`);
+      const { data, error } = await q.limit(50);
+      if (error) throw error;
+      return data ?? [];
+    },
+    retry: 1,
+    staleTime: 60_000,
   });
 
   if (loading) return <div className="flex min-h-screen items-center justify-center"><div className="animate-pulse text-muted-foreground">Loading...</div></div>;
@@ -57,7 +76,6 @@ export default function Archives() {
   return (
     <AppLayout title="Heritage Archives">
       <div className="space-y-6">
-        {/* Hero */}
         <div className="relative h-56 overflow-hidden">
           <img src={archivesHero} alt="Heritage archives" className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-r from-foreground/90 to-foreground/50" />
@@ -86,6 +104,7 @@ export default function Archives() {
               <TabsTrigger value="magazines">Khadayata Jyoti ({magazines?.length ?? 0})</TabsTrigger>
               <TabsTrigger value="books">History Book ({bookPages?.length ?? 0})</TabsTrigger>
             </TabsList>
+
             <TabsContent value="magazines" className="space-y-4 mt-4">
               {canManageOralHistories && (
                 <div className="flex justify-end">
@@ -113,41 +132,93 @@ export default function Archives() {
                   </Dialog>
                 </div>
               )}
-              {magazines?.length === 0 && <div className="text-center py-16"><BookOpen className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" /><p className="text-muted-foreground">No magazine issues found</p></div>}
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {magazines?.map((m) => (
-                  <Card key={m.id} className="shadow-card hover:shadow-elevated transition-all group overflow-hidden">
-                    <div className="h-3 gradient-warm" />
-                    <CardContent className="p-5">
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg">
-                        <BookOpen className="w-6 h-6 text-primary-foreground" />
-                      </div>
-                      <h3 className="font-display font-bold text-sm group-hover:text-primary transition-colors">{m.title}</h3>
-                      <div className="flex gap-2 mt-2 text-xs text-muted-foreground">
-                        {m.issue_date && <span>{new Date(m.issue_date).toLocaleDateString()}</span>}
-                        {m.volume && <Badge variant="outline" className="text-xs">Vol. {m.volume}</Badge>}
-                      </div>
-                      {m.pdf_url && <a href={m.pdf_url} target="_blank" rel="noopener noreferrer" className="text-primary text-xs mt-3 inline-flex items-center gap-1 hover:underline font-medium"><FileText className="w-3 h-3" />Download PDF</a>}
-                      <div className="mt-3 pt-3 border-t border-border">
-                        <HeritageTagging entityType="magazine" entityId={m.id} />
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+
+              {magazinesLoading && (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="animate-pulse rounded-xl border border-border h-40 bg-muted/30" />
+                  ))}
+                </div>
+              )}
+
+              {magazinesError && !magazinesLoading && (
+                <div className="rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive flex items-center justify-between gap-3">
+                  <span>Unable to load magazines. Please try again.</span>
+                  <Button size="sm" variant="outline" className="h-7 text-xs shrink-0" onClick={() => refetchMagazines()}>
+                    <RefreshCw className="w-3 h-3 mr-1" /> Retry
+                  </Button>
+                </div>
+              )}
+
+              {!magazinesLoading && !magazinesError && magazines?.length === 0 && (
+                <div className="text-center py-16">
+                  <BookOpen className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
+                  <p className="text-muted-foreground">No magazine issues found</p>
+                </div>
+              )}
+
+              {!magazinesLoading && !magazinesError && (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {magazines?.map((m) => (
+                    <Card key={m.id} className="shadow-card hover:shadow-elevated transition-all group overflow-hidden">
+                      <div className="h-3 gradient-warm" />
+                      <CardContent className="p-5">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg">
+                          <BookOpen className="w-6 h-6 text-primary-foreground" />
+                        </div>
+                        <h3 className="font-display font-bold text-sm group-hover:text-primary transition-colors">{m.title}</h3>
+                        <div className="flex gap-2 mt-2 text-xs text-muted-foreground">
+                          {m.issue_date && <span>{new Date(m.issue_date).toLocaleDateString()}</span>}
+                          {m.volume && <Badge variant="outline" className="text-xs">Vol. {m.volume}</Badge>}
+                        </div>
+                        {m.pdf_url && <a href={m.pdf_url} target="_blank" rel="noopener noreferrer" className="text-primary text-xs mt-3 inline-flex items-center gap-1 hover:underline font-medium"><FileText className="w-3 h-3" />Download PDF</a>}
+                        <div className="mt-3 pt-3 border-t border-border">
+                          <HeritageTagging entityType="magazine" entityId={m.id} />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </TabsContent>
+
             <TabsContent value="books" className="space-y-4 mt-4">
-              {bookPages?.length === 0 && <div className="text-center py-16"><FileText className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" /><p className="text-muted-foreground">No book pages found</p></div>}
-              <div className="space-y-3">
-                {bookPages?.map((p) => (
-                  <Card key={p.id} className="shadow-card hover:shadow-elevated transition-all">
-                    <CardContent className="p-4 flex items-start gap-4">
-                      <div className="w-10 h-10 rounded-lg gradient-jewel flex items-center justify-center text-primary-foreground text-xs font-bold shrink-0">{p.page_number}</div>
-                      <div><p className="text-sm font-medium">Page {p.page_number}</p>{p.ocr_text && <p className="text-xs text-muted-foreground mt-1 line-clamp-3">{p.ocr_text}</p>}</div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+              {bookPagesLoading && (
+                <div className="space-y-3">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="animate-pulse rounded-xl border border-border h-16 bg-muted/30" />
+                  ))}
+                </div>
+              )}
+
+              {bookPagesError && !bookPagesLoading && (
+                <div className="rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive flex items-center justify-between gap-3">
+                  <span>Unable to load history book. Please try again.</span>
+                  <Button size="sm" variant="outline" className="h-7 text-xs shrink-0" onClick={() => refetchBookPages()}>
+                    <RefreshCw className="w-3 h-3 mr-1" /> Retry
+                  </Button>
+                </div>
+              )}
+
+              {!bookPagesLoading && !bookPagesError && bookPages?.length === 0 && (
+                <div className="text-center py-16">
+                  <FileText className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
+                  <p className="text-muted-foreground">No book pages found</p>
+                </div>
+              )}
+
+              {!bookPagesLoading && !bookPagesError && (
+                <div className="space-y-3">
+                  {bookPages?.map((p) => (
+                    <Card key={p.id} className="shadow-card hover:shadow-elevated transition-all">
+                      <CardContent className="p-4 flex items-start gap-4">
+                        <div className="w-10 h-10 rounded-lg gradient-jewel flex items-center justify-center text-primary-foreground text-xs font-bold shrink-0">{p.page_number}</div>
+                        <div><p className="text-sm font-medium">Page {p.page_number}</p>{p.ocr_text && <p className="text-xs text-muted-foreground mt-1 line-clamp-3">{p.ocr_text}</p>}</div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         </div>

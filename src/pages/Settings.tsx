@@ -1,4 +1,4 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMember } from "@/hooks/useMember";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,12 +19,18 @@ import { ConsentCenter } from "@/components/consent/ConsentCenter";
 
 const PRIVACY_LEVELS = ["public", "members", "chapter", "private"] as const;
 const PRIVACY_FIELDS = ["dob", "phone", "email", "birth_place", "employment"] as const;
+const VALID_TABS = ["privacy", "verification", "consent", "notifications", "account"] as const;
+type Tab = (typeof VALID_TABS)[number];
 
 export default function Settings() {
   const { user, loading } = useAuth();
-  const { member, updateMember } = useMember();
+  const { member } = useMember();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const tabParam = searchParams.get("tab") as Tab | null;
+  const activeTab: Tab = tabParam && VALID_TABS.includes(tabParam) ? tabParam : "privacy";
 
   const [privacy, setPrivacy] = useState<Record<string, string>>({});
   const [newPassword, setNewPassword] = useState("");
@@ -58,6 +64,10 @@ export default function Settings() {
     }
   }, [notifPrefs?.email_enabled, notifPrefs?.whatsapp_enabled, notifPrefs?.push_enabled]);
 
+  const handleTabChange = (value: string) => {
+    setSearchParams({ tab: value }, { replace: true });
+  };
+
   const savePrivacy = useMutation({
     mutationFn: async () => {
       if (!member) throw new Error("Not a member");
@@ -87,9 +97,12 @@ export default function Settings() {
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
+  const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
+
   const changePassword = useMutation({
     mutationFn: async () => {
       if (newPassword.length < 8) throw new Error("Password must be at least 8 characters.");
+      if (!PASSWORD_REGEX.test(newPassword)) throw new Error("Password must contain at least one uppercase letter, one number, and one special character.");
       if (newPassword !== confirmPassword) throw new Error("Passwords do not match.");
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
@@ -118,7 +131,7 @@ export default function Settings() {
         </div>
 
         <div className="px-3 sm:px-6 pb-6 max-w-2xl">
-          <Tabs defaultValue="privacy">
+          <Tabs value={activeTab} onValueChange={handleTabChange}>
             <TabsList className="mb-4 flex-wrap h-auto gap-1">
               <TabsTrigger value="privacy"><Eye className="w-3.5 h-3.5 mr-1" />Privacy</TabsTrigger>
               <TabsTrigger value="verification"><Shield className="w-3.5 h-3.5 mr-1" />Verification</TabsTrigger>
@@ -188,11 +201,12 @@ export default function Settings() {
                 </CardContent>
               </Card>
             </TabsContent>
+
             <TabsContent value="account" className="space-y-4">
               <Card className="shadow-card">
                 <CardHeader>
                   <CardTitle className="font-display flex items-center gap-2"><Key className="w-5 h-5 text-primary" />Change Password</CardTitle>
-                  <CardDescription>Update your account password. Must be at least 8 characters.</CardDescription>
+                  <CardDescription>Must be at least 8 characters with one uppercase letter, one number, and one special character.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
@@ -216,6 +230,12 @@ export default function Settings() {
                     />
                   </div>
                   {passwordError && <p className="text-xs text-destructive">{passwordError}</p>}
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p className={newPassword.length >= 8 ? "text-success" : ""}>• At least 8 characters</p>
+                    <p className={/[A-Z]/.test(newPassword) ? "text-success" : ""}>• At least one uppercase letter</p>
+                    <p className={/[0-9]/.test(newPassword) ? "text-success" : ""}>• At least one number</p>
+                    <p className={/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(newPassword) ? "text-success" : ""}>• At least one special character</p>
+                  </div>
                   <Button
                     onClick={() => changePassword.mutate()}
                     disabled={changePassword.isPending || !newPassword}

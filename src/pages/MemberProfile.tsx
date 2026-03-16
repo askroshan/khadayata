@@ -655,9 +655,6 @@ export default function MemberProfile() {
           <CardHeader><CardTitle className="text-lg font-display flex items-center gap-2"><Users className="w-4 h-4 text-primary" />Family</CardTitle></CardHeader>
           <CardContent>
             <FamilyTree memberId={id!} />
-            {(!familyLinks || familyLinks.length === 0) && (
-              <p className="text-sm text-muted-foreground">No family connections linked yet.</p>
-            )}
           </CardContent>
         </Card>
 

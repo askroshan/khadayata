@@ -106,7 +106,10 @@ export default function Events() {
       const { error } = await supabase.from("event_rsvps").upsert({ event_id: eventId, member_id: member.id, status }, { onConflict: "event_id,member_id" });
       if (error) throw error;
     },
-    onSuccess: () => { toast({ title: "RSVP updated!" }); queryClient.invalidateQueries({ queryKey: ["events"] }); },
+    onSuccess: (_, vars) => {
+      toast({ title: vars.status === "going" ? "You're attending this event!" : "RSVP cancelled." });
+      queryClient.invalidateQueries({ queryKey: ["events"] });
+    },
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
@@ -375,9 +378,17 @@ export default function Events() {
                             )}
                             <ReportDialog entityType="event" entityId={event.id} entityName={event.name} variant="icon" />
                             {myRsvp?.status === "going" ? (
-                              <Badge className="bg-success/20 text-success h-9 px-4"><Check className="w-3.5 h-3.5 mr-1" />Going</Badge>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-9 text-success border-success/40 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/40 transition-colors"
+                                onClick={() => rsvpMutation.mutate({ eventId: event.id, status: "not_going" })}
+                                disabled={rsvpMutation.isPending}
+                              >
+                                <Check className="w-3.5 h-3.5 mr-1" />Going · Cancel
+                              </Button>
                             ) : (
-                              <Button size="sm" className="gradient-warm text-primary-foreground h-9" onClick={() => rsvpMutation.mutate({ eventId: event.id, status: "going" })}>RSVP Now</Button>
+                              <Button size="sm" className="gradient-warm text-primary-foreground h-9" onClick={() => rsvpMutation.mutate({ eventId: event.id, status: "going" })} disabled={rsvpMutation.isPending}>RSVP Now</Button>
                             )}
                           </div>
                         </div>

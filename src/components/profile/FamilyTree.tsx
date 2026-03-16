@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
-import { Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Users, RefreshCw } from "lucide-react";
 
 interface FamilyMember {
   id: string;
@@ -40,21 +41,47 @@ function RelationGroup({ label, members }: { label: string; members: FamilyMembe
 }
 
 export function FamilyTree({ memberId }: { memberId: string }) {
-  const { data: links, isLoading } = useQuery({
+  const { data: links, isLoading, isError, refetch } = useQuery({
     queryKey: ["family-tree", memberId],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("family_links")
         .select("id, relation, related:members!family_links_related_member_id_fkey(id, first_name, last_name, verification_level)")
         .eq("member_id", memberId)
         .not("related_member_id", "is", null);
+      if (error) throw error;
       return (data ?? []) as FamilyMember[];
     },
     enabled: !!memberId,
+    retry: 1,
+    staleTime: 30_000,
   });
 
-  if (isLoading) return <div className="animate-pulse h-12 bg-muted rounded-lg" />;
-  if (!links?.length) return null;
+  if (isLoading) {
+    return (
+      <div aria-label="Loading family connections" className="space-y-2">
+        <div className="animate-pulse h-4 w-32 bg-muted rounded" />
+        <div className="animate-pulse h-9 w-48 bg-muted rounded-lg" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive flex items-center justify-between gap-3">
+        <span>Unable to load family data. Please try again.</span>
+        <Button size="sm" variant="outline" className="h-7 text-xs shrink-0" onClick={() => refetch()}>
+          <RefreshCw className="w-3 h-3 mr-1" /> Retry
+        </Button>
+      </div>
+    );
+  }
+
+  if (!links?.length) {
+    return (
+      <p className="text-sm text-muted-foreground">No family connections linked yet.</p>
+    );
+  }
 
   const grouped = RELATION_ORDER.reduce<Record<string, FamilyMember[]>>((acc, rel) => {
     const matches = links.filter((l) => l.relation?.toLowerCase() === rel);
