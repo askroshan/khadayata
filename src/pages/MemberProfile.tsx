@@ -17,6 +17,8 @@ import { format, parseISO } from "date-fns";
 import { useMember } from "@/hooks/useMember";
 import { usePermissions, useRoles } from "@/hooks/useRoles";
 import { ReportDialog } from "@/components/ReportDialog";
+import { FamilyTree } from "@/components/profile/FamilyTree";
+import { SakhaEndorsement } from "@/components/profile/SakhaEndorsement";
 
 export default function MemberProfile() {
   const { id } = useParams<{ id: string }>();
@@ -601,20 +603,25 @@ export default function MemberProfile() {
           </Card>
         )}
 
-        {/* Family links */}
-        {familyLinks && familyLinks.length > 0 && (
-          <Card className="shadow-card">
-            <CardHeader><CardTitle className="text-lg font-display flex items-center gap-2"><Users className="w-4 h-4 text-primary" />Family</CardTitle></CardHeader>
-            <CardContent className="space-y-2">
-              {familyLinks.map((fl) => (
-                <div key={fl.id} className="flex items-center gap-2 text-sm">
-                  <Badge variant="outline" className="capitalize">{fl.relation}</Badge>
-                  <span>{(fl.related as { first_name: string; last_name: string } | null)?.first_name} {(fl.related as { first_name: string; last_name: string } | null)?.last_name}</span>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        )}
+        {/* Family tree */}
+        <Card className="shadow-card">
+          <CardHeader><CardTitle className="text-lg font-display flex items-center gap-2"><Users className="w-4 h-4 text-primary" />Family</CardTitle></CardHeader>
+          <CardContent>
+            <FamilyTree memberId={id!} />
+            {(!familyLinks || familyLinks.length === 0) && (
+              <p className="text-sm text-muted-foreground">No family connections linked yet.</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Sakha endorsement */}
+        <SakhaEndorsement
+          targetMemberId={id!}
+          currentMemberId={currentMember?.id ?? null}
+          currentMemberLevel={currentMember?.verification_level ?? 0}
+          targetMemberLevel={member.verification_level ?? 0}
+          isOwnProfile={isOwnProfile}
+        />
 
         {/* Vouches */}
         <Card className="shadow-card">

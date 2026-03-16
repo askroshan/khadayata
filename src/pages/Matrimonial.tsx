@@ -22,6 +22,7 @@ import { ProfileDetailDialog } from "@/components/matrimonial/ProfileDetailDialo
 import { ProfileForm } from "@/components/matrimonial/ProfileForm";
 import { SearchFilters, EMPTY_FILTERS, type Filters } from "@/components/matrimonial/SearchFilters";
 import { MatrimonialModerationPanel } from "@/components/matrimonial/MatrimonialModerationPanel";
+import { RishtaWorkflow } from "@/components/matrimonial/RishtaWorkflow";
 
 // ── Profile Card ─────────────────────────────────────────────────────
 function ProfileCard({
@@ -374,12 +375,15 @@ export default function Matrimonial() {
           {/* Has profile — show tabs; no profile — show moderator panel or browse-only view */}
           {myProfile ? (
             <Tabs defaultValue="matches" className="space-y-4">
-              <TabsList className={`w-full grid ${canManageMatrimonial ? "grid-cols-4" : "grid-cols-3"}`}>
+              <TabsList className={`w-full grid ${canManageMatrimonial ? "grid-cols-5" : "grid-cols-4"}`}>
                 <TabsTrigger value="matches" className="text-xs sm:text-sm">
                   <Heart className="w-3.5 h-3.5 mr-1 hidden sm:inline" /> Matches
                 </TabsTrigger>
+                <TabsTrigger value="rishta" className="text-xs sm:text-sm">
+                  <Star className="w-3.5 h-3.5 mr-1 hidden sm:inline" /> Rishta
+                </TabsTrigger>
                 <TabsTrigger value="introductions" className="text-xs sm:text-sm">
-                  <MessageCircle className="w-3.5 h-3.5 mr-1 hidden sm:inline" /> Introductions
+                  <MessageCircle className="w-3.5 h-3.5 mr-1 hidden sm:inline" /> Intros
                 </TabsTrigger>
                 <TabsTrigger value="myprofile" className="text-xs sm:text-sm">
                   <User className="w-3.5 h-3.5 mr-1 hidden sm:inline" /> My Profile
@@ -419,13 +423,18 @@ export default function Matrimonial() {
                             key={p.id} profile={p} score={score} alreadySent={!!alreadySent}
                             onSendIntro={() => sendIntro.mutate(p.member_id)} sending={sendIntro.isPending}
                             myProfile={myProfile}
-                            onRishta={() => setRishtaTarget(p)}
+                            onRishta={myProfile ? () => setRishtaTarget(p) : undefined}
                           />
                         );
                       })}
                     </div>
                   </>
                 )}
+              </TabsContent>
+
+              {/* ── Rishta Tab ── */}
+              <TabsContent value="rishta" className="space-y-4">
+                <RishtaWorkflow myProfileId={myProfile.id} />
               </TabsContent>
 
               {/* ── Introductions Tab ── */}

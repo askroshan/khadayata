@@ -22,6 +22,9 @@ import DirectoryTab from "@/components/admin/DirectoryTab";
 import EventsTab from "@/components/admin/EventsTab";
 import FinanceTab from "@/components/admin/FinanceTab";
 import NewsPublisherTab from "@/components/admin/NewsPublisherTab";
+import WhatsAppTab from "@/components/admin/WhatsAppTab";
+import SMSTab from "@/components/admin/SMSTab";
+import BannedKeywordsTab from "@/components/admin/BannedKeywordsTab";
 
 export default function Admin() {
   const { user, loading } = useAuth();
@@ -143,6 +146,9 @@ export default function Admin() {
               {canManageFunds && <TabsTrigger value="finance" className="gap-1 text-xs sm:text-sm"><DollarSign className="w-3.5 h-3.5" />Finance</TabsTrigger>}
               {canPublishNews && <TabsTrigger value="publisher" className="gap-1 text-xs sm:text-sm"><Newspaper className="w-3.5 h-3.5" />My Content</TabsTrigger>}
               {(isGlobalAdmin || isChapterAdmin) && <TabsTrigger value="samiti" className="text-xs sm:text-sm">Samiti</TabsTrigger>}
+              {isGlobalAdmin && <TabsTrigger value="whatsapp" className="text-xs sm:text-sm">WhatsApp</TabsTrigger>}
+              {isGlobalAdmin && <TabsTrigger value="sms" className="text-xs sm:text-sm">SMS</TabsTrigger>}
+              {(isGlobalAdmin || isModerator) && <TabsTrigger value="keywords" className="text-xs sm:text-sm">Keywords</TabsTrigger>}
             </TabsList>
           </div>
 
@@ -209,6 +215,21 @@ export default function Admin() {
           {(isGlobalAdmin || isChapterAdmin) && (
             <TabsContent value="samiti" className="mt-4">
               <SamitiTab />
+            </TabsContent>
+          )}
+          {isGlobalAdmin && (
+            <TabsContent value="whatsapp" className="mt-4">
+              <WhatsAppTab />
+            </TabsContent>
+          )}
+          {isGlobalAdmin && (
+            <TabsContent value="sms" className="mt-4">
+              <SMSTab />
+            </TabsContent>
+          )}
+          {(isGlobalAdmin || isModerator) && (
+            <TabsContent value="keywords" className="mt-4">
+              <BannedKeywordsTab />
             </TabsContent>
           )}
         </Tabs>

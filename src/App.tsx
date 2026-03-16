@@ -32,6 +32,7 @@ import OralHistory from "./pages/OralHistory";
 import EmergencyContacts from "./pages/EmergencyContacts";
 import Chapters from "./pages/Chapters";
 import ChapterDetail from "./pages/ChapterDetail";
+import EldersCouncil from "./pages/EldersCouncil";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -72,6 +73,7 @@ const App = () => (
               <Route path="/emergency" element={<EmergencyContacts />} />
               <Route path="/chapters" element={<Chapters />} />
               <Route path="/chapters/:slug" element={<ChapterDetail />} />
+              <Route path="/elders-council" element={<EldersCouncil />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
             </ErrorBoundary>

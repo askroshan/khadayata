@@ -50,14 +50,14 @@
 | US-014 | Business & Jobs filtering | User | ✅ DONE | `src/pages/Business.tsx`: Tab-based view for Businesses and Jobs. Filters by category, city, and verification status. Search by name. Business details dialog with contact info and report button. Jobs show salary range, employment type. |
 | US-015 | Matrimonial — browse profiles | Matrimonial User | ✅ DONE | `src/pages/Matrimonial.tsx`: Browse tab shows all verified profiles with match % scores. `SearchFilters` component for gotra, gender, age range, height, education, occupation, city. Profile detail dialog with full bio. Send introduction messages. Own profile management (create/edit). Moderator review panel. |
 | US-016 | Gotra filtering in matrimonial search | Community Member | ✅ DONE | `SearchFilters` component includes gotra dropdown. `hasGotraConflict()` and `hasEkdaConflict()` functions in `src/components/matrimonial/constants.ts` flag incompatible matches with warning icons on profile cards. |
-| US-017 | Family tree connections with privacy controls | Community Member | ⚠️ DEFERRED | `families` and `family_links` tables exist in schema. `FamilyInviteDialog` component exists at `src/components/profile/FamilyInviteDialog.tsx`. Full interactive family tree visualization (D3/react-flow) deferred — backend data model in place; frontend tree view is out of current scope. |
-| US-018 | Elders Council digital forum with voting/polling | Community Elder | ⚠️ DEFERRED | No dedicated Elders Council table or forum feature. Would require new `council_threads`, `council_votes` tables and a separate forum UI. Deferred to next milestone. |
-| US-019 | WhatsApp integration for alerts | Chapter Member | ⚠️ DEFERRED | `whatsapp_templates` and `whatsapp_messages` tables exist. `supabase/functions/send-whatsapp/index.ts` edge function is deployed. Frontend admin trigger UI not yet built. WhatsApp API credentials must be configured separately. |
-| US-020 | Sakha Verification badge via elder endorsement | Member | ⚠️ DEFERRED | `verification_requests` table handles level-up requests. Elder endorsement workflow (where an L4/L5 member endorses another) requires additional UI in MemberProfile and RLS policy changes. Deferred. |
-| US-021 | Automated content flagging based on keywords | Moderator | ⚠️ DEFERRED | Manual reporting via `src/components/ReportDialog.tsx` is fully working. Automatic keyword-based flagging requires a database trigger or edge function. Deferred — manual moderation covers the immediate need. |
+| US-017 | Family tree connections with privacy controls | Community Member | ✅ DONE | `src/components/profile/FamilyTree.tsx` — visual tree grouped by relation type (spouse, parent, child, sibling). Each member renders as a linked chip with initials avatar + verification-level badge. Integrated into `MemberProfile.tsx` replacing the old static family links section. Reads from existing `family_links` table via `related:members!family_links_related_member_id_fkey` join. |
+| US-018 | Elders Council digital forum with voting/polling | Community Elder | ✅ DONE | `src/pages/EldersCouncil.tsx` — full forum with thread list, up/down voting (±1 `council_votes`), category filter bar (general/governance/tradition/announcement/poll), thread detail dialog with paginated replies. New thread creation gated to L3+ members. New DB tables: `council_threads`, `council_votes`, `council_replies`. Route `/elders-council` added; nav item added to Heritage group in `AppLayout.tsx`. |
+| US-019 | WhatsApp integration for alerts | Chapter Member | ✅ DONE | `src/components/admin/WhatsAppTab.tsx` — template CRUD (name/language/category/header/body/footer), send dialog (single recipient or blast-all-members mode), message history tab. Calls existing `send-whatsapp` edge function. Exposed in Admin panel as "WhatsApp" tab (Global Admin only). |
+| US-020 | Sakha Verification badge via elder endorsement | Member | ✅ DONE | `src/components/profile/SakhaEndorsement.tsx` — endorsement panel shown on all member profiles. L3+ members can endorse others below L3. Shows endorsement count, history list, and "Endorse for Sakha" button. Inserts into `verification_requests` with `status = 'endorsed'`, `requested_level = 3`. Integrated into `MemberProfile.tsx`. |
+| US-021 | Automated content flagging based on keywords | Moderator | ✅ DONE | `banned_keywords` DB table (keyword + severity: low/medium/high). `fn_autoflag_content()` PL/pgSQL trigger fires on `content_news` (INSERT/UPDATE title/summary/body) and `oral_histories` (INSERT/UPDATE title/transcript) — inserts into `reports` with `category = 'auto_flagged'` when a keyword matches. `src/components/admin/BannedKeywordsTab.tsx` admin UI for managing the keyword list. 5 seed keywords: spam, scam, fraud, fake, offensive. |
 | US-022 | Kuldevi/Kuldevta section in profiles | Member | ✅ DONE | `kuldevi` field on `members` table. Shown in `MemberProfile.tsx` and editable in `Onboarding.tsx` and `Profile.tsx`. Matrimonial profile also exposes kuldevi. |
-| US-023 | Rishta recommendation with family approval workflow | Member | ⚠️ DEFERRED | Match scoring (`matchScore()`) implemented in matrimonial constants. Introduction messages supported. Full approval workflow with family sign-off, sub-caste rules, and multi-step state machine is deferred. |
-| US-024 | SMS alerts for urgent announcements | Chapter Admin | ⚠️ DEFERRED | Not implemented. Requires Twilio/MSG91 integration and API credentials. `whatsapp_messages` table exists but SMS-specific integration is out of current scope. |
+| US-023 | Rishta recommendation with family approval workflow | Member | ✅ DONE | `src/components/matrimonial/RishtaWorkflow.tsx` — full 5-state FSM: `intro_sent → family_review → family_approved → accepted | declined | withdrawn`. `RishtaCard` shows status badge, family-OK indicators, contextual action buttons (send to family, family-OK, accept/decline, withdraw). Dedicated "Rishta" tab added to `Matrimonial.tsx`. New `rishta_requests` DB table with `from_family_ok`/`to_family_ok` booleans and `family_notes` JSONB. |
+| US-024 | SMS alerts for urgent announcements | Chapter Admin | ✅ DONE | `supabase/functions/send-sms/index.ts` edge function (deployed) — Twilio API integration, verifies Global Admin role, logs to `sms_messages` table. `src/components/admin/SMSTab.tsx` admin UI: single recipient tab (phone + message, 160-char limit) and blast-all-members tab (fetches members with phones). History tab queries `sms_messages`. Exposed in Admin panel as "SMS" tab (Global Admin only). Requires `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` secrets. |
 | US-025 | Community Help for medical/financial emergencies | Member | ✅ DONE | `src/pages/EmergencyContacts.tsx` for emergency contacts. `medical_aid_requests` table with admin review in `FinanceTab` (Medical Aid sub-tab). Hall booking via `hall_bookings`. Finance panel shows pending/approved requests filterable by chapter. |
 
 ---
@@ -68,7 +68,7 @@
 - [x] All 4 WCAG 2.2 AA issues resolved — skip nav, landmarks, ARIA labels, search roles
 - [x] US-001 through US-016 implemented and working
 - [x] US-022 and US-025 implemented and working
-- [x] US-017, 018, 019, 020, 021, 023, 024 deferred with documented reasoning (backend infrastructure in place where applicable)
+- [x] US-017, 018, 019, 020, 021, 023, 024 implemented and working (all 25 user stories complete)
 - [x] Build passes — `npm run build` succeeds with 2166+ modules
 - [x] `docs/dbschema.md` updated — full schema including samiti_groups, funds, receipts, magazine_issues, book_pages, verification_requests, families, family_links, whatsapp_templates, whatsapp_messages, notification_preferences
 - [x] `docs/api.md` updated — Edge Functions (generate-global-id, send-whatsapp), RPC functions, Storage Buckets, Moderator and Finance Admin query patterns
@@ -76,16 +76,16 @@
 
 ---
 
-## Deferred Items Summary
+## Completion Summary
 
-8 user stories are deferred. Backend infrastructure is partially in place for most:
+All 25 user stories are now fully implemented. No stories remain deferred.
 
-| Story | Reason for Deferral | Backend Ready |
-|-------|---------------------|---------------|
-| US-017 Family Tree | Needs D3/react-flow visualization; tables exist | `families`, `family_links` tables ✅ |
-| US-018 Elders Council | Needs new forum/polling tables and separate UI | Schema not yet created |
-| US-019 WhatsApp Frontend | Edge function deployed; needs admin trigger UI + API credentials | Edge function + tables ✅ |
-| US-020 Sakha Verification | Needs L4/L5 endorsement UI + RLS policy update | `verification_requests` ✅ |
-| US-021 Auto-flagging | Needs DB trigger or edge function | Manual reporting ✅ |
-| US-023 Rishta Workflow | Match scoring done; needs family approval state machine | Introductions partial ✅ |
-| US-024 SMS Alerts | Needs Twilio/MSG91 API integration and credentials | Schema not yet created |
+| Story | Key Deliverables |
+|-------|-----------------|
+| US-017 Family Tree | `FamilyTree.tsx` component in `MemberProfile`, grouped by relation type |
+| US-018 Elders Council | `/elders-council` forum page, `council_threads/votes/replies` tables |
+| US-019 WhatsApp Admin UI | `WhatsAppTab.tsx` in Admin panel, template CRUD + blast sending |
+| US-020 Sakha Endorsement | `SakhaEndorsement.tsx` in `MemberProfile`, L3+ endorsement flow |
+| US-021 Auto-flagging | `banned_keywords` table + `fn_autoflag_content()` trigger + `BannedKeywordsTab.tsx` |
+| US-023 Rishta Workflow | `RishtaWorkflow.tsx` + `rishta_requests` table, 5-state FSM |
+| US-024 SMS Alerts | `send-sms` edge function (Twilio) + `SMSTab.tsx` in Admin panel |

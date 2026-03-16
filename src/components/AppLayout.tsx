@@ -58,6 +58,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { icon: Library, label: "Khadayata Jyoti", path: "/archives" },
       { icon: Mic, label: "Oral History", path: "/oral-history" },
+      { icon: BookMarked, label: "Elders Council", path: "/elders-council" },
     ],
   },
   {
