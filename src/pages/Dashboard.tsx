@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import communityGathering from "@/assets/community-gathering.jpg";
 import diyaLamp from "@/assets/diya-lamp.png";
+import { L1UpgradeBanner } from "@/components/verification/L1UpgradeBanner";
 
 function getPanchangDates() {
   const now = new Date();
@@ -163,6 +164,9 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+
+        {/* L1/L2 upgrade banner — shown only when level < 2 */}
+        <L1UpgradeBanner />
 
         {/* Quick links grid */}
         <div className="grid gap-4 grid-cols-2 lg:grid-cols-3">

@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Building2, MapPin, Plus, ExternalLink, CircleCheck as CheckCircle, Briefcase, TrendingUp, Phone, Mail, Globe, Clock, DollarSign, Users, GraduationCap, Search } from "lucide-react";
 import { ReportDialog } from "@/components/ReportDialog";
+import { L2GateButton } from "@/components/verification/VerificationGate";
 import businessHero from "@/assets/business-hero.jpg";
 
 const SECTORS = ["Healthcare", "Technology", "Education", "Finance", "Real Estate", "Retail", "Manufacturing", "Hospitality", "Legal", "Construction", "Textile", "Diamond & Jewellery", "Food & Beverage", "Transport & Logistics", "Agriculture", "Other"];
@@ -220,6 +221,9 @@ export default function Business() {
                     <SelectItem value="unverified">Unverified</SelectItem>
                   </SelectContent>
                 </Select>
+                {(member?.verification_level ?? 0) < 2 ? (
+                  <L2GateButton featureName="List Business" />
+                ) : (
                 <Dialog>
                   <DialogTrigger asChild>
                     <Button className="gradient-hero text-primary-foreground shrink-0"><Plus className="w-4 h-4 mr-1" />List Business</Button>
@@ -281,6 +285,7 @@ export default function Business() {
                     </div>
                   </DialogContent>
                 </Dialog>
+                )}
               </div>
 
               {businesses?.length === 0 && <div className="text-center py-16"><Building2 className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" /><p className="text-muted-foreground">No businesses found</p></div>}
@@ -340,6 +345,7 @@ export default function Business() {
                   <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
                   <Input id="job-location-filter" placeholder="Location..." value={jobLocationFilter} onChange={e => setJobLocationFilter(e.target.value)} className="pl-9" />
                 </div>
+                {(member?.verification_level ?? 0) >= 2 ? (
                 <Dialog>
                   <DialogTrigger asChild>
                     <Button className="gradient-hero text-primary-foreground shrink-0"><Plus className="w-4 h-4 mr-1" />Post Job</Button>
@@ -407,6 +413,9 @@ export default function Business() {
                     </div>
                   </DialogContent>
                 </Dialog>
+                ) : (
+                  <L2GateButton featureName="Post Job" />
+                )}
               </div>
 
               {!jobs?.length && <div className="text-center py-16"><Briefcase className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" /><p className="text-muted-foreground">No open jobs</p></div>}

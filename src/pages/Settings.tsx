@@ -49,10 +49,14 @@ export default function Settings() {
   }, [member?.id]);
 
   useEffect(() => {
-    if (notifPrefs && !notifLocal) {
-      setNotifLocal({ email_enabled: notifPrefs.email_enabled ?? true, whatsapp_enabled: notifPrefs.whatsapp_enabled ?? false, push_enabled: notifPrefs.push_enabled ?? false });
+    if (!notifLocal) {
+      setNotifLocal({
+        email_enabled: notifPrefs?.email_enabled ?? true,
+        whatsapp_enabled: notifPrefs?.whatsapp_enabled ?? false,
+        push_enabled: notifPrefs?.push_enabled ?? false,
+      });
     }
-  }, [notifPrefs]);
+  }, [notifPrefs?.email_enabled, notifPrefs?.whatsapp_enabled, notifPrefs?.push_enabled]);
 
   const savePrivacy = useMutation({
     mutationFn: async () => {

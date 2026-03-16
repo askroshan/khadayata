@@ -22,7 +22,7 @@ Primary table storing all community member records. A record is auto-created via
 | user_id | uuid | No | — | Foreign key to auth.users |
 | chapter_id | uuid | Yes | — | Foreign key to chapters |
 | global_id | text | Yes | — | Unique global identifier (e.g. KHDINGJ AHM26000001Z) |
-| verification_level | smallint | No | 0 | 0=unverified, 1=basic, 2=standard, 3=full |
+| verification_level | smallint | No | 0 | 0=L0 Unverified, 1=L1 Vouched (2 vouches), 2=L2 Verified (3 L1+ vouches + KYC doc), 3=L3 Senior (admin-granted) |
 | first_name | text | No | '' | First name |
 | middle_names | text | Yes | — | Middle name(s) |
 | last_name | text | No | '' | Last name |

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useMember } from "@/hooks/useMember";
+import { useRoles } from "@/hooks/useRoles";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -29,6 +30,7 @@ interface ReportDialogProps {
 
 export function ReportDialog({ entityType, entityId, entityName, variant = "icon", className }: ReportDialogProps) {
   const { member } = useMember();
+  const { isModerator, isAnyAdmin } = useRoles();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -87,8 +89,8 @@ export function ReportDialog({ entityType, entityId, entityName, variant = "icon
     </Button>
   );
 
-  if (!member) {
-    return null; // Only show for logged-in users
+  if (!member || (!isModerator && !isAnyAdmin)) {
+    return null;
   }
 
   return (

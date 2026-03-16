@@ -520,6 +520,117 @@ The `<ReportDialog>` component accepts the following `entityType` values:
 
 ---
 
+## SMS — Easify Integration
+
+SMS messages are sent via the **Easify** platform (`https://backend.easify.app/api/v2`). Two edge functions handle SMS.
+
+**From Number:** `+1 (682) 432-9400`
+
+**Required Secret:** `EASIFY_API_TOKEN` (from Easify dashboard Settings > API Settings)
+
+**Access Control:** Global Admin only for both endpoints.
+
+---
+
+### send-sms (Single Message)
+
+**Endpoint:** `POST /send-sms`
+
+**Request Body:**
+```json
+{
+  "to": "9876543210",
+  "body": "Hello from KhadayataOnline!",
+  "country_code": "1",
+  "recipient_member_id": "uuid (optional)"
+}
+```
+
+- `to`: Digits only, no leading `+` or country code
+- `country_code`: Defaults to `"1"` if omitted
+- Easify rate limit: 15 requests/minute
+
+**Response (Success):**
+```json
+{ "success": true, "result": { ... } }
+```
+
+**Error Responses:**
+- `401` - Unauthenticated
+- `403` - Not a Global Admin
+- `500` - `EASIFY_API_TOKEN` not configured
+- `502` - Easify API error
+
+**Logging:** All sends logged to `sms_messages` table with provider `"easify"`.
+
+---
+
+### send-sms-campaign (Bulk Blast)
+
+**Endpoint:** `POST /send-sms-campaign`
+
+**Request Body:**
+```json
+{
+  "group_id": "12345",
+  "message": "Community announcement...",
+  "campaign_name": "Diwali 2026 (optional)"
+}
+```
+
+- `group_id`: Easify Contact Group ID (find in Easify dashboard)
+- Campaign processed server-side at higher volume than single SMS
+- `campaign_name` defaults to `"Blast <ISO timestamp>"` if omitted
+
+**Response (Success):**
+```json
+{ "success": true, "result": { "campaign_id": "...", ... } }
+```
+
+**Logging:** Logged to `sms_messages` with `recipient_phone = "group:<group_id>"`.
+
+---
+
+## RBAC — Role-Based Access Control
+
+### Report / Moderation Visibility
+
+`ReportDialog` (used on member profiles, business cards, job listings, events, news, matrimonial profiles, oral histories, and mentorship cards) is **only rendered for Moderators and Admins**.
+
+| Role | Can See Report Button |
+|------|----------------------|
+| L0 — Unverified | No |
+| L1 — Vouched | No |
+| L2 — Verified | No |
+| Moderator | Yes |
+| Chapter Admin | Yes |
+| Global Admin | Yes |
+| Data Steward | Yes |
+
+### Feature Gates by Verification Level
+
+| Feature | L0 | L1 | L2+ |
+|---------|----|----|-----|
+| View directory, events, news, archives | Yes | Yes | Yes |
+| Vouch for members | Yes | Yes | Yes |
+| Post Jobs | No | No | Yes |
+| List Business | No | No | Yes |
+| Create Events | No | No | Event Manager role required |
+| Matrimonial profile | Yes | Yes | Yes |
+| Submit reports | No | No | Moderator/Admin role required |
+
+### L1 → L2 Upgrade Requirements
+
+| Level | Requirement |
+|-------|-------------|
+| L0 → L1 | 2 vouches from any verified members |
+| L1 → L2 | 3 vouches from L1+ members + KYC document upload |
+| L2 → L3 | Admin-granted only |
+
+The `L1UpgradeBanner` component on the Dashboard shows real-time progress towards the next level.
+
+---
+
 ## Versioning
 
 Current API Version: **v1**
