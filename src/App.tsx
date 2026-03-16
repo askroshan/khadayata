@@ -33,6 +33,11 @@ import EmergencyContacts from "./pages/EmergencyContacts";
 import Chapters from "./pages/Chapters";
 import ChapterDetail from "./pages/ChapterDetail";
 import EldersCouncil from "./pages/EldersCouncil";
+import Contact from "./pages/Contact";
+import Terms from "./pages/Terms";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import CookiePolicy from "./pages/CookiePolicy";
+import Accessibility from "./pages/Accessibility";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -74,6 +79,11 @@ const App = () => (
               <Route path="/chapters" element={<Chapters />} />
               <Route path="/chapters/:slug" element={<ChapterDetail />} />
               <Route path="/elders-council" element={<EldersCouncil />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/cookie-policy" element={<CookiePolicy />} />
+              <Route path="/accessibility" element={<Accessibility />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
             </ErrorBoundary>

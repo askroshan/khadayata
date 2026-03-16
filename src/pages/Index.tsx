@@ -90,7 +90,7 @@ export default function Index() {
               <Button asChild size="lg" className="gradient-hero text-primary-foreground shadow-glow h-12 sm:h-14 px-6 sm:px-8 text-sm sm:text-base">
                 <Link to="/auth">Get Started Free <ArrowRight className="w-5 h-5 ml-2" /></Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="h-12 sm:h-14 px-6 sm:px-8 text-sm sm:text-base border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10">
+                      <Button asChild variant="outline" size="lg" className="h-12 sm:h-14 px-6 sm:px-8 text-sm sm:text-base border-2 border-white/60 text-white bg-white/10 hover:bg-white/20 hover:border-white backdrop-blur-sm">
                 <a href="#features">Learn More</a>
               </Button>
             </div>
@@ -225,17 +225,23 @@ export default function Index() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border py-12 bg-card">
+      <footer className="border-t border-border pt-12 pb-0 bg-card">
         <div className="container">
-          <div className="grid gap-8 md:grid-cols-4">
-            <div className="md:col-span-2">
+          <div className="grid gap-8 md:grid-cols-4 pb-10">
+            <div className="md:col-span-1">
               <div className="flex items-center gap-2 mb-3">
                 <img src={patternOrnament} alt="" className="w-6 h-6 opacity-80" />
                 <span className="font-display font-bold text-gradient-hero">KhadayataOnline</span>
               </div>
-              <p className="text-sm text-muted-foreground max-w-sm">
+              <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
                 Preserving heritage. Empowering community. Connecting generations across the globe.
               </p>
+              <div className="text-xs text-muted-foreground space-y-1">
+                <p>1320 Pepperhill Ln</p>
+                <p>Fort Worth, TX 76131</p>
+                <a href="tel:+16824329400" className="hover:text-primary transition-colors block">+1 (682) 432-9400</a>
+                <a href="mailto:support@khadayataonline.com" className="hover:text-primary transition-colors block">support@khadayataonline.com</a>
+              </div>
             </div>
             <div>
               <h4 className="font-display font-semibold text-sm mb-3">Platform</h4>
@@ -244,6 +250,7 @@ export default function Index() {
                 <li><Link to="/events" className="hover:text-primary transition-colors">Events</Link></li>
                 <li><Link to="/business" className="hover:text-primary transition-colors">Business</Link></li>
                 <li><Link to="/matrimonial" className="hover:text-primary transition-colors">Matrimonial</Link></li>
+                <li><Link to="/contact" className="hover:text-primary transition-colors">Contact Us</Link></li>
               </ul>
             </div>
             <div>
@@ -252,11 +259,22 @@ export default function Index() {
                 <li><Link to="/temple" className="hover:text-primary transition-colors">Kotyark Temple</Link></li>
                 <li><Link to="/archives" className="hover:text-primary transition-colors">Archives</Link></li>
                 <li><Link to="/news" className="hover:text-primary transition-colors">News</Link></li>
+                <li><Link to="/oral-history" className="hover:text-primary transition-colors">Oral History</Link></li>
+                <li><Link to="/elders-council" className="hover:text-primary transition-colors">Elders Council</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-display font-semibold text-sm mb-3">Legal</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><Link to="/terms" className="hover:text-primary transition-colors">Terms of Use</Link></li>
+                <li><Link to="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
+                <li><Link to="/cookie-policy" className="hover:text-primary transition-colors">Cookie Policy</Link></li>
+                <li><Link to="/accessibility" className="hover:text-primary transition-colors">Accessibility</Link></li>
               </ul>
             </div>
           </div>
-          <div className="border-t border-border mt-8 pt-8 text-center text-xs text-muted-foreground">
-            <p>&copy; {new Date().getFullYear()} KhadayataOnline. All rights reserved.</p>
+          <div className="border-t border-border py-6 text-center text-xs text-muted-foreground">
+            <p>&copy; {new Date().getFullYear()} KhadayataOnline. All rights reserved. &bull; Jai Jai Khadayata</p>
           </div>
         </div>
       </footer>
