@@ -34,21 +34,21 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Community",
     items: [
       { icon: Users, label: "Members", path: "/directory" },
-      { icon: Heart, label: "Matrimonial", path: "/matrimonial" },
+      { icon: Heart, label: "Matrimonial", path: "/matrimonial/manage" },
     ],
   },
   {
     label: "Economy",
     items: [
       { icon: Briefcase, label: "Business & Jobs", path: "/business/manage" },
-      { icon: Handshake, label: "Mentorship", path: "/mentorship" },
-      { icon: GraduationCap, label: "Scholarships", path: "/scholarships" },
+      { icon: Handshake, label: "Mentorship", path: "/mentorship/manage" },
+      { icon: GraduationCap, label: "Scholarships", path: "/scholarships/manage" },
     ],
   },
   {
     label: "Engage",
     items: [
-      { icon: Calendar, label: "Events", path: "/events" },
+      { icon: Calendar, label: "Events", path: "/events/manage" },
       { icon: Newspaper, label: "News", path: "/news/manage" },
       { icon: Building2, label: "Kotyark Temple", path: "/temple" },
       { icon: IndianRupee, label: "Donate", path: "/temple" },

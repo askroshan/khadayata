@@ -29,6 +29,10 @@ import NewsDetail from "./pages/NewsDetail";
 import Profile from "./pages/Profile";
 import Mentorship from "./pages/Mentorship";
 import Scholarships from "./pages/Scholarships";
+import PublicEvents from "./pages/PublicEvents";
+import PublicScholarships from "./pages/PublicScholarships";
+import PublicMentorship from "./pages/PublicMentorship";
+import PublicMatrimonial from "./pages/PublicMatrimonial";
 import Services from "./pages/Services";
 import OralHistory from "./pages/OralHistory";
 import EmergencyContacts from "./pages/EmergencyContacts";
@@ -60,13 +64,17 @@ const App = () => (
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/directory" element={<Directory />} />
               <Route path="/member/:id" element={<MemberProfile />} />
-              <Route path="/events" element={<Events />} />
+              {/* Events: public listing at /events, management at /events/manage */}
+              <Route path="/events" element={<PublicEvents />} />
+              <Route path="/events/manage" element={<Events />} />
 
               {/* Business: public listing at /business, management at /business/manage */}
               <Route path="/business" element={<PublicBusiness />} />
               <Route path="/business/manage" element={<Business />} />
 
-              <Route path="/matrimonial" element={<Matrimonial />} />
+              {/* Matrimonial: public listing at /matrimonial, full app at /matrimonial/manage */}
+              <Route path="/matrimonial" element={<PublicMatrimonial />} />
+              <Route path="/matrimonial/manage" element={<Matrimonial />} />
               <Route path="/temple" element={<Temple />} />
               <Route path="/archives" element={<Archives />} />
               <Route path="/search" element={<GlobalSearch />} />
@@ -80,8 +88,13 @@ const App = () => (
               <Route path="/news/:id" element={<NewsDetail />} />
 
               <Route path="/profile" element={<Profile />} />
-              <Route path="/mentorship" element={<Mentorship />} />
-              <Route path="/scholarships" element={<Scholarships />} />
+              {/* Mentorship: public listing at /mentorship, full app at /mentorship/manage */}
+              <Route path="/mentorship" element={<PublicMentorship />} />
+              <Route path="/mentorship/manage" element={<Mentorship />} />
+
+              {/* Scholarships: public listing at /scholarships, full app at /scholarships/manage */}
+              <Route path="/scholarships" element={<PublicScholarships />} />
+              <Route path="/scholarships/manage" element={<Scholarships />} />
               <Route path="/services" element={<Services />} />
               <Route path="/oral-history" element={<OralHistory />} />
               <Route path="/emergency" element={<EmergencyContacts />} />
