@@ -14,39 +14,6 @@ const NAV_LINKS = [
   { label: "Temple", href: "/temple" },
 ];
 
-const FOOTER_COLS = [
-  {
-    title: "Platform",
-    links: [
-      ["Directory", "/directory"],
-      ["Events", "/events"],
-      ["Business", "/business"],
-      ["Matrimonial", "/matrimonial"],
-      ["Mentorship", "/mentorship"],
-      ["Scholarships", "/scholarships"],
-      ["Contact Us", "/contact"],
-    ],
-  },
-  {
-    title: "Heritage",
-    links: [
-      ["Kotyark Temple", "/temple"],
-      ["Archives", "/archives"],
-      ["News", "/news"],
-      ["Oral History", "/oral-history"],
-      ["Elders Council", "/elders-council"],
-      ["Services", "/services"],
-    ],
-  },
-  {
-    title: "Legal",
-    links: [
-      ["Terms of Use", "/terms"],
-      ["Privacy Policy", "/privacy"],
-      ["Accessibility", "/accessibility"],
-    ],
-  },
-];
 
 export default function PublicLayout({ children, title, description }: {
   children: ReactNode;
@@ -206,28 +173,87 @@ export default function PublicLayout({ children, title, description }: {
               </div>
             </div>
 
-            {/* Link columns */}
-            {FOOTER_COLS.map((col) => (
-              <div key={col.title}>
-                <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", marginBottom: 18, marginTop: 0 }}>
-                  {col.title}
-                </p>
-                <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 11 }}>
-                  {col.links.map(([label, href]) => (
-                    <li key={href}>
-                      <Link
-                        to={href}
-                        style={{ fontSize: 13, color: "rgba(255,255,255,0.42)", textDecoration: "none", transition: "color .18s" }}
-                        onMouseEnter={e => (e.currentTarget.style.color = "#F4B400")}
-                        onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.42)")}
-                      >
-                        {label}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+            {/* Platform links */}
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", marginBottom: 18, marginTop: 0 }}>
+                Platform
+              </p>
+              <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 11 }}>
+                {[
+                  ["Directory", "/directory"],
+                  ["Events", "/events"],
+                  ["Business", "/business"],
+                  ["Matrimonial", "/matrimonial"],
+                  ["Mentorship", "/mentorship"],
+                  ["Scholarships", "/scholarships"],
+                  ["Contact Us", "/contact"],
+                ].map(([label, href]) => (
+                  <li key={href}>
+                    <Link
+                      to={href}
+                      style={{ fontSize: 13, color: "rgba(255,255,255,0.42)", textDecoration: "none", transition: "color .18s" }}
+                      onMouseEnter={e => (e.currentTarget.style.color = "#F4B400")}
+                      onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.42)")}
+                    >
+                      {label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Heritage links */}
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", marginBottom: 18, marginTop: 0 }}>
+                Heritage
+              </p>
+              <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 11 }}>
+                {[
+                  ["Kotyark Temple", "/temple"],
+                  ["Archives", "/archives"],
+                  ["News", "/news"],
+                  ["Oral History", "/oral-history"],
+                  ["Elders Council", "/elders-council"],
+                  ["Services", "/services"],
+                ].map(([label, href]) => (
+                  <li key={href}>
+                    <Link
+                      to={href}
+                      style={{ fontSize: 13, color: "rgba(255,255,255,0.42)", textDecoration: "none", transition: "color .18s" }}
+                      onMouseEnter={e => (e.currentTarget.style.color = "#F4B400")}
+                      onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.42)")}
+                    >
+                      {label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Legal links */}
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", marginBottom: 18, marginTop: 0 }}>
+                Legal
+              </p>
+              <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 11 }}>
+                {[
+                  ["Terms of Use", "/terms"],
+                  ["Privacy Policy", "/privacy"],
+                  ["Accessibility", "/accessibility"],
+                ].map(([label, href]) => (
+                  <li key={href}>
+                    <Link
+                      to={href}
+                      style={{ fontSize: 13, color: "rgba(255,255,255,0.42)", textDecoration: "none", transition: "color .18s" }}
+                      onMouseEnter={e => (e.currentTarget.style.color = "#F4B400")}
+                      onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.42)")}
+                    >
+                      {label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
 
           {/* Bottom bar */}
