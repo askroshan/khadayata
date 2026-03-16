@@ -1,0 +1,317 @@
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
+import { Building2, Briefcase, Search, CircleCheck as CheckCircle, CircleX, Clock, MapPin, Phone, ExternalLink } from "lucide-react";
+import { Link } from "react-router-dom";
+
+interface DirectoryTabProps {
+  myChapterId: string | null;
+}
+
+export default function DirectoryTab({ myChapterId }: DirectoryTabProps) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [bizSearch, setBizSearch] = useState("");
+  const [jobSearch, setJobSearch] = useState("");
+
+  const { data: businesses, isLoading: bizLoading } = useQuery({
+    queryKey: ["admin-businesses", myChapterId, bizSearch],
+    queryFn: async () => {
+      let q = supabase
+        .from("businesses")
+        .select("*, owner:members!businesses_owner_member_id_fkey(id, first_name, last_name), chapters(name)")
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (myChapterId) q = q.eq("chapter_id", myChapterId);
+      if (bizSearch.trim()) q = q.or(`name.ilike.%${bizSearch}%,sector.ilike.%${bizSearch}%`);
+      const { data } = await q;
+      return data ?? [];
+    },
+  });
+
+  const { data: jobs, isLoading: jobsLoading } = useQuery({
+    queryKey: ["admin-jobs", myChapterId, jobSearch],
+    queryFn: async () => {
+      let q = supabase
+        .from("jobs")
+        .select("*, employer:members!jobs_employer_member_id_fkey(id, first_name, last_name), chapters(name)")
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (myChapterId) q = q.eq("chapter_id", myChapterId);
+      if (jobSearch.trim()) q = q.or(`title.ilike.%${jobSearch}%,location.ilike.%${jobSearch}%`);
+      const { data } = await q;
+      return data ?? [];
+    },
+  });
+
+  const verifyBizMutation = useMutation({
+    mutationFn: async ({ id, verified }: { id: string; verified: boolean }) => {
+      const { error } = await supabase.from("businesses").update({ verified }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_, { verified }) => {
+      toast({ title: verified ? "Business verified" : "Verification removed" });
+      queryClient.invalidateQueries({ queryKey: ["admin-businesses"] });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const updateJobStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const { error } = await supabase.from("jobs").update({ status }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Job status updated" });
+      queryClient.invalidateQueries({ queryKey: ["admin-jobs"] });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const pendingBiz = businesses?.filter((b) => !b.verified) ?? [];
+  const verifiedBiz = businesses?.filter((b) => b.verified) ?? [];
+  const openJobs = jobs?.filter((j) => j.status === "open") ?? [];
+  const closedJobs = jobs?.filter((j) => j.status !== "open") ?? [];
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Card className="shadow-card">
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-amber-600">{pendingBiz.length}</p>
+            <p className="text-xs text-muted-foreground mt-1">Pending Verification</p>
+          </CardContent>
+        </Card>
+        <Card className="shadow-card">
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-emerald-600">{verifiedBiz.length}</p>
+            <p className="text-xs text-muted-foreground mt-1">Verified Businesses</p>
+          </CardContent>
+        </Card>
+        <Card className="shadow-card">
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-blue-600">{openJobs.length}</p>
+            <p className="text-xs text-muted-foreground mt-1">Open Jobs</p>
+          </CardContent>
+        </Card>
+        <Card className="shadow-card">
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-muted-foreground">{(businesses?.length ?? 0) + (jobs?.length ?? 0)}</p>
+            <p className="text-xs text-muted-foreground mt-1">Total Listings</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Tabs defaultValue="businesses">
+        <TabsList>
+          <TabsTrigger value="businesses" className="gap-1.5">
+            <Building2 className="w-3.5 h-3.5" />
+            Businesses
+            {pendingBiz.length > 0 && (
+              <Badge className="ml-1 h-4 px-1.5 text-[9px] bg-amber-500 text-white border-0">{pendingBiz.length}</Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="jobs" className="gap-1.5">
+            <Briefcase className="w-3.5 h-3.5" />
+            Jobs ({openJobs.length})
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Businesses Tab */}
+        <TabsContent value="businesses" className="mt-4 space-y-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search businesses..."
+              value={bizSearch}
+              onChange={(e) => setBizSearch(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+          {pendingBiz.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5" /> Pending Verification ({pendingBiz.length})
+              </p>
+              <div className="space-y-2">
+                {pendingBiz.map((b) => (
+                  <Card key={b.id} className="shadow-card border-amber-200/60">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="font-semibold text-sm">{b.name}</h4>
+                            {b.sector && <Badge variant="secondary" className="text-xs">{b.sector}</Badge>}
+                          </div>
+                          {b.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{b.description}</p>}
+                          <div className="flex flex-wrap gap-2 mt-2 text-xs text-muted-foreground">
+                            {b.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{b.phone}</span>}
+                            {b.website && <a href={b.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary hover:underline"><ExternalLink className="w-3 h-3" />Website</a>}
+                          </div>
+                          {b.owner && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Owner:{" "}
+                              <Link to={`/member/${(b.owner as { id: string }).id}`} className="text-primary hover:underline">
+                                {(b.owner as { first_name: string; last_name: string }).first_name} {(b.owner as { first_name: string; last_name: string }).last_name}
+                              </Link>
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex gap-2 shrink-0">
+                          <Button
+                            size="sm"
+                            className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white"
+                            onClick={() => verifyBizMutation.mutate({ id: b.id, verified: true })}
+                            disabled={verifyBizMutation.isPending}
+                          >
+                            <CheckCircle className="w-3.5 h-3.5 mr-1" /> Verify
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {verifiedBiz.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                <CheckCircle className="w-3.5 h-3.5" /> Verified ({verifiedBiz.length})
+              </p>
+              <div className="space-y-2">
+                {verifiedBiz.map((b) => (
+                  <Card key={b.id} className="shadow-card">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
+                          <span className="font-medium text-sm truncate">{b.name}</span>
+                          {b.sector && <Badge variant="outline" className="text-xs shrink-0">{b.sector}</Badge>}
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs text-destructive border-destructive/30 hover:bg-destructive/5 shrink-0"
+                          onClick={() => verifyBizMutation.mutate({ id: b.id, verified: false })}
+                          disabled={verifyBizMutation.isPending}
+                        >
+                          <CircleX className="w-3.5 h-3.5 mr-1" /> Revoke
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!bizLoading && (!businesses || businesses.length === 0) && (
+            <div className="text-center py-12 text-muted-foreground">
+              <Building2 className="w-10 h-10 mx-auto mb-2 opacity-30" />
+              <p className="text-sm">No business listings found</p>
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Jobs Tab */}
+        <TabsContent value="jobs" className="mt-4 space-y-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search jobs..."
+              value={jobSearch}
+              onChange={(e) => setJobSearch(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+          {openJobs.map((j) => (
+            <Card key={j.id} className="shadow-card">
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="font-semibold text-sm">{j.title}</h4>
+                      <Badge variant="outline" className="text-xs capitalize">
+                        {(j.employment_type ?? "full_time").replace("_", " ")}
+                      </Badge>
+                      <Badge className="text-xs bg-emerald-100 text-emerald-700 border-0">Open</Badge>
+                    </div>
+                    {j.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{j.description}</p>}
+                    <div className="flex flex-wrap gap-2 mt-2 text-xs text-muted-foreground">
+                      {j.location && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{j.location}</span>}
+                    </div>
+                    {j.employer && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Posted by:{" "}
+                        <Link to={`/member/${(j.employer as { id: string }).id}`} className="text-primary hover:underline">
+                          {(j.employer as { first_name: string; last_name: string }).first_name} {(j.employer as { first_name: string; last_name: string }).last_name}
+                        </Link>
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 text-xs text-destructive border-destructive/30 hover:bg-destructive/5"
+                      onClick={() => updateJobStatusMutation.mutate({ id: j.id, status: "closed" })}
+                      disabled={updateJobStatusMutation.isPending}
+                    >
+                      <CircleX className="w-3.5 h-3.5 mr-1" /> Close
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+
+          {closedJobs.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Closed / Filled ({closedJobs.length})</p>
+              <div className="space-y-2">
+                {closedJobs.map((j) => (
+                  <Card key={j.id} className="shadow-card opacity-60">
+                    <CardContent className="p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-medium">{j.title}</span>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs capitalize">{j.status}</Badge>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs"
+                            onClick={() => updateJobStatusMutation.mutate({ id: j.id, status: "open" })}
+                            disabled={updateJobStatusMutation.isPending}
+                          >
+                            Reopen
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!jobsLoading && (!jobs || jobs.length === 0) && (
+            <div className="text-center py-12 text-muted-foreground">
+              <Briefcase className="w-10 h-10 mx-auto mb-2 opacity-30" />
+              <p className="text-sm">No job listings found</p>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
