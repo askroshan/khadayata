@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, MapPin, Briefcase, GraduationCap, Heart, Users, ChevronUp, ChevronDown, CreditCard as Edit, UserCheck, UserX, FileText, ClipboardList, Pencil } from "lucide-react";
+import { Shield, MapPin, Briefcase, GraduationCap, Heart, Users, ChevronUp, ChevronDown, CreditCard as Edit, UserCheck, UserX, FileText, ClipboardList, Pencil, MessageCircle } from "lucide-react";
 import { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { useMember } from "@/hooks/useMember";
@@ -357,6 +357,15 @@ export default function MemberProfile() {
                     <span className="ml-1 rounded-full bg-primary/15 text-primary text-xs px-1.5 py-0.5">{verificationHistory.length}</span>
                   )}
                 </Button>
+              </div>
+            )}
+            {/* Ask-to-vouch nudge for L0 members viewing others' profiles */}
+            {!isOwnProfile && (currentMember?.verification_level ?? 0) < 1 && (
+              <div className="mt-3 flex items-start gap-2 rounded-lg bg-amber-50/60 border border-amber-200/50 dark:bg-amber-900/10 dark:border-amber-700/30 px-3 py-2.5 text-xs text-amber-800 dark:text-amber-300">
+                <MessageCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                <span>
+                  Need to get verified? Ask <strong>{member.first_name}</strong> to vouch for you — scroll down to the Vouches section to send a vouch request.
+                </span>
               </div>
             )}
             {/* Report button */}

@@ -19,7 +19,7 @@ import { AvatarUpload } from "@/components/AvatarUpload";
 import { QRCodeDisplay } from "@/components/QRCodeDisplay";
 import { PhoneField } from "@/components/profile/PhoneField";
 import { FamilyInviteDialog } from "@/components/profile/FamilyInviteDialog";
-import { User, Briefcase, GraduationCap, Users, Shield, QrCode, CreditCard as Edit, Check, X, Plus, Trash2, MapPin, Award } from "lucide-react";
+import { User, Briefcase, GraduationCap, Users, Shield, QrCode, CreditCard as Edit, Check, X, Plus, Trash2, MapPin, Award, Heart, ArrowRight } from "lucide-react";
 import { format } from "date-fns";
 
 const GENDERS = ["Male", "Female", "Other", "Prefer not to say"];
@@ -94,7 +94,7 @@ export default function Profile() {
       if (!member) return [];
       const { data } = await supabase
         .from("vouches")
-        .select("id, created_at, note, voucher:members!vouches_voucher_member_id_fkey(id, first_name, last_name, photo_url, global_id)")
+        .select("id, created_at, note, voucher:members!vouches_voucher_member_id_fkey(id, first_name, last_name, photo_url, global_id, verification_level)")
         .eq("member_id", member.id)
         .order("created_at", { ascending: false });
       return data ?? [];
@@ -618,7 +618,38 @@ export default function Profile() {
               )}
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            {/* Verification progress for L0 and L1 members */}
+            {(member?.verification_level ?? 0) < 2 && (
+              <div className={`rounded-xl p-4 space-y-3 ${(member?.verification_level ?? 0) === 0 ? "bg-amber-50/60 border border-amber-200/50 dark:bg-amber-900/10 dark:border-amber-700/30" : "bg-blue-50/60 border border-blue-200/50 dark:bg-blue-900/10 dark:border-blue-700/30"}`}>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-muted-foreground">
+                    {(member?.verification_level ?? 0) === 0
+                      ? `Vouches to reach L1: ${Math.min(vouches?.length ?? 0, 2)}/2`
+                      : `L1+ vouches to reach L2: ${Math.min(vouches?.filter((v) => ((v.voucher as { verification_level?: number } | null)?.verification_level ?? 0) >= 1).length ?? 0, 3)}/3`
+                    }
+                  </p>
+                  <Link to="/directory" className="text-xs text-primary hover:underline flex items-center gap-1">
+                    Find members <ArrowRight className="w-3 h-3" />
+                  </Link>
+                </div>
+                <Progress
+                  value={
+                    (member?.verification_level ?? 0) === 0
+                      ? Math.min((vouches?.length ?? 0) / 2, 1) * 100
+                      : Math.min((vouches?.filter((v) => ((v.voucher as { verification_level?: number } | null)?.verification_level ?? 0) >= 1).length ?? 0) / 3, 1) * 100
+                  }
+                  className={`h-2 ${(member?.verification_level ?? 0) === 0 ? "bg-amber-100 [&>div]:bg-amber-500" : "bg-blue-100 [&>div]:bg-blue-500"}`}
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  {(member?.verification_level ?? 0) === 0
+                    ? "Visit the Member Directory and ask verified members to vouch for you."
+                    : "You need 3 vouches from L1+ verified members plus a KYC document to reach L2."
+                  }
+                </p>
+              </div>
+            )}
+
             {!vouches || vouches.length === 0 ? (
               <div className="text-center py-4">
                 <p className="text-sm text-muted-foreground">No vouches yet</p>

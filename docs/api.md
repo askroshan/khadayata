@@ -612,22 +612,33 @@ SMS messages are sent via the **Easify** platform (`https://backend.easify.app/a
 | Feature | L0 | L1 | L2+ |
 |---------|----|----|-----|
 | View directory, events, news, archives | Yes | Yes | Yes |
-| Vouch for members | Yes | Yes | Yes |
-| Post Jobs | No | No | Yes |
-| List Business | No | No | Yes |
-| Create Events | No | No | Event Manager role required |
-| Matrimonial profile | Yes | Yes | Yes |
+| Vouch for other members | Yes | Yes | Yes |
+| Post Jobs | No (L2 gate shown) | No (L2 gate shown) | Yes |
+| List Business | No (L2 gate shown) | No (L2 gate shown) | Yes |
+| Create Events | No (Event Manager role required) | No | Event Manager role required |
+| Matrimonial profile — browse | Yes | Yes | Yes |
+| Matrimonial profile — create | No (L1 gate) | Yes | Yes |
 | Submit reports | No | No | Moderator/Admin role required |
+
+### L0-Specific UX Nudges
+
+| Location | Nudge |
+|----------|-------|
+| Dashboard | `L1UpgradeBanner` — progress bar 0/2 vouches, checklist, link to Settings |
+| Profile page | Vouched By card — progress bar + "Find members" link to Directory |
+| Member profiles | Amber callout: "Ask [Name] to vouch for you — scroll to Vouches" |
+| Directory | Amber banner: explains how to get vouched from any verified member |
+| Matrimonial | Locked amber card: "L1 Verification Required" + "Get Verified" button |
 
 ### L1 → L2 Upgrade Requirements
 
 | Level | Requirement |
 |-------|-------------|
-| L0 → L1 | 2 vouches from any verified members |
+| L0 → L1 | 2 vouches from any members |
 | L1 → L2 | 3 vouches from L1+ members + KYC document upload |
 | L2 → L3 | Admin-granted only |
 
-The `L1UpgradeBanner` component on the Dashboard shows real-time progress towards the next level.
+The `L1UpgradeBanner` component on the Dashboard shows real-time progress towards the next level. The profile page's Vouched By card also shows level-appropriate progress for L0 and L1 members.
 
 ---
 

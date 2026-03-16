@@ -15,6 +15,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Heart, Shield, Send, Check, X, Sparkles, User, MapPin, GraduationCap, Briefcase, Ruler, Scale, UtensilsCrossed, Star, Users, Eye, Pencil, Calendar, Gem, BookOpen, Chrome as Home, UserCheck, MessageCircle, Glasses, Car, Globe, Building, BadgeDollarSign, Linkedin, Phone, Crown, Flag, Trash2 } from "lucide-react";
 import matrimonialHero from "@/assets/matrimonial-hero.jpg";
 import { usePermissions } from "@/hooks/useRoles";
+import { Link } from "react-router-dom";
+import { Lock } from "lucide-react";
 
 import { MatrimonialProfile, computeAge, cmToFeetInches, matchScore, hasGotraConflict, hasEkdaConflict } from "@/components/matrimonial/constants";
 import { InfoChip } from "@/components/matrimonial/InfoChip";
@@ -338,8 +340,8 @@ export default function Matrimonial() {
         </div>
 
         <div className="px-3 sm:px-6 pb-4 sm:pb-6 space-y-4 sm:space-y-6">
-            {/* Profile creation form (when requested) */}
-          {!myProfile && showForm && (
+            {/* Profile creation form (when requested, requires L1) */}
+          {!myProfile && showForm && (member?.verification_level ?? 0) >= 1 && (
             <Card className="shadow-elevated">
               <CardHeader>
                 <CardTitle className="font-display flex items-center gap-2">
@@ -355,21 +357,44 @@ export default function Matrimonial() {
 
           {/* No profile CTA banner (shown above browse, not instead of it) */}
           {!myProfile && !showForm && !canManageMatrimonial && (
-            <Card className="shadow-elevated border-secondary/20 overflow-hidden">
-              <div className="gradient-jewel px-6 py-5 sm:py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="text-center sm:text-left">
-                  <h3 className="font-display font-bold text-lg sm:text-xl text-primary-foreground flex items-center gap-2 justify-center sm:justify-start">
-                    <Sparkles className="w-5 h-5" /> Create Your Profile to Connect
-                  </h3>
-                  <p className="text-primary-foreground/70 mt-1 text-sm max-w-lg">
-                    Browse community profiles below. Create your own profile to send introductions and show your match score.
-                  </p>
+            (member?.verification_level ?? 0) >= 1 ? (
+              <Card className="shadow-elevated border-secondary/20 overflow-hidden">
+                <div className="gradient-jewel px-6 py-5 sm:py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="text-center sm:text-left">
+                    <h3 className="font-display font-bold text-lg sm:text-xl text-primary-foreground flex items-center gap-2 justify-center sm:justify-start">
+                      <Sparkles className="w-5 h-5" /> Create Your Profile to Connect
+                    </h3>
+                    <p className="text-primary-foreground/70 mt-1 text-sm max-w-lg">
+                      Browse community profiles below. Create your own profile to send introductions and show your match score.
+                    </p>
+                  </div>
+                  <Button onClick={() => setShowForm(true)} className="shrink-0 bg-primary-foreground text-foreground hover:bg-primary-foreground/90 h-10 px-6">
+                    <Heart className="w-4 h-4 mr-2" /> Create My Profile
+                  </Button>
                 </div>
-                <Button onClick={() => setShowForm(true)} className="shrink-0 bg-primary-foreground text-foreground hover:bg-primary-foreground/90 h-10 px-6">
-                  <Heart className="w-4 h-4 mr-2" /> Create My Profile
-                </Button>
-              </div>
-            </Card>
+              </Card>
+            ) : (
+              <Card className="shadow-card border-amber-200/60 bg-amber-50/40 dark:bg-amber-900/10 dark:border-amber-700/30">
+                <CardContent className="p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+                      <Lock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <div>
+                      <p className="font-display font-semibold text-sm">L1 Verification Required</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Get 2 vouches from community members to create a matrimonial profile. You can browse profiles now.
+                      </p>
+                    </div>
+                  </div>
+                  <Link to="/settings?tab=verification">
+                    <Button size="sm" variant="outline" className="border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-600 dark:text-amber-300 shrink-0">
+                      Get Verified
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            )
           )}
 
           {/* Has profile — show tabs; no profile — show moderator panel or browse-only view */}

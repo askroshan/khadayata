@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Navigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useMember } from "@/hooks/useMember";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import AppLayout from "@/components/AppLayout";
@@ -8,13 +9,14 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, MapPin, Shield, Users } from "lucide-react";
+import { Search, MapPin, Shield, Users, Heart } from "lucide-react";
 
 const VERIFICATION_LABELS: Record<number, string> = { 0: "L0", 1: "L1", 2: "L2" };
 const VERIFICATION_COLORS: Record<number, string> = { 0: "bg-muted text-muted-foreground", 1: "bg-gold/20 text-gold-foreground", 2: "bg-success/20 text-success" };
 
 export default function Directory() {
   const { user, loading } = useAuth();
+  const { member: currentMember } = useMember();
   const [search, setSearch] = useState("");
   const [chapterFilter, setChapterFilter] = useState("all");
 
@@ -64,7 +66,16 @@ export default function Directory() {
           </div>
         </div>
 
-        <div className="px-3 sm:px-6 pb-4 sm:pb-6">
+        <div className="px-3 sm:px-6 pb-4 sm:pb-6 space-y-4">
+          {/* L0 nudge — ask members to vouch */}
+          {(currentMember?.verification_level ?? 0) === 0 && (
+            <div className="flex items-start gap-3 rounded-xl bg-amber-50/60 border border-amber-200/50 dark:bg-amber-900/10 dark:border-amber-700/30 px-4 py-3">
+              <Heart className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-800 dark:text-amber-300">
+                <strong>Get vouched to reach L1.</strong> Click on any verified member's card to visit their profile, then scroll to the Vouches section to vouch for them — or ask them to vouch for you. You need 2 vouches to unlock full access.
+              </p>
+            </div>
+          )}
           {isLoading ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {[1,2,3,4,5,6].map(i => <div key={i} className="h-24 rounded-xl bg-muted animate-pulse" />)}
