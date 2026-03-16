@@ -39,7 +39,7 @@ export default function PublicMentorship() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("mentorships")
-        .select("id, skills, bio, status, mentor:members!mentorships_mentor_member_id_fkey(id, first_name, last_name, photo_url, verification_level, chapters(name))")
+        .select("id, skills, description, status, mode, availability, mentor:members!mentorships_mentor_member_id_fkey(id, first_name, last_name, photo_url, verification_level, chapters(name))")
         .eq("status", "available")
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -234,12 +234,12 @@ export default function PublicMentorship() {
                       </div>
                     </div>
 
-                    {m.bio && (
+                    {m.description && (
                       <p style={{ fontSize: 13, color: "#555", margin: "0 0 10px", lineHeight: 1.55,
                         overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3,
                         WebkitBoxOrient: "vertical" as any,
                       }}>
-                        {m.bio}
+                        {m.description}
                       </p>
                     )}
 

@@ -59,7 +59,8 @@ export default function PublicMatrimonial() {
             chapters(name)
           )
         `)
-        .eq("status", "approved")
+        .eq("visibility", "members")
+        .eq("suspended", false)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
