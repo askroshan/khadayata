@@ -130,131 +130,88 @@ export default function PublicLayout({ children, title, description }: {
         itemType="https://schema.org/Organization"
       >
         <div style={{ maxWidth: 1280, margin: "0 auto" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 48, paddingBottom: 52 }} className="footer-grid">
-            {/* Brand */}
-            <div>
-              <Link to="/" style={{ display: "inline-block", marginBottom: 18, textDecoration: "none" }}>
-                <img
-                  src={LOGO}
-                  alt="Khadayata"
-                  itemProp="logo"
-                  style={{ height: 52, width: "auto", mixBlendMode: "screen", opacity: 0.9 }}
-                />
-              </Link>
-              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.52)", lineHeight: 1.75, maxWidth: 320, marginBottom: 20 }} itemProp="description">
-                Khadayata Online is the world's most comprehensive platform for the Khadayata community —
-                connecting families across 28 countries through a verified global identity, events, business, and heritage.
-              </p>
-              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.38)", lineHeight: 2 }} itemProp="address" itemScope itemType="https://schema.org/PostalAddress">
-                <p style={{ margin: 0 }} itemProp="streetAddress">1320 Pepperhill Ln</p>
-                <p style={{ margin: 0 }}>
-                  <span itemProp="addressLocality">Fort Worth</span>,{" "}
-                  <span itemProp="addressRegion">TX</span>{" "}
-                  <span itemProp="postalCode">76131</span>
-                </p>
-                <a
-                  href="tel:+16824329400"
-                  style={{ color: "rgba(255,255,255,0.38)", textDecoration: "none", display: "block" }}
-                  itemProp="telephone"
-                  onMouseEnter={e => (e.currentTarget.style.color = "#F4B400")}
-                  onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.38)")}
-                >
-                  +1 (682) 432-9400
-                </a>
-                <a
-                  href="mailto:support@khadayataonline.com"
-                  style={{ color: "rgba(255,255,255,0.38)", textDecoration: "none", display: "block" }}
-                  itemProp="email"
-                  onMouseEnter={e => (e.currentTarget.style.color = "#F4B400")}
-                  onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.38)")}
-                >
-                  support@khadayataonline.com
-                </a>
-              </div>
+          {/* Brand row */}
+          <div style={{ paddingBottom: 40, borderBottom: "1px solid rgba(255,255,255,0.07)", marginBottom: 40 }}>
+            <Link to="/" style={{ display: "inline-block", marginBottom: 14, textDecoration: "none" }}>
+              <img
+                src={LOGO}
+                alt="Khadayata"
+                itemProp="logo"
+                style={{ height: 48, width: "auto", mixBlendMode: "screen", opacity: 0.9 }}
+              />
+            </Link>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", lineHeight: 1.7, maxWidth: 560, marginBottom: 14, marginTop: 0 }} itemProp="description">
+              Khadayata Online is the world's most comprehensive platform for the Khadayata community —
+              connecting families across 28 countries through a verified global identity, events, business, and heritage.
+            </p>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", lineHeight: 1.9, display: "flex", flexWrap: "wrap", gap: "0 32px" }} itemProp="address" itemScope itemType="https://schema.org/PostalAddress">
+              <span itemProp="streetAddress">1320 Pepperhill Ln, <span itemProp="addressLocality">Fort Worth</span>, <span itemProp="addressRegion">TX</span> <span itemProp="postalCode">76131</span></span>
+              <a href="tel:+16824329400" style={{ color: "rgba(255,255,255,0.35)", textDecoration: "none" }} itemProp="telephone"
+                onMouseEnter={e => (e.currentTarget.style.color = "#F4B400")}
+                onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.35)")}
+              >+1 (682) 432-9400</a>
+              <a href="mailto:support@khadayataonline.com" style={{ color: "rgba(255,255,255,0.35)", textDecoration: "none" }} itemProp="email"
+                onMouseEnter={e => (e.currentTarget.style.color = "#F4B400")}
+                onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.35)")}
+              >support@khadayataonline.com</a>
             </div>
+          </div>
 
+          {/* Link columns grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 32, paddingBottom: 52 }} className="footer-grid">
             {/* Platform links */}
             <div>
-              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", marginBottom: 18, marginTop: 0 }}>
-                Platform
-              </p>
-              <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 11 }}>
-                {[
-                  ["Directory", "/directory"],
-                  ["Events", "/events"],
-                  ["Business", "/business"],
-                  ["Matrimonial", "/matrimonial"],
-                  ["Mentorship", "/mentorship"],
-                  ["Scholarships", "/scholarships"],
-                  ["Contact Us", "/contact"],
-                ].map(([label, href]) => (
-                  <li key={href}>
-                    <Link
-                      to={href}
-                      style={{ fontSize: 13, color: "rgba(255,255,255,0.42)", textDecoration: "none", transition: "color .18s" }}
-                      onMouseEnter={e => (e.currentTarget.style.color = "#F4B400")}
-                      onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.42)")}
-                    >
-                      {label}
-                    </Link>
-                  </li>
+              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", marginBottom: 16, marginTop: 0 }}>Platform</p>
+              <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 10 }}>
+                {([["Directory", "/directory"], ["Events", "/events"], ["Business", "/business"], ["Matrimonial", "/matrimonial"], ["Mentorship", "/mentorship"], ["Scholarships", "/scholarships"], ["Obituaries", "/obituaries"], ["Contact Us", "/contact"]] as [string, string][]).map(([label, href]) => (
+                  <li key={href}><Link to={href} style={{ fontSize: 13, color: "rgba(255,255,255,0.42)", textDecoration: "none", transition: "color .18s" }}
+                    onMouseEnter={e => (e.currentTarget.style.color = "#F4B400")}
+                    onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.42)")}
+                  >{label}</Link></li>
                 ))}
               </ul>
             </div>
 
             {/* Heritage links */}
             <div>
-              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", marginBottom: 18, marginTop: 0 }}>
-                Heritage
-              </p>
-              <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 11 }}>
-                {[
-                  ["Kotyark Temple", "/temple"],
-                  ["Archives", "/archives"],
-                  ["News", "/news"],
-                  ["Oral History", "/oral-history"],
-                  ["Elders Council", "/elders-council"],
-                  ["Services", "/services"],
-                ].map(([label, href]) => (
-                  <li key={href}>
-                    <Link
-                      to={href}
-                      style={{ fontSize: 13, color: "rgba(255,255,255,0.42)", textDecoration: "none", transition: "color .18s" }}
-                      onMouseEnter={e => (e.currentTarget.style.color = "#F4B400")}
-                      onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.42)")}
-                    >
-                      {label}
-                    </Link>
-                  </li>
+              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", marginBottom: 16, marginTop: 0 }}>Heritage</p>
+              <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 10 }}>
+                {([["Kotyark Temple", "/temple"], ["Archives", "/archives"], ["News", "/news"], ["Oral History", "/oral-history"], ["Elders Council", "/elders-council"], ["Services", "/services"]] as [string, string][]).map(([label, href]) => (
+                  <li key={href}><Link to={href} style={{ fontSize: 13, color: "rgba(255,255,255,0.42)", textDecoration: "none", transition: "color .18s" }}
+                    onMouseEnter={e => (e.currentTarget.style.color = "#F4B400")}
+                    onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.42)")}
+                  >{label}</Link></li>
                 ))}
               </ul>
             </div>
 
-            {/* Legal links */}
+            {/* Chapters & Community */}
             <div>
-              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", marginBottom: 18, marginTop: 0 }}>
-                Legal
-              </p>
-              <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 11 }}>
-                {[
-                  ["Terms of Use", "/terms"],
-                  ["Privacy Policy", "/privacy"],
-                  ["Accessibility", "/accessibility"],
-                ].map(([label, href]) => (
-                  <li key={href}>
-                    <Link
-                      to={href}
-                      style={{ fontSize: 13, color: "rgba(255,255,255,0.42)", textDecoration: "none", transition: "color .18s" }}
-                      onMouseEnter={e => (e.currentTarget.style.color = "#F4B400")}
-                      onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.42)")}
-                    >
-                      {label}
-                    </Link>
-                  </li>
+              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", marginBottom: 16, marginTop: 0 }}>Community</p>
+              <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 10 }}>
+                {([["Chapters", "/chapters"], ["Dashboard", "/dashboard"], ["Profile", "/profile"], ["Settings", "/settings"]] as [string, string][]).map(([label, href]) => (
+                  <li key={href}><Link to={href} style={{ fontSize: 13, color: "rgba(255,255,255,0.42)", textDecoration: "none", transition: "color .18s" }}
+                    onMouseEnter={e => (e.currentTarget.style.color = "#F4B400")}
+                    onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.42)")}
+                  >{label}</Link></li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Legal */}
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", marginBottom: 16, marginTop: 0 }}>Legal</p>
+              <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 10 }}>
+                {([["Terms of Use", "/terms"], ["Privacy Policy", "/privacy"], ["Accessibility", "/accessibility"]] as [string, string][]).map(([label, href]) => (
+                  <li key={href}><Link to={href} style={{ fontSize: 13, color: "rgba(255,255,255,0.42)", textDecoration: "none", transition: "color .18s" }}
+                    onMouseEnter={e => (e.currentTarget.style.color = "#F4B400")}
+                    onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.42)")}
+                  >{label}</Link></li>
                 ))}
               </ul>
             </div>
           </div>
+
 
           {/* Bottom bar */}
           <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", padding: "22px 0", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>

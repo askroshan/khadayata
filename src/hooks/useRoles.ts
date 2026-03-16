@@ -92,8 +92,11 @@ export function useRoles() {
 
 // Hook for checking if current user can perform specific actions
 export function usePermissions() {
-  const { isGlobalAdmin, isChapterAdmin, isDataSteward, isDirectoryManager, 
-    isEventManager, isFinanceAdmin, isPublisher, isModerator } = useRoles();
+  const { isGlobalAdmin, isChapterAdmin, isDataSteward, isDirectoryManager,
+    isEventManager, isFinanceAdmin, isPublisher, isModerator, hasRole } = useRoles();
+
+  const isGlobalPublisher = hasRole(["Global Admin", "Global Publisher"]);
+  const canManageChapter = isGlobalAdmin || isChapterAdmin;
 
   return {
     // Announcements
@@ -142,5 +145,12 @@ export function usePermissions() {
     
     // WhatsApp
     canManageWhatsApp: isGlobalAdmin,
+
+    // Obituaries
+    canPostObituaries: isGlobalAdmin || isChapterAdmin || isPublisher,
+
+    // Derived helpers used across components
+    isGlobalPublisher,
+    canManageChapter,
   };
 }
