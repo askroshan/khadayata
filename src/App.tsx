@@ -2,7 +2,18 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { useEffect } from "react";
+
+function ScrollToTop() {
+  const { pathname, hash } = useLocation();
+  useEffect(() => {
+    if (!hash) {
+      window.scrollTo({ top: 0, behavior: "instant" });
+    }
+  }, [pathname, hash]);
+  return null;
+}
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ChapterLayout } from "@/components/ChapterLayout";
@@ -44,6 +55,10 @@ import Terms from "./pages/Terms";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Accessibility from "./pages/Accessibility";
 import NotFound from "./pages/NotFound";
+import Obituaries from "./pages/Obituaries";
+import PublicOralHistory from "./pages/PublicOralHistory";
+import PublicArchives from "./pages/PublicArchives";
+import PublicEldersCouncil from "./pages/PublicEldersCouncil";
 
 const queryClient = new QueryClient();
 
@@ -54,6 +69,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <ScrollToTop />
           <ChapterLayout>
             <ErrorBoundary>
             <Routes>
@@ -76,7 +92,6 @@ const App = () => (
               <Route path="/matrimonial" element={<PublicMatrimonial />} />
               <Route path="/matrimonial/manage" element={<Matrimonial />} />
               <Route path="/temple" element={<Temple />} />
-              <Route path="/archives" element={<Archives />} />
               <Route path="/search" element={<GlobalSearch />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/moderation" element={<ModeratorDashboard />} />
@@ -96,11 +111,19 @@ const App = () => (
               <Route path="/scholarships" element={<PublicScholarships />} />
               <Route path="/scholarships/manage" element={<Scholarships />} />
               <Route path="/services" element={<Services />} />
-              <Route path="/oral-history" element={<OralHistory />} />
+              {/* Oral History: public teaser at /oral-history, full app at /oral-history/full */}
+              <Route path="/oral-history" element={<PublicOralHistory />} />
+              <Route path="/oral-history/full" element={<OralHistory />} />
               <Route path="/emergency" element={<EmergencyContacts />} />
               <Route path="/chapters" element={<Chapters />} />
               <Route path="/chapters/:slug" element={<ChapterDetail />} />
-              <Route path="/elders-council" element={<EldersCouncil />} />
+              {/* Elders Council: public teaser at /elders-council, full app at /elders-council/full */}
+              <Route path="/elders-council" element={<PublicEldersCouncil />} />
+              <Route path="/elders-council/full" element={<EldersCouncil />} />
+              {/* Archives: public teaser at /archives, full app at /archives/full */}
+              <Route path="/archives" element={<PublicArchives />} />
+              <Route path="/archives/full" element={<Archives />} />
+              <Route path="/obituaries" element={<Obituaries />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy" element={<PrivacyPolicy />} />
