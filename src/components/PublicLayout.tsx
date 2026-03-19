@@ -158,7 +158,7 @@ export default function PublicLayout({ children, title, description }: {
           </div>
 
           {/* Link columns grid */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 32, paddingBottom: 52 }} className="footer-grid">
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 1fr 1fr", gap: 32, paddingBottom: 52 }} className="footer-grid">
             {/* Platform links */}
             <div>
               <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", marginBottom: 16, marginTop: 0 }}>Platform</p>
@@ -236,10 +236,13 @@ export default function PublicLayout({ children, title, description }: {
       </footer>
 
       <style>{`
-        @media (max-width: 900px) {
+        @media (max-width: 1024px) {
           .footer-grid { grid-template-columns: 1fr 1fr !important; }
         }
         @media (max-width: 600px) {
+          .footer-grid { grid-template-columns: 1fr 1fr !important; }
+        }
+        @media (max-width: 420px) {
           .footer-grid { grid-template-columns: 1fr !important; }
         }
       `}</style>

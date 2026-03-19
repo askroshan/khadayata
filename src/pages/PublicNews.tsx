@@ -157,6 +157,31 @@ export default function PublicNews() {
 
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px" }}>
 
+          {!user && (
+            <div style={{
+              background: "linear-gradient(135deg,#2E2E2E,#1a1a1a)",
+              borderRadius: 20, padding: "28px 32px", marginBottom: 36,
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              gap: 20, flexWrap: "wrap",
+            }}>
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#fff", margin: "0 0 6px" }}>
+                  Want more from Khadayata News?
+                </h3>
+                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", margin: 0, maxWidth: 520 }}>
+                  Sign in to react and comment on articles, submit news tips to your chapter, manage your reading preferences, and receive personalised newsletters.
+                </p>
+              </div>
+              <Link to="/auth" style={{
+                display: "inline-flex", alignItems: "center", gap: 8, flexShrink: 0,
+                padding: "11px 28px", borderRadius: 50, fontSize: 13, fontWeight: 700,
+                background: "#F4B400", color: "#2E2E2E", textDecoration: "none",
+              }}>
+                Sign In / Join Free <ArrowRight size={14} />
+              </Link>
+            </div>
+          )}
+
           {isLoading && (
             <div style={{ textAlign: "center", padding: "60px 0", color: "#2E2E2E60" }}>
               <Newspaper size={40} style={{ margin: "0 auto 12px", opacity: 0.2 }} />

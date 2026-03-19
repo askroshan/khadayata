@@ -56,7 +56,7 @@ export default function PublicEldersCouncil() {
       <PublicLayout>
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "40px 24px", textAlign: "center" }}>
           <p style={{ color: "#2E2E2E80", fontSize: 15 }}>
-            You are signed in. <Link to="/elders-council" style={{ color: "#F39C12", fontWeight: 600 }}>Go to Elders Council &rarr;</Link>
+            You are signed in. <Link to="/elders-council/full" style={{ color: "#F39C12", fontWeight: 600 }}>Go to Elders Council &rarr;</Link>
           </p>
         </div>
       </PublicLayout>
@@ -100,8 +100,27 @@ export default function PublicEldersCouncil() {
           </div>
         </div>
 
+        {/* Stats bar */}
+        <div style={{ background: "#fff", borderBottom: "1px solid rgba(232,163,23,0.2)", padding: "18px 24px" }}>
+          <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", gap: 40, flexWrap: "wrap" }}>
+            {[
+              { icon: MessageCircle, label: "Active Discussions", value: `${(threads ?? []).length}+` },
+              { icon: Crown, label: "Governance Threads", value: `${(threads ?? []).filter(t => (t as Record<string,unknown>).category === "governance").length || "—"}` },
+              { icon: BarChart2, label: "Open Polls", value: `${(threads ?? []).filter(t => (t as Record<string,unknown>).category === "poll").length || "—"}` },
+            ].map(({ icon: Icon, label, value }) => (
+              <div key={label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <Icon size={20} style={{ color: "#F39C12" }} />
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: "#2E2E2E" }}>{value}</div>
+                  <div style={{ fontSize: 12, color: "#2E2E2E70" }}>{label}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* Category chips */}
-        <div style={{ background: "#fff", borderBottom: "1px solid rgba(232,163,23,0.2)", padding: "16px 24px" }}>
+        <div style={{ background: "#f8f8f8", borderBottom: "1px solid rgba(232,163,23,0.2)", padding: "16px 24px" }}>
           <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", gap: 10, flexWrap: "wrap" }}>
             {Object.entries(CATEGORY_META).map(([key, { label, color, icon: Icon }]) => (
               <div key={key} style={{

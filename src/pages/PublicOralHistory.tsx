@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import PublicLayout from "@/components/PublicLayout";
 import SEOMeta from "@/components/SEOMeta";
-import { Mic, Video, Play, Clock, Lock, ArrowRight, Users, Tag } from "lucide-react";
+import { Mic, Video, Play, Clock, Lock, ArrowRight, Users, Tag, BookOpen, Heart } from "lucide-react";
 import { format } from "date-fns";
 
 function LoginGate({ message }: { message: string }) {
@@ -48,7 +48,7 @@ export default function PublicOralHistory() {
       <PublicLayout>
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "40px 24px", textAlign: "center" }}>
           <p style={{ color: "#2E2E2E80", fontSize: 15 }}>
-            You are signed in. <Link to="/oral-history" style={{ color: "#F39C12", fontWeight: 600 }}>Go to Oral History Project &rarr;</Link>
+            You are signed in. <Link to="/oral-history/full" style={{ color: "#F39C12", fontWeight: 600 }}>Go to Oral History Project &rarr;</Link>
           </p>
         </div>
       </PublicLayout>
@@ -202,6 +202,38 @@ export default function PublicOralHistory() {
             )}
 
             <LoginGate message="Sign in to listen to recordings and contribute your own oral history" />
+          </div>
+
+          {/* What the project contains */}
+          <div style={{ marginBottom: 48 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
+              <div style={{ width: 4, height: 22, borderRadius: 2, background: "#1E88E5" }} />
+              <h2 style={{ fontSize: 18, fontWeight: 700, color: "#2E2E2E", margin: 0 }}>What You'll Find Inside</h2>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 20 }}>
+              {[
+                { icon: Mic, title: "Elder Voices", desc: "Audio recordings from Khadayata elders sharing memories of village life, festivals, and migration journeys from decades past." },
+                { icon: Video, title: "Video Testimonies", desc: "Visual stories capturing traditions, rituals, and personal accounts — a living archive for future generations to connect with their roots." },
+                { icon: BookOpen, title: "Thematic Collections", desc: "Stories grouped by themes such as Kotyark Temple, marriage customs, farming heritage, and the Khadayata diaspora experience." },
+                { icon: Heart, title: "Family Connections", desc: "Recordings linked to family profiles and the genealogy tree, so descendants can listen to stories from their own ancestors." },
+              ].map(({ icon: Icon, title, desc }) => (
+                <div key={title} style={{
+                  background: "#fff", borderRadius: 18, padding: "22px 20px",
+                  border: "1px solid rgba(232,163,23,0.18)",
+                  boxShadow: "0 2px 12px rgba(46,46,46,0.05)",
+                }}>
+                  <div style={{
+                    width: 44, height: 44, borderRadius: 12,
+                    background: "linear-gradient(135deg,rgba(243,156,18,0.15),rgba(230,126,34,0.08))",
+                    display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14,
+                  }}>
+                    <Icon size={20} style={{ color: "#F39C12" }} />
+                  </div>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, color: "#2E2E2E", margin: "0 0 6px" }}>{title}</h3>
+                  <p style={{ fontSize: 13, color: "#2E2E2E70", lineHeight: 1.6, margin: 0 }}>{desc}</p>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Why contribute */}

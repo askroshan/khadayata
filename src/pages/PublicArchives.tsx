@@ -45,7 +45,7 @@ export default function PublicArchives() {
       <PublicLayout>
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "40px 24px", textAlign: "center" }}>
           <p style={{ color: "#2E2E2E80", fontSize: 15 }}>
-            You are signed in. <Link to="/archives" style={{ color: "#F39C12", fontWeight: 600 }}>Go to Archives &rarr;</Link>
+            You are signed in. <Link to="/archives/full" style={{ color: "#F39C12", fontWeight: 600 }}>Go to Archives &rarr;</Link>
           </p>
         </div>
       </PublicLayout>
@@ -95,7 +95,7 @@ export default function PublicArchives() {
             {[
               { icon: BookOpen, label: "Magazine Issues", value: "50+" },
               { icon: FileText, label: "Digitized Pages", value: "2,000+" },
-              { icon: Mic, label: "Oral History Recordings", value: "Coming Soon" },
+              { icon: Mic, label: "Oral History Recordings", value: "Growing" },
             ].map(({ icon: Icon, label, value }) => (
               <div key={label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <Icon size={20} style={{ color: "#F39C12" }} />
