@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Navigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { useMember, useCountries, useStates, useCities } from "@/hooks/useMember";
+import { useMember, useCountries, useStates, useCities, useHasStates, useCitiesByCountry } from "@/hooks/useMember";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import AppLayout from "@/components/AppLayout";
@@ -84,8 +84,11 @@ export default function News() {
   });
 
   const { data: countries } = useCountries();
-  const { data: newsStates } = useStates(article.country_id || undefined);
-  const { data: newsCities } = useCities(article.state_id || undefined);
+  const { data: newsHasStates } = useHasStates(article.country_id || undefined);
+  const { data: newsStates } = useStates(article.country_id && newsHasStates ? article.country_id : undefined);
+  const { data: newsCitiesByState } = useCities(article.state_id || undefined);
+  const { data: newsCitiesByCountry } = useCitiesByCountry(article.country_id && newsHasStates === false ? article.country_id : undefined);
+  const newsCities = newsHasStates ? newsCitiesByState : newsCitiesByCountry;
 
   const { data: newsList } = useQuery({
     queryKey: ["news", search, categoryFilter],
@@ -288,8 +291,9 @@ export default function News() {
                       </SelectContent>
                     </Select>
                   </div>
+                  {newsHasStates !== false && (
                   <div><Label>State</Label>
-                    <Select value={article.state_id || "__none__"} onValueChange={v => setArticle({...article, state_id: v === "__none__" ? "" : v, city_id: ""})} disabled={!article.country_id}>
+                    <Select value={article.state_id || "__none__"} onValueChange={v => setArticle({...article, state_id: v === "__none__" ? "" : v, city_id: ""})} disabled={!article.country_id || !newsHasStates}>
                       <SelectTrigger><SelectValue placeholder="Select state" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="__none__">No state</SelectItem>
@@ -297,6 +301,7 @@ export default function News() {
                       </SelectContent>
                     </Select>
                   </div>
+                  )}
                   <div><Label>Tags (comma-separated)</Label><Input value={article.tags} onChange={e => setArticle({...article, tags: e.target.value})} maxLength={200} /></div>
                   <div className="sm:col-span-2 flex items-center gap-3 p-3 rounded-lg bg-muted/40 flex-wrap">
                     <label className="flex items-center gap-2 text-sm cursor-pointer">

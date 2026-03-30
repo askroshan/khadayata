@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Calendar, Users, MapPin, Plus, CreditCard as Edit, Circle as XCircle, Copy, TrendingUp, ChartBar as BarChart3, Eye, Check } from "lucide-react";
 import { format } from "date-fns";
-import { useCountries, useStates, useCities, useChapters } from "@/hooks/useMember";
+import { useCountries, useStates, useCities, useHasStates, useCitiesByCountry, useChapters } from "@/hooks/useMember";
 
 const EVENT_CATEGORIES = ["Cultural", "Religious", "Social", "Sports", "Educational", "Business", "Charity", "Youth", "Senior", "Samooha Bhojan", "Satsang", "Mahotsav", "Other"];
 const EVENT_TYPES = [
@@ -53,8 +53,11 @@ export default function EventsTab({ myChapterId }: EventsTabProps) {
 
   const { data: countries } = useCountries();
   const { data: chapters } = useChapters();
-  const { data: evtStates } = useStates(evt.country_id || undefined);
-  const { data: evtCities } = useCities(evt.state_id || undefined);
+  const { data: evtHasStates } = useHasStates(evt.country_id || undefined);
+  const { data: evtStates } = useStates(evt.country_id && evtHasStates ? evt.country_id : undefined);
+  const { data: evtCitiesByState } = useCities(evt.state_id || undefined);
+  const { data: evtCitiesByCountry } = useCitiesByCountry(evt.country_id && evtHasStates === false ? evt.country_id : undefined);
+  const evtCities = evtHasStates ? evtCitiesByState : evtCitiesByCountry;
 
   const { data: events, isLoading } = useQuery({
     queryKey: ["admin-events", myChapterId, search],
@@ -387,8 +390,9 @@ export default function EventsTab({ myChapterId }: EventsTabProps) {
                 </SelectContent>
               </Select>
             </div>
+            {evtHasStates !== false && (
             <div><Label>State</Label>
-              <Select value={evt.state_id || "__none__"} onValueChange={v => setEvt({...evt, state_id: v === "__none__" ? "" : v, city_id: ""})} disabled={!evt.country_id}>
+              <Select value={evt.state_id || "__none__"} onValueChange={v => setEvt({...evt, state_id: v === "__none__" ? "" : v, city_id: ""})} disabled={!evt.country_id || !evtHasStates}>
                 <SelectTrigger><SelectValue placeholder="Select state" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none__">None</SelectItem>
@@ -396,6 +400,7 @@ export default function EventsTab({ myChapterId }: EventsTabProps) {
                 </SelectContent>
               </Select>
             </div>
+            )}
             <div><Label>Contact Email</Label><Input type="email" value={evt.contact_email} onChange={e => setEvt({...evt, contact_email: e.target.value})} /></div>
             <div><Label>Contact Phone</Label><Input value={evt.contact_phone} onChange={e => setEvt({...evt, contact_phone: e.target.value})} /></div>
             <div className="sm:col-span-2"><Label>Tags (comma-separated)</Label><Input value={evt.tags} onChange={e => setEvt({...evt, tags: e.target.value})} placeholder="diwali, cultural, family" /></div>

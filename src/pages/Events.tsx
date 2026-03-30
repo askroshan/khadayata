@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { useMember, useCountries, useStates, useCities, useChapters } from "@/hooks/useMember";
+import { useMember, useCountries, useStates, useCities, useHasStates, useCitiesByCountry, useChapters } from "@/hooks/useMember";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import AppLayout from "@/components/AppLayout";
@@ -52,8 +52,11 @@ export default function Events() {
 
   const { data: countries } = useCountries();
   const { data: chapters } = useChapters();
-  const { data: evtStates } = useStates(evt.country_id || undefined);
-  const { data: evtCities } = useCities(evt.state_id || undefined);
+  const { data: evtHasStates } = useHasStates(evt.country_id || undefined);
+  const { data: evtStates } = useStates(evt.country_id && evtHasStates ? evt.country_id : undefined);
+  const { data: evtCitiesByState } = useCities(evt.state_id || undefined);
+  const { data: evtCitiesByCountry } = useCitiesByCountry(evt.country_id && evtHasStates === false ? evt.country_id : undefined);
+  const evtCities = evtHasStates ? evtCitiesByState : evtCitiesByCountry;
 
   const { data: events } = useQuery({
     queryKey: ["events"],
@@ -254,14 +257,16 @@ export default function Events() {
                     <SelectContent>{countries?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
+                {evtHasStates !== false && (
                 <div><Label>State</Label>
-                  <Select value={evt.state_id} onValueChange={v => setEvt({...evt, state_id: v, city_id: ""})} disabled={!evt.country_id}>
+                  <Select value={evt.state_id} onValueChange={v => setEvt({...evt, state_id: v, city_id: ""})} disabled={!evt.country_id || !evtHasStates}>
                     <SelectTrigger><SelectValue placeholder="Select state" /></SelectTrigger>
                     <SelectContent>{evtStates?.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
+                )}
                 <div><Label>City</Label>
-                  <Select value={evt.city_id} onValueChange={v => setEvt({...evt, city_id: v})} disabled={!evt.state_id}>
+                  <Select value={evt.city_id} onValueChange={v => setEvt({...evt, city_id: v})} disabled={evtHasStates ? !evt.state_id : !evt.country_id}>
                     <SelectTrigger><SelectValue placeholder="Select city" /></SelectTrigger>
                     <SelectContent>{evtCities?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
                   </Select>

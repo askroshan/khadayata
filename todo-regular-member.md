@@ -72,3 +72,18 @@ User: Amit Patel, Ahmedabad Chapter, L1 — Vouched
 | 12 | US-030: Moderation queue workflow | DONE (pre-existing) | `src/pages/ModeratorDashboard.tsx` |
 
 All items signed off. Build passes.
+
+---
+
+## World Geography (US-126, US-127)
+
+- [x] **US-126** — All countries, states/provinces, major cities globally seeded
+  - 197 countries, 325 states, 151 cities, 195 city_codes
+  - Member can be in any country/state/city worldwide
+
+- [x] **US-127** — Location dropdowns handle stateless countries
+  - `useHasStates(countryId)` — returns false for city-states (Singapore, Bahrain, Malta, etc.)
+  - `useCitiesByCountry(countryId)` — fetches cities directly without state intermediary
+  - State dropdown hidden automatically when country has no states
+  - City dropdown enabled directly from country selection for stateless countries
+  - Applied to: Search, Business form, Job form, Events form, Admin Events form

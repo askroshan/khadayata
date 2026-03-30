@@ -97,3 +97,34 @@ export function useCities(stateId?: string) {
     enabled: !!stateId,
   });
 }
+
+export function useHasStates(countryId?: string) {
+  return useQuery({
+    queryKey: ["has_states", countryId],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("states")
+        .select("id", { count: "exact", head: true })
+        .eq("country_id", countryId!);
+      if (error) throw error;
+      return (count ?? 0) > 0;
+    },
+    enabled: !!countryId,
+  });
+}
+
+export function useCitiesByCountry(countryId?: string) {
+  return useQuery({
+    queryKey: ["cities_by_country", countryId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("cities")
+        .select("*, states!inner(country_id)")
+        .eq("states.country_id", countryId!)
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!countryId,
+  });
+}

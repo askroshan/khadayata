@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Navigate, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { useCountries, useStates, useCities } from "@/hooks/useMember";
+import { useCountries, useStates, useCities, useHasStates, useCitiesByCountry } from "@/hooks/useMember";
 import { supabase } from "@/integrations/supabase/client";
 import AppLayout from "@/components/AppLayout";
 import { Input } from "@/components/ui/input";
@@ -41,8 +41,11 @@ export default function GlobalSearch() {
   const [cityId, setCityId] = useState("");
 
   const { data: countries } = useCountries();
-  const { data: states } = useStates(countryId || undefined);
-  const { data: cities } = useCities(stateId || undefined);
+  const { data: hasStates } = useHasStates(countryId || undefined);
+  const { data: states } = useStates(countryId && hasStates ? countryId : undefined);
+  const { data: citiesByCountry } = useCitiesByCountry(countryId && hasStates === false ? countryId : undefined);
+  const { data: citiesByState } = useCities(stateId || undefined);
+  const cities = hasStates ? citiesByState : citiesByCountry;
 
   const isSearching = query.length > 1 || dobFilter || countryId || stateId || cityId;
   const searchIn = (cat: SearchCategory) => category === "all" || category === cat;
@@ -212,16 +215,18 @@ export default function GlobalSearch() {
                     <SelectContent>{countries?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <Label className="text-primary-foreground/80 text-xs">State</Label>
-                  <Select value={stateId} onValueChange={v => { setStateId(v); setCityId(""); }} disabled={!countryId}>
-                    <SelectTrigger className="bg-primary-foreground text-foreground border-0"><SelectValue placeholder="Any state" /></SelectTrigger>
-                    <SelectContent>{states?.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
+                {hasStates !== false && (
+                  <div>
+                    <Label className="text-primary-foreground/80 text-xs">State</Label>
+                    <Select value={stateId} onValueChange={v => { setStateId(v); setCityId(""); }} disabled={!countryId || !hasStates}>
+                      <SelectTrigger className="bg-primary-foreground text-foreground border-0"><SelectValue placeholder="Any state" /></SelectTrigger>
+                      <SelectContent>{states?.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <div>
                   <Label className="text-primary-foreground/80 text-xs">City</Label>
-                  <Select value={cityId} onValueChange={setCityId} disabled={!stateId}>
+                  <Select value={cityId} onValueChange={setCityId} disabled={hasStates ? !stateId : !countryId}>
                     <SelectTrigger className="bg-primary-foreground text-foreground border-0"><SelectValue placeholder="Any city" /></SelectTrigger>
                     <SelectContent>{cities?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
                   </Select>

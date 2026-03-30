@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { useMember, useCountries, useStates, useCities } from "@/hooks/useMember";
+import { useMember, useCountries, useStates, useCities, useHasStates, useCitiesByCountry } from "@/hooks/useMember";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import AppLayout from "@/components/AppLayout";
@@ -63,10 +63,16 @@ export default function Business() {
   });
 
   const { data: countries } = useCountries();
-  const { data: bizStates } = useStates(biz.country_id || undefined);
-  const { data: bizCities } = useCities(biz.state_id || undefined);
-  const { data: jobStates } = useStates(job.country_id || undefined);
-  const { data: jobCities } = useCities(job.state_id || undefined);
+  const { data: bizHasStates } = useHasStates(biz.country_id || undefined);
+  const { data: bizStates } = useStates(biz.country_id && bizHasStates ? biz.country_id : undefined);
+  const { data: bizCitiesByState } = useCities(biz.state_id || undefined);
+  const { data: bizCitiesByCountry } = useCitiesByCountry(biz.country_id && bizHasStates === false ? biz.country_id : undefined);
+  const bizCities = bizHasStates ? bizCitiesByState : bizCitiesByCountry;
+  const { data: jobHasStates } = useHasStates(job.country_id || undefined);
+  const { data: jobStates } = useStates(job.country_id && jobHasStates ? job.country_id : undefined);
+  const { data: jobCitiesByState } = useCities(job.state_id || undefined);
+  const { data: jobCitiesByCountry } = useCitiesByCountry(job.country_id && jobHasStates === false ? job.country_id : undefined);
+  const jobCities = jobHasStates ? jobCitiesByState : jobCitiesByCountry;
 
   const { data: businesses } = useQuery({
     queryKey: ["businesses", searchBiz, sectorFilter, verifiedFilter, bizLocationFilter],
@@ -271,14 +277,16 @@ export default function Business() {
                           <SelectContent>{countries?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
                         </Select>
                       </div>
+                      {bizHasStates !== false && (
                       <div><Label>State</Label>
-                        <Select value={biz.state_id} onValueChange={v => setBiz({...biz, state_id: v, city_id: ""})} disabled={!biz.country_id}>
+                        <Select value={biz.state_id} onValueChange={v => setBiz({...biz, state_id: v, city_id: ""})} disabled={!biz.country_id || !bizHasStates}>
                           <SelectTrigger><SelectValue placeholder="Select state" /></SelectTrigger>
                           <SelectContent>{bizStates?.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                         </Select>
                       </div>
+                      )}
                       <div><Label>City</Label>
-                        <Select value={biz.city_id} onValueChange={v => setBiz({...biz, city_id: v})} disabled={!biz.state_id}>
+                        <Select value={biz.city_id} onValueChange={v => setBiz({...biz, city_id: v})} disabled={bizHasStates ? !biz.state_id : !biz.country_id}>
                           <SelectTrigger><SelectValue placeholder="Select city" /></SelectTrigger>
                           <SelectContent>{bizCities?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
                         </Select>
@@ -396,14 +404,16 @@ export default function Business() {
                           <SelectContent>{countries?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
                         </Select>
                       </div>
+                      {jobHasStates !== false && (
                       <div><Label>State</Label>
-                        <Select value={job.state_id} onValueChange={v => setJob({...job, state_id: v, city_id: ""})} disabled={!job.country_id}>
+                        <Select value={job.state_id} onValueChange={v => setJob({...job, state_id: v, city_id: ""})} disabled={!job.country_id || !jobHasStates}>
                           <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                           <SelectContent>{jobStates?.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                         </Select>
                       </div>
+                      )}
                       <div><Label>City</Label>
-                        <Select value={job.city_id} onValueChange={v => setJob({...job, city_id: v})} disabled={!job.state_id}>
+                        <Select value={job.city_id} onValueChange={v => setJob({...job, city_id: v})} disabled={jobHasStates ? !job.state_id : !job.country_id}>
                           <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                           <SelectContent>{jobCities?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
                         </Select>

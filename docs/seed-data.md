@@ -14,20 +14,15 @@ This document describes the seed data used to populate the Khadayata Heritage Di
 
 ### Countries
 
-8 countries seeded. Migration: `seed_geography`.
+197 countries seeded total (all UN-recognised countries + territories). Migrations:
+- `seed_geography` — original 8 key community countries (c1 UUID series)
+- `seed_world_geography_countries` — 189 additional countries (c2 UUID series)
 
-```sql
-INSERT INTO public.countries (id, name, iso2) VALUES
-  ('c1000001-0000-0000-0000-000000000001', 'India',                'IN'),
-  ('c1000002-0000-0000-0000-000000000001', 'United States',        'US'),
-  ('c1000003-0000-0000-0000-000000000001', 'United Kingdom',       'GB'),
-  ('c1000004-0000-0000-0000-000000000001', 'United Arab Emirates', 'AE'),
-  ('c1000005-0000-0000-0000-000000000001', 'Canada',               'CA'),
-  ('c1000006-0000-0000-0000-000000000001', 'Australia',            'AU'),
-  ('c1000007-0000-0000-0000-000000000001', 'Singapore',            'SG'),
-  ('c1000008-0000-0000-0000-000000000001', 'Kenya',                'KE')
-ON CONFLICT (iso2) DO NOTHING;
-```
+**Coverage:** Africa (54), Americas (35), Asia (48), Europe (44), Oceania (16)
+
+UUID patterns:
+- Original 8: `c1000001-0000-0000-0000-000000000001` through `c1000008-...`
+- World expansion: `c2000101-0000-0000-0000-000000000101` through `c2000297-...`
 
 **Data Source:** ISO 3166-1 alpha-2 standard
 
@@ -35,73 +30,41 @@ ON CONFLICT (iso2) DO NOTHING;
 
 ### States / Regions
 
-16 states/regions seeded across India (10), USA (3), UK, UAE, and Kenya.
+325 states/regions seeded total. Migrations:
+- `seed_geography` — original 16 (d1 UUID series)
+- `seed_world_geography_states_v2` — ~309 additional (d2 UUID series)
 
-Indian states: Gujarat (GJ), Maharashtra (MH), Rajasthan (RJ), Delhi (DL), Karnataka (KA), Madhya Pradesh (MP), plus 4 international regions.
+**Countries with states seeded:**
+India (36), USA (51), UK (4), UAE (7), Canada (13), Australia (8), New Zealand (16), Germany (16), France (13), Italy (20), Spain (17), Brazil (27), South Africa (9), Nigeria (37), Pakistan (7), Bangladesh (8), Sri Lanka (9), Malaysia (16), Kenya (10)
 
-Fixed UUIDs: `d1000001-0000-0000-0000-000000000001` through `d1000016-...`
+**Countries without states (city-states / small nations):**
+Singapore, Bahrain, Malta, Luxembourg, Monaco, Liechtenstein, Andorra, Vatican, San Marino, Maldives, and many small island nations — these countries have NO state records. The UI automatically skips the state dropdown for these.
 
 ---
 
 ### Cities
 
-19 cities seeded. Fixed UUIDs: `e1000001-0000-0000-0000-000000000001` through `e1000019-...`
+151 cities seeded total. Migrations:
+- `seed_geography` — original 19 (e1 UUID series)
+- `seed_world_geography_cities_and_codes` — 132 additional (e2 UUID series)
 
-| City | State | Code |
-|---|---|---|
-| Ahmedabad | GJ | AHM |
-| Surat | GJ | SUR |
-| Vadodara | GJ | VAD |
-| Rajkot | GJ | RAJ |
-| Mumbai | MH | MUM |
-| Pune | MH | PUN |
-| Jaipur | RJ | JPR |
-| Jodhpur | RJ | JDH |
-| New Delhi | DL | DEL |
-| Bengaluru | KA | BLR |
-| New York | NY | NYC |
-| Los Angeles | CA | LAX |
-| Chicago | IL | CHI |
-| London | ENG | LON |
-| Dubai | DXB | DXB |
-| Toronto | ON | TOR |
-| Sydney | NSW | SYD |
-| Singapore | SG | SGP |
-| Nairobi | NAI | NBI |
+**Coverage:** Major cities in India, USA, UK, UAE, Canada, Australia, New Zealand, Germany, France, Italy, Spain, Brazil, South Africa, Nigeria, Pakistan, Bangladesh, Sri Lanka, Malaysia, Kenya, Singapore, and others.
 
 ---
 
 ### City Codes (For Global ID Generation)
 
-19 city codes to match cities above. Used by `generate_global_id()` function.
+195 city codes seeded total. Migrations:
+- `seed_geography` — original 19 city codes
+- `seed_world_geography_cities_and_codes` — ~176 additional codes
+
+Used by `generate_global_id()` function. Format: `KHD + CC(2) + SS(2-3) + CTY(3) + YY(2) + SEQ(6) + CHECKSUM(1)`
+
+For stateless countries, `state_code` uses the country's ISO2 code (e.g., Singapore → `SG`).
 
 **Important corrections vs earlier docs:**
 - Surat code is `SUR` (not `SUT`)
 - Jaipur code is `JPR` (not `JAI`)
-
-```sql
-INSERT INTO public.city_codes (country_code, state_code, city_name, city_code) VALUES
-  ('IN', 'GJ', 'Ahmedabad',  'AHM'),
-  ('IN', 'GJ', 'Surat',      'SUR'),
-  ('IN', 'GJ', 'Vadodara',   'VAD'),
-  ('IN', 'GJ', 'Rajkot',     'RAJ'),
-  ('IN', 'MH', 'Mumbai',     'MUM'),
-  ('IN', 'MH', 'Pune',       'PUN'),
-  ('IN', 'RJ', 'Jaipur',     'JPR'),
-  ('IN', 'RJ', 'Jodhpur',    'JDH'),
-  ('IN', 'DL', 'New Delhi',  'DEL'),
-  ('IN', 'KA', 'Bengaluru',  'BLR'),
-  ('US', 'NY', 'New York',   'NYC'),
-  ('US', 'CA', 'Los Angeles','LAX'),
-  ('US', 'IL', 'Chicago',    'CHI'),
-  ('GB', 'ENG','London',     'LON'),
-  ('AE', 'DXB','Dubai',      'DXB'),
-  ('CA', 'ON', 'Toronto',    'TOR'),
-  ('AU', 'NSW','Sydney',     'SYD'),
-  ('SG', 'SG', 'Singapore',  'SGP'),
-  ('KE', 'NAI','Nairobi',    'NBI')
-ON CONFLICT DO NOTHING;
-```
 
 ---
 
@@ -121,7 +84,7 @@ ON CONFLICT DO NOTHING;
 | `f1000008-...` | `london` | London Chapter | UK |
 | `f1000009-...` | `dubai` | Dubai Chapter | UAE |
 
-Each chapter has `settings` JSONB: `{ theme, features[], contact: { email } }`.
+Each chapter has `settings` JSONB: `{ theme, features[], contact: { email, phone, url } }`. Phone and URL were added via migration `add_phone_url_to_chapter_settings`.
 
 ---
 
@@ -340,14 +303,17 @@ Seeded via `settings` table (key/value):
 All seeds are Supabase migrations. Apply in order:
 
 ```
-1. seed_geography                        — countries, states, cities, city_codes
-2. seed_chapters                         — 9 chapters
-3. seed_test_users_all_roles             — 10 auth users + blank member profiles
-4. seed_roles_and_assignments            — 11 roles + initial assignment attempt
-5. seed_update_role_members              — member profile data + corrected role assignments
-6. seed_member_contacts_employment_education — contacts, jobs, education, skills
-7. seed_content_events_news_businesses   — events, news, businesses, jobs
-8. seed_matrimonial_scholarships_mentorships — matrimonial, scholarships, mentors, funds
+1. seed_geography                          — original 8 countries, 16 states, 19 cities, 19 city_codes
+2. seed_world_geography_countries          — 189 additional countries (world coverage)
+3. seed_world_geography_states_v2          — ~309 additional states/provinces
+4. seed_world_geography_cities_and_codes   — 132 additional cities + ~176 city_codes
+5. seed_chapters                           — 9 chapters
+6. seed_test_users_all_roles               — 10 auth users + blank member profiles
+7. seed_roles_and_assignments              — 11 roles + initial assignment attempt
+8. seed_update_role_members                — member profile data + corrected role assignments
+9. seed_member_contacts_employment_education — contacts, jobs, education, skills
+10. seed_content_events_news_businesses    — events, news, businesses, jobs
+11. seed_matrimonial_scholarships_mentorships — matrimonial, scholarships, mentors, funds
 ```
 
 All migrations use `ON CONFLICT DO NOTHING` and can be re-run safely.
@@ -358,10 +324,10 @@ All migrations use `ON CONFLICT DO NOTHING` and can be re-run safely.
 
 ```sql
 -- Verify geography
-SELECT COUNT(*) FROM public.countries;        -- 8
-SELECT COUNT(*) FROM public.states;           -- 16
-SELECT COUNT(*) FROM public.cities;           -- 19
-SELECT COUNT(*) FROM public.city_codes;       -- 19
+SELECT COUNT(*) FROM public.countries;        -- 197
+SELECT COUNT(*) FROM public.states;           -- 325
+SELECT COUNT(*) FROM public.cities;           -- 151
+SELECT COUNT(*) FROM public.city_codes;       -- 195
 
 -- Verify chapters and roles
 SELECT COUNT(*) FROM public.chapters;         -- 9
@@ -398,7 +364,6 @@ SELECT COUNT(*) FROM public.emergency_contacts;
 
 ## Future Enhancements
 
-- Extended international city coverage
 - Industry sector and skills taxonomy
 - Language list
 - Cultural event calendar templates
