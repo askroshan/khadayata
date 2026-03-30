@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Users, Newspaper, Calendar, Briefcase, Camera, MapPin, Building2,
-  ArrowLeft, Shield, Clock, ExternalLink, ChevronRight
+  ArrowLeft, Shield, Clock, ExternalLink, ChevronRight, Mail, Phone, Globe
 } from "lucide-react";
 import {
   useChapterBySlug, useChapterMemberCount, useChapterMembers,
@@ -138,6 +138,11 @@ export default function ChapterDetail() {
   const count = memberCount ?? 0;
   const upcomingCount = upcomingEvents?.length ?? 0;
 
+  const contact = (chapter.settings as { contact?: { email?: string; phone?: string; url?: string } } | null)?.contact;
+  const contactEmail = contact?.email;
+  const contactPhone = contact?.phone;
+  const contactUrl = contact?.url;
+
   const seoTitle = chapter.name + (locationStr ? " — Khadayata Community in " + locationStr : " — Khadayata Community");
   const seoDescription =
     "Khadayata community chapter in " + (locationStr || "India") +
@@ -175,10 +180,45 @@ export default function ChapterDetail() {
           <h1 className="text-3xl sm:text-5xl font-display font-extrabold text-primary-foreground">
             {chapter.name}
           </h1>
-          <p className="flex items-center gap-1.5 text-primary-foreground/80 mt-2 text-sm">
-            <MapPin className="w-4 h-4" />
-            {locationStr}
-          </p>
+          {locationStr && (
+            <p className="flex items-center gap-1.5 text-primary-foreground/80 mt-2 text-sm">
+              <MapPin className="w-4 h-4 shrink-0" />
+              {locationStr}
+            </p>
+          )}
+          {(contactEmail || contactPhone || contactUrl) && (
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-3">
+              {contactPhone && (
+                <a
+                  href={`tel:${contactPhone}`}
+                  className="inline-flex items-center gap-1.5 text-primary-foreground/90 hover:text-primary-foreground text-sm transition-colors"
+                >
+                  <Phone className="w-4 h-4 shrink-0" />
+                  {contactPhone}
+                </a>
+              )}
+              {contactEmail && (
+                <a
+                  href={`mailto:${contactEmail}`}
+                  className="inline-flex items-center gap-1.5 text-primary-foreground/90 hover:text-primary-foreground text-sm transition-colors"
+                >
+                  <Mail className="w-4 h-4 shrink-0" />
+                  {contactEmail}
+                </a>
+              )}
+              {contactUrl && (
+                <a
+                  href={contactUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-primary-foreground/90 hover:text-primary-foreground text-sm transition-colors"
+                >
+                  <Globe className="w-4 h-4 shrink-0" />
+                  {contactUrl.replace(/^https?:\/\//, "")}
+                </a>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
