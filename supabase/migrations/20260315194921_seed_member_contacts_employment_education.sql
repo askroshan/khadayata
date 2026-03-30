@@ -56,7 +56,7 @@ ON CONFLICT DO NOTHING;
 -- Employment
 -- -------------------------------------------------------
 INSERT INTO employment (id, member_id, job_title, company, sector, start_date, end_date) VALUES
-  (gen_random_uuid(), '955e2975-bf64-48c2-99cc-3ae9f703b8d5'::uuid, 'Managing Director',       'Khandelwal Textiles Pvt Ltd',    'Textile',       '2005-01-01', NULL),
+  (gen_random_uuid(), '955e2975-bf64-48c2-99cc-3ae9f703b8d5'::uuid, 'Managing Director',       'Khadayata Textiles Pvt Ltd',    'Textile',       '2005-01-01', NULL),
   (gen_random_uuid(), '4f2f1a8a-4e11-4a3f-b014-d6140accb7cd'::uuid, 'Principal',               'Ahmedabad Public School',        'Education',     '2010-06-01', NULL),
   (gen_random_uuid(), '1572af15-fdc7-4c11-9e3c-03185c50f040'::uuid, 'Senior Auditor',          'Agarwal & Associates CA Firm',   'Finance',       '2012-04-01', NULL),
   (gen_random_uuid(), '5369121a-0a98-4293-81ac-6e2f7f1b21ca'::uuid, 'Operations Manager',      'Gupta Logistics Ltd',            'Logistics',     '2008-03-01', NULL),

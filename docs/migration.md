@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the database migration history and procedures for the Khandelwal Heritage Directory (KHD) platform.
+This document describes the database migration history and procedures for the Khadayata Heritage Directory (KHD) platform.
 
 **Migration Tool:** Supabase Migrations  
 **Location:** `supabase/migrations/`  
@@ -486,7 +486,7 @@ CREATE TABLE public.audits (
 **Purpose:** Create 10 role-specific test accounts in `auth.users` with corresponding `auth.identities` and blank `members` profiles
 
 **Accounts Created:**
-- `global-admin@test.khandelwal.org` through `unverified@test.khandelwal.org`
+- `global-admin@khadayataonline.com` through `unverified@khadayataonline.com`
 - Auth UUIDs: `b0000001-cafe-0000-0000-000000000001` through `...000000000010`
 - Password hash for `TestPass123!`
 

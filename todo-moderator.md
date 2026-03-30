@@ -1,7 +1,7 @@
 # Moderator Role — Bug Fixes & User Stories
 
 **Persona:** Moderator (Pooja Verma, Ahmedabad Chapter, L2 Verified)
-**Login:** moderator@test.khandelwal.org
+**Login:** moderator@khadayataonline.com
 **Completed:** 2026-03-16
 
 ---
@@ -13,7 +13,7 @@
 | B-001 | Settings Page Empty — Only shows "Go Back" and "Refresh Page" | ✅ DONE | `src/pages/Settings.tsx` rebuilt with 4 tabs: Notifications (with `notification_preferences` table upsert), Privacy (field-level JSONB controls), Verification Center (`VerificationCenter` component), Consent Center (`ConsentCenter` component). Password change via `supabase.auth.updateUser`. |
 | B-002 | Dashboard "View All" for Events shows 0 items | ✅ DONE | `src/pages/Dashboard.tsx` queries `events` filtered by `status = 'published'` and `starts_at >= now()`. Events navigation button points to `/events`. Seed data includes published events with future dates. |
 | B-003 | Member Profile Links Don't Work | ✅ DONE | `src/pages/Directory.tsx` wraps each member card in `<Link to={/member/${m.id}}>`. `src/pages/MemberProfile.tsx` handles the route `/member/:id` with full profile details. |
-| B-004 | Scholarships Empty — Shows "Available (0)" | ✅ DONE | `src/pages/Scholarships.tsx` queries `scholarships` with `.eq("status", "active")`. Migration `20260316031349_seed_scholarships_archives_v2.sql` seeds 4 active scholarships: Khandelwal Merit, Vyapaar Vikas, Women Empowerment Award, Global Diaspora Grant. |
+| B-004 | Scholarships Empty — Shows "Available (0)" | ✅ DONE | `src/pages/Scholarships.tsx` queries `scholarships` with `.eq("status", "active")`. Migration `20260316031349_seed_scholarships_archives_v2.sql` seeds 4 active scholarships: Khadayata Merit, Vyapaar Vikas, Women Empowerment Award, Global Diaspora Grant. |
 | B-005 | Archives Empty — Both tabs show 0 items | ✅ DONE | `src/pages/Archives.tsx` uses correct tables: `magazine_issues` (Khadayata Jyoti tab) and `book_pages` (History Book tab). Migration seeds 5 magazine issues and 6 history book pages. |
 | B-006 | Notifications Panel Empty | ✅ DONE | `src/components/NotificationsPanel.tsx` fetches from `notifications` table, renders title + description + timestamp, supports mark-read / mark-all-read. Seed migration adds 5 notifications for the moderator account (2 unread, 3 read). |
 
@@ -26,7 +26,7 @@
 | W-001 | 7 form inputs without proper ARIA labels | ✅ DONE | All search inputs use `<label htmlFor="...">` with `.sr-only` class. Select dropdowns use `aria-label` attributes. Directory, Archives, Events, Business pages all updated. |
 | W-002 | No skip navigation links | ✅ DONE | `src/components/AppLayout.tsx` includes `<a href="#main-content" className="sr-only focus:not-sr-only ...">Skip to main content</a>` as first child of layout. |
 | W-003 | No search landmark | ✅ DONE | All search areas wrapped in `<div role="search" aria-label="...">`. Applied to Directory, Archives, Events, Business, News, and Search pages. |
-| W-004 | Missing footer/contentinfo landmark | ✅ DONE | `AppLayout.tsx` includes `<footer role="contentinfo" className="sr-only">KhadayataOnline — Khandelwal Heritage Directory</footer>`. Header uses `role="banner"`, main uses `role="main"` with `id="main-content"` and `tabIndex={-1}`. |
+| W-004 | Missing footer/contentinfo landmark | ✅ DONE | `AppLayout.tsx` includes `<footer role="contentinfo" className="sr-only">KhadayataOnline — Khadayata Heritage Directory</footer>`. Header uses `role="banner"`, main uses `role="main"` with `id="main-content"` and `tabIndex={-1}`. |
 
 ---
 

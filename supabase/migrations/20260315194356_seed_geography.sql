@@ -6,7 +6,7 @@
 
   1. Countries: India, United States, United Kingdom, UAE, Canada, Australia, Singapore, Kenya
   2. States: Major Indian states + international
-  3. Cities: All major Khandelwal community hubs globally
+  3. Cities: All major Khadayata community hubs globally
 */
 
 INSERT INTO countries (id, iso2, name) VALUES

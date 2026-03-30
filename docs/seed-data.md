@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the seed data used to populate the Khandelwal Heritage Directory (KHD) database for development, testing, and initial production deployment.
+This document describes the seed data used to populate the Khadayata Heritage Directory (KHD) database for development, testing, and initial production deployment.
 
 **Purpose:** Provide baseline reference data and sample records for system functionality.
 
@@ -187,16 +187,16 @@ Migration: `seed_test_users_all_roles`. Auth UUIDs follow pattern `b0000001-cafe
 
 | UUID suffix | Email | Role | Chapter |
 |---|---|---|---|
-| `...000000000001` | `global-admin@test.khandelwal.org` | Global Admin | Global |
-| `...000000000002` | `chapter-admin@test.khandelwal.org` | Chapter Admin | Ahmedabad |
-| `...000000000003` | `data-steward@test.khandelwal.org` | Data Steward | Ahmedabad |
-| `...000000000004` | `dir-manager@test.khandelwal.org` | Directory Manager | Ahmedabad |
-| `...000000000005` | `event-manager@test.khandelwal.org` | Event Manager | Mumbai |
-| `...000000000006` | `finance-admin@test.khandelwal.org` | Finance Admin | Ahmedabad |
-| `...000000000007` | `publisher@test.khandelwal.org` | Global Publisher | Mumbai |
-| `...000000000008` | `moderator@test.khandelwal.org` | Moderator | Ahmedabad |
-| `...000000000009` | `member@test.khandelwal.org` | (none) | Ahmedabad |
-| `...000000000010` | `unverified@test.khandelwal.org` | (none) | (none) |
+| `...000000000001` | `global-admin@khadayataonline.com` | Global Admin | Global |
+| `...000000000002` | `chapter-admin@khadayataonline.com` | Chapter Admin | Ahmedabad |
+| `...000000000003` | `data-steward@khadayataonline.com` | Data Steward | Ahmedabad |
+| `...000000000004` | `dir-manager@khadayataonline.com` | Directory Manager | Ahmedabad |
+| `...000000000005` | `event-manager@khadayataonline.com` | Event Manager | Mumbai |
+| `...000000000006` | `finance-admin@khadayataonline.com` | Finance Admin | Ahmedabad |
+| `...000000000007` | `publisher@khadayataonline.com` | Global Publisher | Mumbai |
+| `...000000000008` | `moderator@khadayataonline.com` | Moderator | Ahmedabad |
+| `...000000000009` | `member@khadayataonline.com` | (none) | Ahmedabad |
+| `...000000000010` | `unverified@khadayataonline.com` | (none) | (none) |
 
 Role assignments are in `seed_update_role_members` (corrective migration with right auth UUIDs).
 
@@ -255,7 +255,7 @@ Migration: `seed_content_events_news_businesses`.
 
 | Name | Sector | Verified |
 |---|---|---|
-| Khandelwal Textiles Pvt Ltd | Textile | yes |
+| Khadayata Textiles Pvt Ltd | Textile | yes |
 | Mehta & Sons Chartered Accountants | Finance | yes |
 | Gupta Logistics Ltd | Logistics | yes |
 | Celebration Events Co. | Events | yes |
@@ -325,7 +325,7 @@ Seeded via `settings` table (key/value):
 
 | Key | Value |
 |---|---|
-| `platform_name` | Khandelwal Heritage Directory |
+| `platform_name` | Khadayata Heritage Directory |
 | `kyc_enabled` | true |
 | `matrimonial_enabled` | true |
 | `oral_history_enabled` | true |

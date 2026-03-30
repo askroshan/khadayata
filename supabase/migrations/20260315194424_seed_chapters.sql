@@ -19,7 +19,7 @@ INSERT INTO chapters (id, name, slug, subdomain, country_id, state_id, city_id, 
     'c1000001-0000-0000-0000-000000000001'::uuid,
     NULL,
     NULL,
-    '{"theme":"default","features":["events","directory","matrimonial","business","news","scholarships","mentorship"],"contact":{"email":"global@khandelwal.org"}}'::jsonb
+    '{"theme":"default","features":["events","directory","matrimonial","business","news","scholarships","mentorship"],"contact":{"email":"global@khadayataonline.com"}}'::jsonb
   ),
   (
     'f1000002-0000-0000-0000-000000000002'::uuid,
@@ -29,7 +29,7 @@ INSERT INTO chapters (id, name, slug, subdomain, country_id, state_id, city_id, 
     'c1000001-0000-0000-0000-000000000001'::uuid,
     'd1000001-0000-0000-0000-000000000001'::uuid,
     'e1000001-0000-0000-0000-000000000001'::uuid,
-    '{"theme":"default","features":["events","directory","matrimonial","business","news","scholarships"],"contact":{"email":"ahmedabad@khandelwal.org"}}'::jsonb
+    '{"theme":"default","features":["events","directory","matrimonial","business","news","scholarships"],"contact":{"email":"ahmedabad@khadayataonline.com"}}'::jsonb
   ),
   (
     'f1000003-0000-0000-0000-000000000003'::uuid,
@@ -39,7 +39,7 @@ INSERT INTO chapters (id, name, slug, subdomain, country_id, state_id, city_id, 
     'c1000001-0000-0000-0000-000000000001'::uuid,
     'd1000002-0000-0000-0000-000000000002'::uuid,
     'e1000010-0000-0000-0000-000000000010'::uuid,
-    '{"theme":"default","features":["events","directory","business","news"],"contact":{"email":"mumbai@khandelwal.org"}}'::jsonb
+    '{"theme":"default","features":["events","directory","business","news"],"contact":{"email":"mumbai@khadayataonline.com"}}'::jsonb
   ),
   (
     'f1000004-0000-0000-0000-000000000004'::uuid,
@@ -49,7 +49,7 @@ INSERT INTO chapters (id, name, slug, subdomain, country_id, state_id, city_id, 
     'c1000001-0000-0000-0000-000000000001'::uuid,
     'd1000001-0000-0000-0000-000000000001'::uuid,
     'e1000002-0000-0000-0000-000000000002'::uuid,
-    '{"theme":"default","features":["events","directory","matrimonial"],"contact":{"email":"surat@khandelwal.org"}}'::jsonb
+    '{"theme":"default","features":["events","directory","matrimonial"],"contact":{"email":"surat@khadayataonline.com"}}'::jsonb
   ),
   (
     'f1000005-0000-0000-0000-000000000005'::uuid,
@@ -59,7 +59,7 @@ INSERT INTO chapters (id, name, slug, subdomain, country_id, state_id, city_id, 
     'c1000001-0000-0000-0000-000000000001'::uuid,
     'd1000003-0000-0000-0000-000000000003'::uuid,
     'e1000020-0000-0000-0000-000000000020'::uuid,
-    '{"theme":"default","features":["events","directory","matrimonial","news"],"contact":{"email":"jaipur@khandelwal.org"}}'::jsonb
+    '{"theme":"default","features":["events","directory","matrimonial","news"],"contact":{"email":"jaipur@khadayataonline.com"}}'::jsonb
   ),
   (
     'f1000006-0000-0000-0000-000000000006'::uuid,
@@ -69,7 +69,7 @@ INSERT INTO chapters (id, name, slug, subdomain, country_id, state_id, city_id, 
     'c1000001-0000-0000-0000-000000000001'::uuid,
     'd1000004-0000-0000-0000-000000000004'::uuid,
     'e1000030-0000-0000-0000-000000000030'::uuid,
-    '{"theme":"default","features":["events","directory","matrimonial","business","news"],"contact":{"email":"delhi@khandelwal.org"}}'::jsonb
+    '{"theme":"default","features":["events","directory","matrimonial","business","news"],"contact":{"email":"delhi@khadayataonline.com"}}'::jsonb
   ),
   (
     'f1000007-0000-0000-0000-000000000007'::uuid,
@@ -79,7 +79,7 @@ INSERT INTO chapters (id, name, slug, subdomain, country_id, state_id, city_id, 
     'c1000002-0000-0000-0000-000000000002'::uuid,
     'd1000010-0000-0000-0000-000000000010'::uuid,
     'e1000050-0000-0000-0000-000000000050'::uuid,
-    '{"theme":"default","features":["events","directory","matrimonial","business","news","scholarships"],"contact":{"email":"newyork@khandelwal.org"}}'::jsonb
+    '{"theme":"default","features":["events","directory","matrimonial","business","news","scholarships"],"contact":{"email":"newyork@khadayataonline.com"}}'::jsonb
   ),
   (
     'f1000008-0000-0000-0000-000000000008'::uuid,
@@ -89,7 +89,7 @@ INSERT INTO chapters (id, name, slug, subdomain, country_id, state_id, city_id, 
     'c1000003-0000-0000-0000-000000000003'::uuid,
     'd1000020-0000-0000-0000-000000000020'::uuid,
     'e1000060-0000-0000-0000-000000000060'::uuid,
-    '{"theme":"default","features":["events","directory","news"],"contact":{"email":"london@khandelwal.org"}}'::jsonb
+    '{"theme":"default","features":["events","directory","news"],"contact":{"email":"london@khadayataonline.com"}}'::jsonb
   ),
   (
     'f1000009-0000-0000-0000-000000000009'::uuid,
@@ -99,6 +99,6 @@ INSERT INTO chapters (id, name, slug, subdomain, country_id, state_id, city_id, 
     'c1000004-0000-0000-0000-000000000004'::uuid,
     'd1000030-0000-0000-0000-000000000030'::uuid,
     'e1000070-0000-0000-0000-000000000070'::uuid,
-    '{"theme":"default","features":["events","directory","business","news"],"contact":{"email":"dubai@khandelwal.org"}}'::jsonb
+    '{"theme":"default","features":["events","directory","business","news"],"contact":{"email":"dubai@khadayataonline.com"}}'::jsonb
   )
 ON CONFLICT (id) DO NOTHING;

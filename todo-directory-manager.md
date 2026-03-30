@@ -40,7 +40,7 @@
   - **Fix:** Added `select-none` and targeted `onMouseDown` handler to privacy field rows in `Settings.tsx` to prevent browser text-selection mode from activating during combobox interactions.
 
 - [x] **BUG-049** — Test data "Visa" shown as Ekda value in Digital Member Card
-  - **Fix:** Migration `fix_seed_ekda_visa_values` — replaced all 5 members with `ekda = 'Visa'` with culturally appropriate Khandelwal Ekda values (Khandelwal, Oswal, Agrawala, Maheshwari, Porwal). Also fixed broken `fn_audit_member_changes` trigger that referenced non-existent `is_suspended` column.
+  - **Fix:** Migration `fix_seed_ekda_visa_values` — replaced all 5 members with `ekda = 'Visa'` with culturally appropriate Khadayata Ekda values (Khandelwal, Oswal, Agrawala, Maheshwari, Porwal). Also fixed broken `fn_audit_member_changes` trigger that referenced non-existent `is_suspended` column.
 
 - [x] **BUG-050** — "Param Pujaniya" filter on Oral History inconsistently rendered
   - **Status:** Confirmed not a code bug — the button is rendered unconditionally for all authenticated users in `OralHistory.tsx`. The filter was always global; the inconsistent observation was likely a viewport/scroll issue in testing sessions.
@@ -77,7 +77,7 @@
 | File | Purpose |
 |------|---------|
 | `fix_audit_trigger_missing_column` | Removed `is_suspended` reference from `fn_audit_member_changes` trigger (column does not exist) |
-| `fix_seed_ekda_visa_values` | Replaced 5 members' `ekda = 'Visa'` with valid Khandelwal clan names |
+| `fix_seed_ekda_visa_values` | Replaced 5 members' `ekda = 'Visa'` with valid Khadayata clan names |
 
 ## Files Changed
 

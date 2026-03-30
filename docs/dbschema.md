@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Khandelwal Heritage Directory (KHD) uses a PostgreSQL database managed through Supabase. All tables have Row-Level Security (RLS) enabled for data protection.
+The Khadayata Heritage Directory (KHD) uses a PostgreSQL database managed through Supabase. All tables have Row-Level Security (RLS) enabled for data protection.
 
 **Database:** PostgreSQL 15+
 **Schema:** `public`
@@ -86,7 +86,7 @@ Organisational units representing geographic chapters.
 {
   "theme": "default",
   "features": ["events", "directory", "matrimonial", "business", "news", "scholarships"],
-  "contact": { "email": "chapter@khandelwal.org" }
+  "contact": { "email": "chapter@khadayataonline.com" }
 }
 ```
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the backend APIs available in the Khandelwal Heritage Directory (KHD) platform. The platform uses Supabase Edge Functions for serverless backend operations and provides direct database access through Supabase client libraries.
+This document describes the backend APIs available in the Khadayata Heritage Directory (KHD) platform. The platform uses Supabase Edge Functions for serverless backend operations and provides direct database access through Supabase client libraries.
 
 ## Base URL
 

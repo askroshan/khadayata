@@ -1,7 +1,7 @@
 /*
   # Fix Publisher test user verification level
 
-  Sets publisher@test.khandelwal.org (Vikram Mehta) to verification_level = 2 (Trusted/L2)
+  Sets publisher@khadayataonline.com (Vikram Mehta) to verification_level = 2 (Trusted/L2)
   to match all other admin-class test users and suppress the "Submit ID docs for L2" dashboard prompt.
 */
 
@@ -11,5 +11,5 @@ WHERE id = (
   SELECT m.id
   FROM members m
   JOIN auth.users au ON au.id = m.user_id
-  WHERE au.email = 'publisher@test.khandelwal.org'
+  WHERE au.email = 'publisher@khadayataonline.com'
 );

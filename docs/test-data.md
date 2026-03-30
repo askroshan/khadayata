@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes all test accounts, demo data, and fixtures for the Khandelwal Heritage Directory (KHD) platform.
+This document describes all test accounts, demo data, and fixtures for the Khadayata Heritage Directory (KHD) platform.
 
 **Purpose:** Provide comprehensive test data for:
 - Manual testing and QA
@@ -20,16 +20,16 @@ All accounts below are seeded in the live database. Password for all accounts: *
 
 | Email | Role | Chapter | Notes |
 |---|---|---|---|
-| `global-admin@test.khandelwal.org` | Global Admin | Global | Full platform access, can manage all data |
-| `chapter-admin@test.khandelwal.org` | Chapter Admin | Ahmedabad | Chapter-scoped governance |
-| `data-steward@test.khandelwal.org` | Data Steward | Ahmedabad | Member verification, heritage, matrimonial moderation |
-| `dir-manager@test.khandelwal.org` | Directory Manager | Ahmedabad | Business/job verification |
-| `event-manager@test.khandelwal.org` | Event Manager | Mumbai | Event creation and management |
-| `finance-admin@test.khandelwal.org` | Finance Admin | Ahmedabad | Funds, donations, scholarships |
-| `publisher@test.khandelwal.org` | Global Publisher | Mumbai | News creation and publishing |
-| `moderator@test.khandelwal.org` | Moderator | Ahmedabad | Content moderation, reports |
-| `member@test.khandelwal.org` | Regular Member | Ahmedabad | Standard member, no admin role |
-| `unverified@test.khandelwal.org` | None | None | Incomplete onboarding, verification_level=0 |
+| `global-admin@khadayataonline.com` | Global Admin | Global | Full platform access, can manage all data |
+| `chapter-admin@khadayataonline.com` | Chapter Admin | Ahmedabad | Chapter-scoped governance |
+| `data-steward@khadayataonline.com` | Data Steward | Ahmedabad | Member verification, heritage, matrimonial moderation |
+| `dir-manager@khadayataonline.com` | Directory Manager | Ahmedabad | Business/job verification |
+| `event-manager@khadayataonline.com` | Event Manager | Mumbai | Event creation and management |
+| `finance-admin@khadayataonline.com` | Finance Admin | Ahmedabad | Funds, donations, scholarships |
+| `publisher@khadayataonline.com` | Global Publisher | Mumbai | News creation and publishing |
+| `moderator@khadayataonline.com` | Moderator | Ahmedabad | Content moderation, reports |
+| `member@khadayataonline.com` | Regular Member | Ahmedabad | Standard member, no admin role |
+| `unverified@khadayataonline.com` | None | None | Incomplete onboarding, verification_level=0 |
 
 ### Seed Community Members (10 accounts)
 
@@ -100,7 +100,7 @@ Chapter-scoped: Chapter Admin (Ahmedabad), Publisher (Ahmedabad), Chapter Admin 
 ### Businesses (6)
 | Business | Sector | Verified |
 |---|---|---|
-| Khandelwal Textiles Pvt Ltd | Textile | Yes |
+| Khadayata Textiles Pvt Ltd | Textile | Yes |
 | Mehta & Sons Chartered Accountants | Finance | Yes |
 | Gupta Logistics Ltd | Logistics | Yes |
 | Celebration Events Co. | Events | Yes |
@@ -147,7 +147,7 @@ Covers: Ahmedabad, Mumbai, New York, London, Dubai — each with community helpl
 ## Feature Testing Guide
 
 ### Testing Admin Panel (`/admin`)
-Login as `global-admin@test.khandelwal.org` to see all admin tabs:
+Login as `global-admin@khadayataonline.com` to see all admin tabs:
 - **Members** – verify members, view all profiles
 - **Roles** – assign/revoke roles
 - **Reports** – review abuse reports
@@ -156,10 +156,10 @@ Login as `global-admin@test.khandelwal.org` to see all admin tabs:
 - **Announcements** – create platform-wide announcements
 
 ### Testing Chapter Admin
-Login as `chapter-admin@test.khandelwal.org` — access scoped to Ahmedabad chapter only.
+Login as `chapter-admin@khadayataonline.com` — access scoped to Ahmedabad chapter only.
 
 ### Testing Matrimonial
-Login as any seed account or `member@test.khandelwal.org`. 11 profiles available to browse and filter.
+Login as any seed account or `member@khadayataonline.com`. 11 profiles available to browse and filter.
 
 ### Testing Events
 - Upcoming events visible on `/events`
@@ -169,21 +169,21 @@ Login as any seed account or `member@test.khandelwal.org`. 11 profiles available
 ### Testing News
 - Published articles visible on `/news`
 - Draft article (Oral History) only visible to Publisher / Admin
-- Login as `publisher@test.khandelwal.org` to create/edit articles
+- Login as `publisher@khadayataonline.com` to create/edit articles
 
 ### Testing Business Directory
-Login as `dir-manager@test.khandelwal.org` to verify unverified businesses.
+Login as `dir-manager@khadayataonline.com` to verify unverified businesses.
 6 businesses across textile, finance, logistics, events, legal, design sectors.
 
 ### Testing Scholarships
 3 open scholarships visible at `/scholarships`. Apply as any member.
-Login as `finance-admin@test.khandelwal.org` to manage funds and scholarships.
+Login as `finance-admin@khadayataonline.com` to manage funds and scholarships.
 
 ### Testing Mentorship
 4 active mentors available. Mentorship pairing via `/mentorship`.
 
 ### Testing Onboarding
-Login as `unverified@test.khandelwal.org` — will be redirected to the 4-step onboarding flow (no chapter assigned, no profile data).
+Login as `unverified@khadayataonline.com` — will be redirected to the 4-step onboarding flow (no chapter assigned, no profile data).
 
 ### Testing Directory
 All 20 members with completed profiles appear in `/directory`. Filter by chapter, profession, ekda.
@@ -205,53 +205,53 @@ All 20 members with completed profiles appear in `/directory`. Filter by chapter
 ```typescript
 export const testUsers = {
   globalAdmin: {
-    email: 'global-admin@test.khandelwal.org',
+    email: 'global-admin@khadayataonline.com',
     password: 'TestPass123!',
     role: 'Global Admin',
   },
   chapterAdmin: {
-    email: 'chapter-admin@test.khandelwal.org',
+    email: 'chapter-admin@khadayataonline.com',
     password: 'TestPass123!',
     role: 'Chapter Admin',
     chapter: 'ahmedabad',
   },
   datasteward: {
-    email: 'data-steward@test.khandelwal.org',
+    email: 'data-steward@khadayataonline.com',
     password: 'TestPass123!',
     role: 'Data Steward',
   },
   directoryManager: {
-    email: 'dir-manager@test.khandelwal.org',
+    email: 'dir-manager@khadayataonline.com',
     password: 'TestPass123!',
     role: 'Directory Manager',
   },
   eventManager: {
-    email: 'event-manager@test.khandelwal.org',
+    email: 'event-manager@khadayataonline.com',
     password: 'TestPass123!',
     role: 'Event Manager',
   },
   financeAdmin: {
-    email: 'finance-admin@test.khandelwal.org',
+    email: 'finance-admin@khadayataonline.com',
     password: 'TestPass123!',
     role: 'Finance Admin',
   },
   publisher: {
-    email: 'publisher@test.khandelwal.org',
+    email: 'publisher@khadayataonline.com',
     password: 'TestPass123!',
     role: 'Global Publisher',
   },
   moderator: {
-    email: 'moderator@test.khandelwal.org',
+    email: 'moderator@khadayataonline.com',
     password: 'TestPass123!',
     role: 'Moderator',
   },
   regularMember: {
-    email: 'member@test.khandelwal.org',
+    email: 'member@khadayataonline.com',
     password: 'TestPass123!',
     role: null,
   },
   unverified: {
-    email: 'unverified@test.khandelwal.org',
+    email: 'unverified@khadayataonline.com',
     password: 'TestPass123!',
     onboardingCompleted: false,
   },

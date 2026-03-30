@@ -1,6 +1,6 @@
 # Global Publisher — Bug Fixes & User Stories
 
-**Test User:** publisher@test.khandelwal.org | Vikram Mehta | Mumbai Chapter | L2 — Trusted | Global Publisher
+**Test User:** publisher@khadayataonline.com | Vikram Mehta | Mumbai Chapter | L2 — Trusted | Global Publisher
 **Session Date:** 2026-03-15
 **Status:** COMPLETE ✓
 
@@ -44,7 +44,7 @@
   - *Fixed: Publisher tab added to Admin; defaultValue routes to "publisher" for Publisher role*
 
 - [x] **BUG-PUB-07** — Publisher assigned L1 — Vouched (all other admin-class roles are L2)
-  - *Fixed: DB migration applied — publisher@test.khandelwal.org set to verification_level = 2*
+  - *Fixed: DB migration applied — publisher@khadayataonline.com set to verification_level = 2*
 
 - [x] **BUG-PUB-08** — Cross-chapter data leak: Ahmedabad content visible to Mumbai Publisher
   - *Fixed: recentNews query on Dashboard now scoped to chapter_id + null (global) articles*

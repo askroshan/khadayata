@@ -3,12 +3,12 @@
 
   ## Summary
   Replaces invalid test seed data 'Visa' (a payment card brand) stored in the
-  members.ekda column with culturally appropriate Khandelwal community Ekda
+  members.ekda column with culturally appropriate Khadayata community Ekda
   (clan/gotra group) values. Multiple members had this placeholder value.
 
   ## Changes
-  - Updates members who have ekda = 'Visa' with realistic Khandelwal ekda values
-  - Uses known valid Khandelwal Ekdas: Agrawala, Maheshwari, Oswal, Khandelwal, Porwal
+  - Updates members who have ekda = 'Visa' with realistic Khadayata ekda values
+  - Uses known valid Khadayata Ekdas: Agrawala, Maheshwari, Oswal, Khandelwal, Porwal
 */
 
 UPDATE members SET ekda = 'Khandelwal' WHERE id = '955e2975-bf64-48c2-99cc-3ae9f703b8d5' AND ekda = 'Visa';
