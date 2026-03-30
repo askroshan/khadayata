@@ -613,7 +613,7 @@ export default function Index() {
               <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", lineHeight: 1.8 }}>
                 <p style={{ margin: 0 }}>1320 Pepperhill Ln, Fort Worth, TX 76131</p>
                 <a href="tel:+16824329400" style={{ color: "rgba(255,255,255,0.4)", textDecoration: "none", display: "block" }}>+1 (682) 432-9400</a>
-                <a href="mailto:support@khadayataonline.com" style={{ color: "rgba(255,255,255,0.4)", textDecoration: "none", display: "block" }}>support@khadayataonline.com</a>
+                <Link to="/contact" style={{ color: "rgba(255,255,255,0.4)", textDecoration: "none", display: "block" }}>Contact Us</Link>
               </div>
             </div>
             {[

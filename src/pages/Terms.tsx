@@ -57,7 +57,7 @@ export default function Terms() {
           <ul className="list-disc pl-5 space-y-1">
             <li>Provide accurate and truthful information during registration;</li>
             <li>Keep your password secure and not share it with anyone;</li>
-            <li>Notify us immediately of any unauthorized use of your account at <a href="mailto:support@khadayataonline.com" className="text-primary hover:underline">support@khadayataonline.com</a>;</li>
+            <li>Notify us immediately of any unauthorized use of your account via our <Link to="/contact" className="text-primary hover:underline">Contact Us</Link> page;</li>
             <li>Be responsible for all activity that occurs under your account.</li>
           </ul>
           <p>We are not liable for any loss or damage arising from your failure to protect your account credentials.</p>
@@ -124,12 +124,11 @@ export default function Terms() {
         </Section>
 
         <Section title="13. Contact Us">
-          <p>For questions about these Terms, please contact us:</p>
+          <p>For questions about these Terms, please <Link to="/contact" className="text-primary hover:underline font-medium">contact us here</Link>.</p>
           <div className="bg-muted/50 rounded-xl p-4 mt-2">
             <p className="font-medium text-foreground">KhadayataOnline</p>
             <p>1320 Pepperhill Ln, Fort Worth, TX 76131</p>
             <p>Phone: +1 (682) 432-9400</p>
-            <p>Email: <a href="mailto:legal@khadayataonline.com" className="text-primary hover:underline">legal@khadayataonline.com</a></p>
           </div>
         </Section>
       </div>

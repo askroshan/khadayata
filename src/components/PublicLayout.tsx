@@ -150,10 +150,10 @@ export default function PublicLayout({ children, title, description }: {
                 onMouseEnter={e => (e.currentTarget.style.color = "#F4B400")}
                 onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.35)")}
               >+1 (682) 432-9400</a>
-              <a href="mailto:support@khadayataonline.com" style={{ color: "rgba(255,255,255,0.35)", textDecoration: "none" }} itemProp="email"
+              <Link to="/contact" style={{ color: "rgba(255,255,255,0.35)", textDecoration: "none" }}
                 onMouseEnter={e => (e.currentTarget.style.color = "#F4B400")}
                 onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.35)")}
-              >support@khadayataonline.com</a>
+              >Contact Us</Link>
             </div>
           </div>
 

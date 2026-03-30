@@ -131,7 +131,7 @@ export default function Accessibility() {
             <p className="font-medium text-foreground">Accessibility Team — KhadayataOnline</p>
             <p>1320 Pepperhill Ln, Fort Worth, TX 76131</p>
             <p>Phone: +1 (682) 432-9400</p>
-            <p>Email: <a href="mailto:accessibility@khadayataonline.com" className="text-primary hover:underline">accessibility@khadayataonline.com</a></p>
+            <p>Contact: <Link to="/contact" className="text-primary hover:underline">Contact Us form</Link></p>
           </div>
           <p className="mt-3">Please include:</p>
           <ul className="list-disc pl-5 space-y-1">
