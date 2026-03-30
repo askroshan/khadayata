@@ -24,6 +24,58 @@ import { format } from "date-fns";
 
 const GENDERS = ["Male", "Female", "Other", "Prefer not to say"];
 
+interface FamilyLink {
+  id: string;
+  relation: string;
+  related: unknown;
+}
+
+function FamilyConnectionsTable({ familyLinks }: { familyLinks: FamilyLink[] }) {
+  if (familyLinks.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-8 text-center">
+        <Users className="w-10 h-10 text-muted-foreground/25 mb-3" />
+        <p className="text-sm font-medium text-muted-foreground">No family connections yet</p>
+        <p className="text-xs text-muted-foreground/70 mt-1">Use "Invite Family" above to start building your Parivar tree</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-border">
+            <th className="text-left py-2 px-0 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-10"></th>
+            <th className="text-left py-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Name</th>
+            <th className="text-left py-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Relation</th>
+          </tr>
+        </thead>
+        <tbody>
+          {familyLinks.map((fl) => {
+            const rel = fl.related as { first_name?: string; last_name?: string; verification_level?: number } | null;
+            const initials = rel?.first_name?.[0] ?? "?";
+            const fullName = [rel?.first_name, rel?.last_name].filter(Boolean).join(" ") || "Unknown";
+            return (
+              <tr key={fl.id} className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors">
+                <td className="py-3 px-0">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
+                    {initials}
+                  </div>
+                </td>
+                <td className="py-3 px-3 font-medium text-foreground">{fullName}</td>
+                <td className="py-3 px-3">
+                  <Badge variant="outline" className="capitalize">{fl.relation}</Badge>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export default function Profile() {
   const { user, loading } = useAuth();
   const { member, isLoading, updateMember } = useMember();
@@ -575,36 +627,18 @@ export default function Profile() {
 
         {/* Family */}
         <Card className="shadow-card">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="font-display flex items-center gap-2"><Users className="w-5 h-5 text-primary" />Parivar (Family Tree)</CardTitle>
-              <p className="text-xs text-muted-foreground mt-0.5">Connected family members within the community</p>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="font-display flex items-center gap-2">
+                <Users className="w-5 h-5 text-primary" />Parivar (Family Tree)
+              </CardTitle>
+              {member && <FamilyInviteDialog memberId={member.id} />}
             </div>
-            {member && <FamilyInviteDialog memberId={member.id} />}
+            <p className="text-xs text-muted-foreground mt-0.5">Connected family members within the community</p>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-5 pt-0">
             {member && <PendingInvitationsList memberId={member.id} />}
-            {familyLinks?.length === 0 ? (
-              <div className="text-center py-4">
-                <Users className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">No family connections yet</p>
-                <p className="text-xs text-muted-foreground mt-1">Invite family members to connect your Parivar tree</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {familyLinks?.map((fl) => (
-                  <div key={fl.id} className="flex items-center gap-3 py-2 border-b border-border last:border-0 text-sm">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">
-                      {(fl.related as unknown as { first_name: string } | null)?.first_name?.[0]}
-                    </div>
-                    <div className="flex-1">
-                      <span className="font-medium">{(fl.related as unknown as { first_name: string; last_name: string } | null)?.first_name} {(fl.related as unknown as { first_name: string; last_name: string } | null)?.last_name}</span>
-                    </div>
-                    <Badge variant="outline" className="capitalize text-xs">{fl.relation}</Badge>
-                  </div>
-                ))}
-              </div>
-            )}
+            <FamilyConnectionsTable familyLinks={familyLinks ?? []} />
           </CardContent>
         </Card>
 

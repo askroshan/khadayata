@@ -261,79 +261,104 @@ export function PendingInvitationsList({ memberId }: PendingInvitationsListProps
   if (!invitations?.length) return null;
 
   return (
-    <div className="space-y-2">
+    <div className="w-full space-y-2">
       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
         <Clock className="w-3.5 h-3.5" /> Pending Invitations
       </p>
-      {invitations.map((inv) =>
-        editingId === inv.id ? (
-          <div key={inv.id} className="rounded-lg border border-border bg-muted/30 p-3 space-y-3 text-sm">
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1">
-                <Label className="text-xs">Relation</Label>
-                <Select value={editForm.relation ?? ""} onValueChange={(v) => setEditForm((p) => ({ ...p, relation: v }))}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {RELATIONS.map((r) => (
-                      <SelectItem key={r} value={r.toLowerCase()}>{r}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Name</Label>
-                <Input className="h-8 text-xs" value={editForm.name ?? ""} onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))} maxLength={200} />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Email</Label>
-                <Input className="h-8 text-xs" type="email" value={editForm.email ?? ""} onChange={(e) => setEditForm((p) => ({ ...p, email: e.target.value }))} maxLength={255} />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Phone</Label>
-                <div className="flex gap-1">
-                  <Select value={editForm.countryCode ?? "+91"} onValueChange={(v) => setEditForm((p) => ({ ...p, countryCode: v }))}>
-                    <SelectTrigger className="w-20 h-8 text-xs shrink-0"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {COUNTRY_CODES.map((cc) => (
-                        <SelectItem key={cc.label} value={cc.code}>{cc.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Input className="h-8 text-xs" value={editForm.phone ?? ""} onChange={(e) => setEditForm((p) => ({ ...p, phone: e.target.value.replace(/[^\d]/g, "") }))} maxLength={15} />
-                </div>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Button size="sm" className="h-7 text-xs gradient-warm text-primary-foreground" onClick={() => saveEdit.mutate(inv.id)} disabled={saveEdit.isPending}>
-                <Check className="w-3 h-3 mr-1" />Save
-              </Button>
-              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={cancelEdit}>
-                <X className="w-3 h-3 mr-1" />Cancel
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div key={inv.id} className="flex items-center justify-between py-2 border-b border-border last:border-0 text-sm group">
-            <div className="flex items-center gap-2 flex-wrap">
-              <Badge variant="outline" className="capitalize">{inv.relation}</Badge>
-              <span className="font-medium">{inv.invitee_name}</span>
-              {inv.invitee_email && <Mail className="w-3 h-3 text-muted-foreground" title={inv.invitee_email} />}
-              {inv.invitee_phone && <Phone className="w-3 h-3 text-muted-foreground" title={`${inv.invitee_phone_country_code} ${inv.invitee_phone}`} />}
-              <Badge variant="secondary" className="text-xs">
-                <Clock className="w-3 h-3 mr-1" />{inv.status}
-              </Badge>
-            </div>
-            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => startEdit(inv)} title="Edit invitation">
-                <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
-              </Button>
-              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => cancelInvite.mutate(inv.id)} title="Cancel invitation">
-                <Trash2 className="w-3.5 h-3.5 text-destructive" />
-              </Button>
-            </div>
-          </div>
-        )
-      )}
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-border">
+            <th className="text-left py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Name</th>
+            <th className="text-left py-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Relation</th>
+            <th className="text-left py-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Contact</th>
+            <th className="text-left py-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+            <th className="py-2 w-16"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {invitations.map((inv) =>
+            editingId === inv.id ? (
+              <tr key={inv.id}>
+                <td colSpan={5} className="py-3">
+                  <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Relation</Label>
+                        <Select value={editForm.relation ?? ""} onValueChange={(v) => setEditForm((p) => ({ ...p, relation: v }))}>
+                          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {RELATIONS.map((r) => (
+                              <SelectItem key={r} value={r.toLowerCase()}>{r}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Name</Label>
+                        <Input className="h-8 text-xs" value={editForm.name ?? ""} onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))} maxLength={200} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Email</Label>
+                        <Input className="h-8 text-xs" type="email" value={editForm.email ?? ""} onChange={(e) => setEditForm((p) => ({ ...p, email: e.target.value }))} maxLength={255} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Phone</Label>
+                        <div className="flex gap-1">
+                          <Select value={editForm.countryCode ?? "+91"} onValueChange={(v) => setEditForm((p) => ({ ...p, countryCode: v }))}>
+                            <SelectTrigger className="w-20 h-8 text-xs shrink-0"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {COUNTRY_CODES.map((cc) => (
+                                <SelectItem key={cc.label} value={cc.code}>{cc.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Input className="h-8 text-xs" value={editForm.phone ?? ""} onChange={(e) => setEditForm((p) => ({ ...p, phone: e.target.value.replace(/[^\d]/g, "") }))} maxLength={15} />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" className="h-7 text-xs gradient-warm text-primary-foreground" onClick={() => saveEdit.mutate(inv.id)} disabled={saveEdit.isPending}>
+                        <Check className="w-3 h-3 mr-1" />Save
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={cancelEdit}>
+                        <X className="w-3 h-3 mr-1" />Cancel
+                      </Button>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              <tr key={inv.id} className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors group">
+                <td className="py-3 font-medium text-foreground">{inv.invitee_name}</td>
+                <td className="py-3 px-3">
+                  <Badge variant="outline" className="capitalize">{inv.relation}</Badge>
+                </td>
+                <td className="py-3 px-3 hidden sm:table-cell">
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                    {inv.invitee_email && <span className="flex items-center gap-1 text-xs"><Mail className="w-3 h-3" /><span className="truncate max-w-32">{inv.invitee_email}</span></span>}
+                    {inv.invitee_phone && !inv.invitee_email && <span className="flex items-center gap-1 text-xs"><Phone className="w-3 h-3" />{inv.invitee_phone_country_code} {inv.invitee_phone}</span>}
+                  </div>
+                </td>
+                <td className="py-3 px-3">
+                  <Badge variant="secondary" className="text-xs gap-1">
+                    <Clock className="w-3 h-3" />{inv.status}
+                  </Badge>
+                </td>
+                <td className="py-3 text-right">
+                  <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => startEdit(inv)} title="Edit">
+                      <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => cancelInvite.mutate(inv.id)} title="Cancel">
+                      <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            )
+          )}
+        </tbody>
+      </table>
     </div>
   );
 }
