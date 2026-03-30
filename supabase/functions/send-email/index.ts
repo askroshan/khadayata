@@ -293,7 +293,8 @@ type EmailTemplate =
   | "contact_form_confirmation"
   | "contact_form_admin"
   | "global_id_assigned"
-  | "chapter_transfer_history_update";
+  | "chapter_transfer_history_update"
+  | "family_invitation_sent";
 
 function buildEmailHtml(template: EmailTemplate, vars: Record<string, string>): { subject: string; html: string } {
   const name = vars.name ?? "Member";
@@ -910,6 +911,28 @@ function buildEmailHtml(template: EmailTemplate, vars: Record<string, string>): 
       ]) +
       btn("View Your Profile", WEBSITE + "/profile");
     return { subject: "Your Khadayata Global ID: " + gid + " — " + COMMUNITY_NAME, html: baseTemplate(content, "Your unique Khadayata Global ID has been assigned.") };
+  }
+
+  if (template === "family_invitation_sent") {
+    const inviterName = vars.inviter_name ?? "A community member";
+    const relation = vars.relation ?? "family member";
+    const joinUrl = vars.join_url ?? WEBSITE + "/auth";
+    const content =
+      icon("&#128106;", ACCENT) +
+      h1("You've Been Invited to Connect on " + COMMUNITY_NAME) +
+      pt("Hi " + name + ",<br/><br/><strong>" + inviterName + "</strong> has invited you to join <strong>" + COMMUNITY_NAME + "</strong> and connect as their <strong>" + relation + "</strong> in the Parivar (Family Tree).") +
+      alert(COMMUNITY_NAME + " is the global platform for the Khadayata community — connecting families, chapters, and heritage across the world.", "info") +
+      kvGrid([
+        { label: "Invited By", value: inviterName },
+        { label: "Relation", value: relation.charAt(0).toUpperCase() + relation.slice(1) },
+      ]) +
+      pt("Join the community to accept this invitation and build your family connections.") +
+      btn("Join " + COMMUNITY_NAME, joinUrl) +
+      p("If you are already a member, sign in and visit your profile to find family connection requests.", "font-size:13px;color:" + TEXT_FAINT + ";margin-top:16px;");
+    return {
+      subject: inviterName + " has invited you to join " + COMMUNITY_NAME,
+      html: baseTemplate(content, inviterName + " wants to connect with you on " + COMMUNITY_NAME + "."),
+    };
   }
 
   if (template === "chapter_transfer_history_update") {

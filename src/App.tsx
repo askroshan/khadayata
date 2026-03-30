@@ -59,6 +59,7 @@ import Obituaries from "./pages/Obituaries";
 import PublicOralHistory from "./pages/PublicOralHistory";
 import PublicArchives from "./pages/PublicArchives";
 import PublicEldersCouncil from "./pages/PublicEldersCouncil";
+import AcceptFamilyInvite from "./pages/AcceptFamilyInvite";
 
 const queryClient = new QueryClient();
 
@@ -123,6 +124,7 @@ const App = () => (
               {/* Archives: public teaser at /archives, full app at /archives/full */}
               <Route path="/archives" element={<PublicArchives />} />
               <Route path="/archives/full" element={<Archives />} />
+              <Route path="/accept-family-invite/:token" element={<AcceptFamilyInvite />} />
               <Route path="/obituaries" element={<Obituaries />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/terms" element={<Terms />} />

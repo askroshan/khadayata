@@ -18,7 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { AvatarUpload } from "@/components/AvatarUpload";
 import { QRCodeDisplay } from "@/components/QRCodeDisplay";
 import { PhoneField } from "@/components/profile/PhoneField";
-import { FamilyInviteDialog } from "@/components/profile/FamilyInviteDialog";
+import { FamilyInviteDialog, PendingInvitationsList } from "@/components/profile/FamilyInviteDialog";
 import { User, Briefcase, GraduationCap, Users, Shield, QrCode, CreditCard as Edit, Check, X, Plus, Trash2, MapPin, Award, Heart, ArrowRight } from "lucide-react";
 import { format } from "date-fns";
 
@@ -582,7 +582,8 @@ export default function Profile() {
             </div>
             {member && <FamilyInviteDialog memberId={member.id} />}
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            {member && <PendingInvitationsList memberId={member.id} />}
             {familyLinks?.length === 0 ? (
               <div className="text-center py-4">
                 <Users className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
