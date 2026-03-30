@@ -604,8 +604,8 @@ export default function Index() {
               </div>
             </div>
             {[
-              { title: "Platform", links: [["Directory", "/directory"], ["Events", "/events"], ["Business", "/business"], ["Matrimonial", "/matrimonial"], ["Contact", "/contact"]] },
-              { title: "Heritage", links: [["Kotyark Temple", "/temple"], ["Archives", "/archives"], ["News", "/news"], ["Oral History", "/oral-history"], ["Elders Council", "/elders-council"]] },
+              { title: "Platform", links: [["Directory", "/directory"], ["Events", "/events"], ["Business", "/business"], ["Matrimonial", "/matrimonial"], ["Scholarships", "/scholarships"], ["Mentorship", "/mentorship"], ["Obituaries", "/obituaries"], ["Contact", "/contact"]] },
+              { title: "Heritage", links: [["Kotyark Temple", "/temple"], ["Archives", "/archives"], ["News", "/news"], ["Oral History", "/oral-history"], ["Elders Council", "/elders-council"], ["Services", "/services"]] },
               { title: "Legal", links: [["Terms of Use", "/terms"], ["Privacy Policy", "/privacy"], ["Accessibility", "/accessibility"]] },
             ].map((col) => (
               <div key={col.title}>

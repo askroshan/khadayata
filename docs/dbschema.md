@@ -851,17 +851,55 @@ Reviewed and approved by Chapter Admin or Finance Admin. `approved_by` reference
 
 ### chapter_transfers
 
-| Column | Type | Nullable | Default |
-|--------|------|----------|---------|
-| id | uuid | No | gen_random_uuid() |
-| member_id | uuid | No | — |
-| from_chapter_id | uuid | Yes | — |
-| to_chapter_id | uuid | No | — |
-| reason | text | Yes | — |
-| status | text | No | 'pending' |
-| approved_by | uuid | Yes | — |
-| approved_at | timestamptz | Yes | — |
-| created_at | timestamptz | No | now() |
+Stores pending/approved/rejected transfer requests initiated by members. When a transfer is approved, a trigger writes a permanent record to `chapter_transfer_history`.
+
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| id | uuid | No | gen_random_uuid() | Primary key |
+| member_id | uuid | No | — | Member requesting transfer |
+| from_chapter_id | uuid | Yes | — | Source chapter |
+| to_chapter_id | uuid | No | — | Destination chapter |
+| reason | text | Yes | — | Member-provided reason |
+| status | text | No | 'pending' | pending \| approved \| rejected |
+| approved_by | uuid | Yes | — | Admin who actioned the request |
+| approved_at | timestamptz | Yes | — | Legacy approval timestamp |
+| resolved_at | timestamptz | Yes | — | When status was set to approved/rejected |
+| created_at | timestamptz | No | now() | Request creation time |
+
+---
+
+### chapter_transfer_history
+
+**Immutable audit trail** of every chapter membership change for every member. Populated automatically by two database triggers:
+
+1. `trg_chapter_transfer_history` — fires when `chapter_transfers.status` changes to `'approved'`
+2. `trg_member_chapter_change` — fires when `members.chapter_id` is directly updated by an admin
+
+This table is append-only — there are no UPDATE or DELETE RLS policies.
+
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| id | uuid | No | gen_random_uuid() | Primary key |
+| member_id | uuid | No | — | Member who changed chapters |
+| from_chapter_id | uuid | Yes | — | Previous chapter (null for first assignment) |
+| to_chapter_id | uuid | Yes | — | New chapter |
+| from_chapter_name | text | Yes | — | Snapshot of previous chapter name at time of transfer |
+| to_chapter_name | text | Yes | — | Snapshot of new chapter name at time of transfer |
+| transfer_type | text | No | 'member_request' | `member_request` \| `admin_move` \| `initial_assignment` \| `system` |
+| reason | text | Yes | — | Reason carried over from the transfer request |
+| initiated_by | uuid | Yes | — | Member or admin who initiated the change |
+| approved_by | uuid | Yes | — | Admin who approved (null for admin_move) |
+| related_transfer_id | uuid | Yes | — | FK to `chapter_transfers.id` when applicable |
+| effective_at | timestamptz | No | now() | When the chapter change took effect |
+| created_at | timestamptz | No | now() | Row insertion time |
+
+**RLS Policies:**
+- Members can SELECT their own rows (`member_id = auth member id`)
+- Global Admins and Data Stewards can SELECT all rows
+- Chapter Admins can SELECT rows where their chapter is `from_chapter_id` or `to_chapter_id`
+- Authenticated users can INSERT (required for trigger execution)
+
+**Indexes:** `member_id`, `from_chapter_id`, `to_chapter_id`, `effective_at DESC`, `related_transfer_id`
 
 ---
 

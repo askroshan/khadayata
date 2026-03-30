@@ -291,7 +291,9 @@ type EmailTemplate =
   | "membership_renewal"
   | "new_message"
   | "contact_form_confirmation"
-  | "contact_form_admin";
+  | "contact_form_admin"
+  | "global_id_assigned"
+  | "chapter_transfer_history_update";
 
 function buildEmailHtml(template: EmailTemplate, vars: Record<string, string>): { subject: string; html: string } {
   const name = vars.name ?? "Member";
@@ -885,6 +887,45 @@ function buildEmailHtml(template: EmailTemplate, vars: Record<string, string>): 
       kvGrid(pairs) +
       (vars.message ? label("Message") + '<div style="background:' + BG + ';border:1px solid ' + BORDER + ';border-radius:6px;padding:16px 20px;font-size:14px;color:' + TEXT + ';line-height:1.8;margin-bottom:24px;">' + vars.message + "</div>" : "");
     return { subject: "Contact form: " + (vars.subject_line ?? "New submission") + " — " + name, html: baseTemplate(content, "New contact form submission.") };
+  }
+
+  if (template === "global_id_assigned") {
+    const gid = vars.global_id ?? "KHD-000000";
+    const content =
+      icon("&#127759;", ACCENT) +
+      h1("Your Global Khadayata ID") +
+      pt("Hi " + name + ",<br/><br/>Congratulations! Your unique <strong>Khadayata Global ID</strong> has been assigned. This is your permanent, portable identity across all chapters, events, and services on " + COMMUNITY_NAME + ".") +
+      '<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:24px 0;">' +
+      '<tr><td style="background:' + HEADER_BG + ';border-radius:8px;padding:28px;text-align:center;">' +
+      '<p style="margin:0 0 8px;font-size:11px;font-weight:700;color:rgba(255,255,255,0.45);letter-spacing:2px;text-transform:uppercase;">Your Global ID</p>' +
+      '<p style="margin:0;font-size:32px;font-weight:800;color:#FFFFFF;letter-spacing:4px;font-family:monospace;">' + gid + '</p>' +
+      (vars.chapter_name ? '<p style="margin:10px 0 0;font-size:12px;color:rgba(255,255,255,0.45);">' + vars.chapter_name + '</p>' : '') +
+      '</td></tr></table>' +
+      alert("Keep this ID safe. Use it when contacting any Khadayata chapter worldwide — it uniquely identifies you in our global network.", "info") +
+      kvGrid([
+        { label: "Assigned To", value: name },
+        { label: "Global ID", value: gid },
+        ...(vars.chapter_name ? [{ label: "Home Chapter", value: vars.chapter_name }] : []),
+        { label: "Issued On", value: vars.issued_date ?? new Date().toDateString() },
+      ]) +
+      btn("View Your Profile", WEBSITE + "/profile");
+    return { subject: "Your Khadayata Global ID: " + gid + " — " + COMMUNITY_NAME, html: baseTemplate(content, "Your unique Khadayata Global ID has been assigned.") };
+  }
+
+  if (template === "chapter_transfer_history_update") {
+    const rows: Array<{ label: string; value: string }> = [];
+    if (vars.from_chapter) rows.push({ label: "Previous Chapter", value: vars.from_chapter });
+    if (vars.to_chapter) rows.push({ label: "New Chapter", value: vars.to_chapter });
+    if (vars.transfer_type) rows.push({ label: "Transfer Type", value: vars.transfer_type });
+    if (vars.effective_date) rows.push({ label: "Effective Date", value: vars.effective_date });
+    if (vars.reason) rows.push({ label: "Reason", value: vars.reason });
+    const content =
+      h1("Chapter Membership Updated") +
+      pt("Hi " + name + ", your chapter membership has been updated on " + COMMUNITY_NAME + ".") +
+      (rows.length ? infoRows(rows) : "") +
+      alert("This change has been permanently recorded in your membership history. You can view your full chapter transfer history in your profile settings.", "info") +
+      btn("View Membership History", WEBSITE + "/profile");
+    return { subject: "Chapter membership updated — " + COMMUNITY_NAME, html: baseTemplate(content, "Your chapter membership has been updated.") };
   }
 
   const content =

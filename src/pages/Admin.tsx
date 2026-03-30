@@ -7,7 +7,7 @@ import AppLayout from "@/components/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Shield, TriangleAlert as AlertTriangle, Flag, LayoutDashboard, Building2, Calendar, DollarSign, Newspaper } from "lucide-react";
+import { Shield, TriangleAlert as AlertTriangle, Flag, LayoutDashboard, Building2, Calendar, DollarSign, Newspaper, ChartBar as BarChart2 } from "lucide-react";
 import AdminStats from "@/components/admin/AdminStats";
 import MembersTab from "@/components/admin/MembersTab";
 import RolesTab from "@/components/admin/RolesTab";
@@ -26,6 +26,7 @@ import WhatsAppTab from "@/components/admin/WhatsAppTab";
 import SMSTab from "@/components/admin/SMSTab";
 import BannedKeywordsTab from "@/components/admin/BannedKeywordsTab";
 import ChaptersTab from "@/components/admin/ChaptersTab";
+import AnalyticsTab from "@/components/admin/AnalyticsTab";
 
 export default function Admin() {
   const { user, loading } = useAuth();
@@ -151,6 +152,7 @@ export default function Admin() {
               {isGlobalAdmin && <TabsTrigger value="whatsapp" className="text-xs sm:text-sm">WhatsApp</TabsTrigger>}
               {isGlobalAdmin && <TabsTrigger value="sms" className="text-xs sm:text-sm">SMS</TabsTrigger>}
               {(isGlobalAdmin || isModerator) && <TabsTrigger value="keywords" className="text-xs sm:text-sm">Keywords</TabsTrigger>}
+              {(isGlobalAdmin || isChapterAdmin) && <TabsTrigger value="analytics" className="gap-1 text-xs sm:text-sm"><BarChart2 className="w-3.5 h-3.5" />Analytics</TabsTrigger>}
             </TabsList>
           </div>
 
@@ -237,6 +239,11 @@ export default function Admin() {
           {(isGlobalAdmin || isModerator) && (
             <TabsContent value="keywords" className="mt-4">
               <BannedKeywordsTab />
+            </TabsContent>
+          )}
+          {(isGlobalAdmin || isChapterAdmin) && (
+            <TabsContent value="analytics" className="mt-4">
+              <AnalyticsTab myChapterId={myChapterId} />
             </TabsContent>
           )}
         </Tabs>
