@@ -14,11 +14,84 @@ import {
   useChapterCommittee, useChapterPastCommittee, useChapterEvents,
   useChapterNews, useChapterBusinesses, useChapterJobs, useChapterGallery,
 } from "@/hooks/useChapter";
+import SEOMeta from "@/components/SEOMeta";
 import patternOrnament from "@/assets/pattern-ornament.png";
 import { format } from "date-fns";
 
+const BASE_URL = "https://khadayataonline.com";
+
 function initials(first?: string | null, last?: string | null) {
   return `${(first || "?")[0]}${(last || "")[0] || ""}`.toUpperCase();
+}
+
+function buildChapterSchema(
+  chapterName: string,
+  slug: string,
+  city: string | undefined,
+  state: string | undefined,
+  stateCode: string | undefined,
+  country: string | undefined,
+  countryCode: string | undefined,
+  memberCount: number,
+  upcomingEventCount: number
+) {
+  const locationStr = [city, state, country].filter(Boolean).join(", ");
+  const chapterUrl = BASE_URL + "/chapters/" + slug;
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": ["Organization", "CivicStructure"],
+        "@id": chapterUrl + "/#organization",
+        name: chapterName + " — Khadayata Community",
+        alternateName: chapterName,
+        url: chapterUrl,
+        description:
+          "The Khadayata community chapter in " + (locationStr || "India") +
+          ". Connecting " + memberCount + " verified Khadayata community members through events, business networking, and cultural heritage programs.",
+        logo: { "@type": "ImageObject", url: BASE_URL + "/Screenshot_2026-03-16_at_9.18.14_AM.png" },
+        parentOrganization: {
+          "@type": "Organization",
+          "@id": BASE_URL + "/#organization",
+          name: "Khadayata Online",
+          url: BASE_URL,
+        },
+        address: {
+          "@type": "PostalAddress",
+          ...(city ? { addressLocality: city } : {}),
+          ...(stateCode ? { addressRegion: stateCode } : state ? { addressRegion: state } : {}),
+          ...(countryCode ? { addressCountry: countryCode } : country ? { addressCountry: country } : {}),
+        },
+        areaServed: { "@type": "Place", name: locationStr || "India" },
+        knowsAbout: [
+          "Khadayata community",
+          "Gujarati Hindu community",
+          "Kotyark Temple",
+          "Indian diaspora " + (country || ""),
+          "Community events " + (city || ""),
+        ],
+      },
+      {
+        "@type": "WebPage",
+        "@id": chapterUrl + "/#webpage",
+        url: chapterUrl,
+        name: chapterName + " | Khadayata Community Chapter",
+        description:
+          "Khadayata community chapter in " + (locationStr || "India") +
+          ". " + memberCount + " members, " + upcomingEventCount + " upcoming events.",
+        isPartOf: { "@id": BASE_URL + "/#website" },
+        breadcrumb: {
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Home", item: BASE_URL },
+            { "@type": "ListItem", position: 2, name: "Chapters", item: BASE_URL + "/chapters" },
+            { "@type": "ListItem", position: 3, name: chapterName, item: chapterUrl },
+          ],
+        },
+        inLanguage: "en-US",
+      },
+    ],
+  };
 }
 
 export default function ChapterDetail() {
@@ -58,17 +131,40 @@ export default function ChapterDetail() {
 
   const city = (chapter.cities as { name: string } | null)?.name;
   const state = (chapter.states as { name: string } | null)?.name;
+  const stateCode = (chapter.states as { name: string; code?: string } | null)?.code;
   const country = (chapter.countries as { name: string } | null)?.name;
+  const countryCode = (chapter.countries as { name: string; iso2?: string } | null)?.iso2;
+  const locationStr = [city, state, country].filter(Boolean).join(", ");
+  const count = memberCount ?? 0;
+  const upcomingCount = upcomingEvents?.length ?? 0;
+
+  const seoTitle = chapter.name + (locationStr ? " — Khadayata Community in " + locationStr : " — Khadayata Community");
+  const seoDescription =
+    "Khadayata community chapter in " + (locationStr || "India") +
+    ". " + count + " verified members, " + upcomingCount + " upcoming events, local businesses and news. " +
+    "Join the Khadayata community in " + (city || country || "your area") + ".";
+  const seoKeywords =
+    "Khadayata " + (city || "") + ", Khadayata community " + (country || "India") +
+    ", Gujarati community " + (city || "") + ", Indian community " + (city || "") +
+    ", Khadayata chapter, Khadayata members, Hindu community " + (city || "");
 
   const stats = [
-    { label: "Members", value: memberCount ?? 0, icon: Users },
+    { label: "Members", value: count, icon: Users },
     { label: "Businesses", value: businesses?.length ?? 0, icon: Building2 },
-    { label: "Upcoming Events", value: upcomingEvents?.length ?? 0, icon: Calendar },
+    { label: "Upcoming Events", value: upcomingCount, icon: Calendar },
     { label: "Open Jobs", value: jobs?.length ?? 0, icon: Briefcase },
   ];
 
   return (
     <div className="min-h-screen bg-background">
+      <SEOMeta
+        title={seoTitle}
+        description={seoDescription}
+        keywords={seoKeywords}
+        url={"/chapters/" + slug}
+        type="website"
+        schema={buildChapterSchema(chapter.name, slug!, city, state, stateCode, country, countryCode, count, upcomingCount)}
+      />
       {/* Hero */}
       <div className="relative gradient-hero py-10 sm:py-16">
         <img src={patternOrnament} alt="" className="absolute right-4 top-1/2 -translate-y-1/2 w-40 h-40 opacity-10" />
@@ -81,7 +177,7 @@ export default function ChapterDetail() {
           </h1>
           <p className="flex items-center gap-1.5 text-primary-foreground/80 mt-2 text-sm">
             <MapPin className="w-4 h-4" />
-            {[city, state, country].filter(Boolean).join(", ")}
+            {locationStr}
           </p>
         </div>
       </div>
@@ -157,7 +253,7 @@ export default function ChapterDetail() {
           {/* Members */}
           <TabsContent value="members" className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-display font-bold">Members ({memberCount ?? 0})</h2>
+              <h2 className="text-xl font-display font-bold">Members ({count})</h2>
             </div>
             {members && members.length > 0 ? (
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

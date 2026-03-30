@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Clock, User, MapPin, Globe, Eye, Star, Share2, Copy, BookOpen } from "lucide-react";
 import { format } from "date-fns";
 import { ReportDialog } from "@/components/ReportDialog";
+import SEOMeta from "@/components/SEOMeta";
 
 function estimateReadTime(text: string): number {
   const words = text.trim().split(/\s+/).length;
@@ -87,6 +88,22 @@ export default function NewsDetail() {
 
   return (
     <AppLayout title={article.title}>
+      <SEOMeta
+        title={article.title}
+        description={article.summary ?? article.title}
+        keywords={[article.category, article.article_type, "Khadayata news", "community news"].filter(Boolean).join(", ")}
+        image={article.cover_image_url ?? undefined}
+        url={"/news/" + article.id}
+        type="article"
+        publishedAt={article.published_at ?? undefined}
+        modifiedAt={article.updated_at ?? undefined}
+        authorName={article.author_name ?? undefined}
+        breadcrumbs={[
+          { name: "Home", url: "/" },
+          { name: "News", url: "/news" },
+          { name: article.title, url: "/news/" + article.id },
+        ]}
+      />
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 space-y-6">
         <Link to="/news" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft className="w-4 h-4" /> Back to News

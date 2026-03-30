@@ -12,7 +12,16 @@ export default function Chapters() {
 
   return (
     <PublicLayout title="Chapters">
-    <SEOMeta title="Chapters" description="Explore Khadayata community chapters across 28 countries. Find your local chapter in India, USA, UK, Kenya, Australia and more." url="/chapters" keywords="Khadayata chapters, Khadayata community worldwide, Indian community chapters, Gujarati community chapters" />
+    <SEOMeta
+      title="Chapters — Khadayata Community Worldwide"
+      description="Explore all 67+ Khadayata community chapters across 28 countries. Find your local chapter in India (Ahmedabad, Mumbai, Surat, Delhi, Jaipur), USA (New York), UK (London), UAE (Dubai), and more."
+      url="/chapters"
+      keywords="Khadayata chapters, Khadayata community worldwide, Indian community chapters, Gujarati community chapters, Khadayata India, Khadayata USA, Khadayata UK, Khadayata Dubai, Khadayata London"
+      breadcrumbs={[
+        { name: "Home", url: "/" },
+        { name: "Chapters", url: "/chapters" },
+      ]}
+    />
     <div className="bg-background">
       <div className="gradient-hero py-10 sm:py-14">
         <div className="container max-w-6xl">

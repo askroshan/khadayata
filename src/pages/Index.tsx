@@ -105,19 +105,32 @@ export default function Index() {
     <div style={{ fontFamily: "'Poppins', sans-serif", background: "#FFF7E6", color: "#2E2E2E" }}>
       <SEOMeta
         title={undefined}
-        description="Khadayata Online — the global digital home for the Khadayata community. Verified member directory, events, business network, matrimonial, heritage archives, and Kotyark Temple across 28 countries."
-        keywords="Khadayata, Khadayata community, Khadayata Online, Gujarati community, Indian community, Kotyark Temple, Khadayata chapters, Khadayata members, Hindu community, Indian diaspora"
+        description="Khadayata Online — the global digital home for the Khadayata community. Verified member directory, events, business network, matrimonial, heritage archives, and Kotyark Temple across 28 countries and 67 chapters."
+        keywords="Khadayata, Khadayata community, Khadayata Online, Gujarati community, Indian community, Kotyark Temple, Khadayata chapters, Khadayata members, Hindu community, Indian diaspora, Khadayata heritage directory"
         url="/"
-        schema={{
-          "@type": "CommunityWebsite",
-          name: "Khadayata Online",
-          description: "Global community platform for Khadayata families worldwide",
-          audience: {
-            "@type": "Audience",
-            audienceType: "Khadayata community members",
-            geographicArea: { "@type": "Place", name: "Worldwide" },
+        breadcrumbs={[{ name: "Home", url: "/" }]}
+        faq={[
+          {
+            question: "What is the Khadayata community?",
+            answer: "The Khadayata community is a Gujarati Hindu community originating from the Kutch and Saurashtra regions of Gujarat, India. They are devotees of Kotyark Surya (Sun God) and have a global diaspora across 28+ countries.",
           },
-        }}
+          {
+            question: "What is Khadayata Online?",
+            answer: "Khadayata Online (khadayataonline.com) is the official global digital platform for the Khadayata community, providing a verified member directory, chapter management, events, matrimonial services, business networking, heritage archives, and community governance.",
+          },
+          {
+            question: "How do I find a Khadayata chapter near me?",
+            answer: "Visit the Chapters page at khadayataonline.com/chapters to see all 67+ chapters across 28 countries. Each chapter has its own page with local events, members, and businesses.",
+          },
+          {
+            question: "What is a Khadayata Global ID?",
+            answer: "A Khadayata Global ID (format: KHD-XXXXXX) is a unique verified identifier assigned to community members. It works across all chapters worldwide and persists even if a member transfers between chapters.",
+          },
+          {
+            question: "What is Kotyark Temple?",
+            answer: "Kotyark Temple is the principal temple of the Khadayata community, dedicated to Kotyark Surya (the Sun God), located in Koteshwar, Gujarat, India. Virtual access and live Aarti streaming are available on Khadayata Online.",
+          },
+        ]}
       />
 
       {/* ─── NAVBAR ─── */}

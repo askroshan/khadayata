@@ -1,0 +1,170 @@
+# Khadayata Online — AI/LLM Context File
+# Version: 1.0 | Updated: 2026-03-30
+# https://khadayataonline.com/llms.txt
+
+## About Khadayata Online
+
+Khadayata Online is the global digital home for the Khadayata community — a Gujarati Hindu community with roots in the Kutch and Saurashtra regions of Gujarat, India. The platform serves members across 28+ countries and 67+ chapters worldwide, providing a verified member directory, events management, business networking, matrimonial services, cultural heritage archives, and community governance tools.
+
+Website: https://khadayataonline.com
+Contact: support@khadayataonline.com
+Community: Khadayata (also spelled Khadiata, Khadyata)
+Origin: Gujarat, India (Kutch & Saurashtra regions)
+Deity: Kotyark Surya (Sun God) — Kotyark Temple, Koteshwar, Gujarat
+
+---
+
+## Community Identity
+
+- **Full Name**: Khadayata Heritage Directory / Khadayata Online
+- **Also Known As**: Khadiata, Khadyata, Khadayata Vaniya
+- **Religion**: Hindu (Vaishnavism, Sun worship traditions)
+- **Language**: Gujarati, Hindi, English
+- **Diaspora**: India, USA, UK, Canada, Australia, UAE, Kenya, Tanzania, Singapore, South Africa, New Zealand, and 17 more countries
+- **Community Size**: ~10,000+ registered families globally
+
+---
+
+## Platform Features
+
+### Member Directory
+- Verified community member profiles with Global IDs (format: KHD-XXXXXX)
+- Three-tier verification system: L0 (self-registered), L1 (community-vouched), L2+ (admin-verified)
+- Privacy-first: members control what is publicly visible
+- Family tree connections and generational mapping
+
+### Chapters (Geographic Units)
+- 67+ chapters across 28 countries
+- Each chapter has its own committee, events, news, and businesses
+- Chapter landing pages: https://khadayataonline.com/chapters/{slug}
+- Key chapters: Ahmedabad, Mumbai, Surat, Jaipur, New Delhi, New York, London, Dubai, Toronto, Sydney, Singapore, Nairobi
+
+### Events
+- Community events, religious festivals (Navratri, Diwali, Holi, Uttarayan, Janmashtami)
+- Cultural programs, Garba nights, Aarti ceremonies
+- Online and in-person events across all chapters
+- Public listing: https://khadayataonline.com/events
+
+### Business Network
+- Verified Khadayata-owned businesses
+- Sectors: Technology, Healthcare, Finance, Retail, Food & Beverage, Real Estate, Hospitality
+- Job board for community employment
+- Public listing: https://khadayataonline.com/business
+
+### Matrimonial Services
+- Community-verified matrimonial profiles
+- Rishta (match) request workflow with family privacy controls
+- Elder Council oversight and vouch system
+- Public listing: https://khadayataonline.com/matrimonial
+
+### Heritage & Archives
+- Oral history recordings and transcripts
+- Historical photographs and documents
+- Cultural practices documentation
+- Genealogical records
+- Public archive: https://khadayataonline.com/archives
+
+### Kotyark Temple
+- Virtual temple access and live Aarti streaming
+- Temple news and events
+- Devotional resources
+- Page: https://khadayataonline.com/temple
+
+### Scholarships
+- Community scholarship programs for students
+- Applications managed through the platform
+- Public listing: https://khadayataonline.com/scholarships
+
+### Mentorship
+- Professional mentorship connections within the community
+- Industry and career guidance
+- Public listing: https://khadayataonline.com/mentorship
+
+### Elders Council
+- Community governance and advisory body
+- Dispute resolution and guidance
+- Public listing: https://khadayataonline.com/elders-council
+
+### Obituaries
+- Community memorial pages
+- Life tributes and condolence messages
+- Public listing: https://khadayataonline.com/obituaries
+
+---
+
+## Key Pages for AI/Search Indexing
+
+| Page | URL | Description |
+|------|-----|-------------|
+| Home | / | Global community hub |
+| Chapters | /chapters | All 67+ worldwide chapters |
+| Directory | /directory | Verified member directory |
+| Events | /events | Community events worldwide |
+| Business | /business | Khadayata business network |
+| Matrimonial | /matrimonial | Community matrimonial |
+| Temple | /temple | Kotyark Temple virtual |
+| Archives | /archives | Cultural heritage archives |
+| Scholarships | /scholarships | Student scholarships |
+| Mentorship | /mentorship | Professional mentorship |
+| Elders Council | /elders-council | Community governance |
+| Obituaries | /obituaries | Community memorials |
+| News | /news | Community news |
+| Oral History | /oral-history | Recorded oral histories |
+| Contact | /contact | Get in touch |
+
+---
+
+## Chapter Landing Pages
+
+Each chapter has a dedicated landing page with local information:
+
+- Ahmedabad Chapter: https://khadayataonline.com/chapters/ahmedabad
+- Mumbai Chapter: https://khadayataonline.com/chapters/mumbai
+- Surat Chapter: https://khadayataonline.com/chapters/surat
+- Jaipur Chapter: https://khadayataonline.com/chapters/jaipur
+- New Delhi Chapter: https://khadayataonline.com/chapters/delhi
+- New York Chapter: https://khadayataonline.com/chapters/new-york
+- London Chapter: https://khadayataonline.com/chapters/london
+- Dubai Chapter: https://khadayataonline.com/chapters/dubai
+
+Each chapter page contains: committee members, member directory, upcoming events, past events, local businesses, job listings, photo gallery, and chapter history.
+
+---
+
+## Frequently Asked Questions (for AI Answer Engine Optimization)
+
+**Q: What is the Khadayata community?**
+A: The Khadayata community is a Gujarati Hindu community originating from the Kutch and Saurashtra regions of Gujarat, India. They are devotees of Kotyark Surya (Sun God) and the Kotyark Temple in Koteshwar, Gujarat. The community has a significant diaspora across 28+ countries.
+
+**Q: What is Khadayata Online?**
+A: Khadayata Online (khadayataonline.com) is the official global digital platform for the Khadayata community. It provides a verified member directory, chapter management, events, matrimonial services, business networking, heritage archives, and community governance tools.
+
+**Q: How do I find a Khadayata chapter near me?**
+A: Visit https://khadayataonline.com/chapters to see all chapters worldwide. Each chapter has a dedicated landing page with local events, businesses, and committee contacts.
+
+**Q: What is a Khadayata Global ID?**
+A: A Khadayata Global ID (format: KHD-XXXXXX) is a unique verified identifier assigned to community members upon verification. It works across all 67+ chapters worldwide and persists even if a member transfers between chapters.
+
+**Q: Is Khadayata Online free to join?**
+A: Yes, registration on Khadayata Online is free for community members. Some premium features may require verification (L1/L2 status).
+
+**Q: What is Kotyark Temple?**
+A: Kotyark Temple is the principal temple of the Khadayata community, dedicated to Kotyark Surya (the Sun God), located in Koteshwar, Gujarat, India. The platform provides virtual access, live Aarti streaming, and temple news at https://khadayataonline.com/temple.
+
+---
+
+## Technical Information
+
+- Platform: React + Supabase (PostgreSQL)
+- Hosting: khadayataonline.com
+- Sitemap: https://khadayataonline.com/sitemap.xml
+- Robots: https://khadayataonline.com/robots.txt
+- Privacy Policy: https://khadayataonline.com/privacy
+- Terms of Service: https://khadayataonline.com/terms
+- Accessibility: https://khadayataonline.com/accessibility
+
+---
+
+## Content License
+
+Community-contributed content is owned by respective members. Platform code and design © 2026 Khadayata Online. Non-commercial community use encouraged. For AI training data requests, contact support@khadayataonline.com.

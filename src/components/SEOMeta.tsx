@@ -9,6 +9,11 @@ interface SEOMetaProps {
   type?: "website" | "article" | "profile";
   schema?: object;
   noIndex?: boolean;
+  breadcrumbs?: Array<{ name: string; url: string }>;
+  faq?: Array<{ question: string; answer: string }>;
+  publishedAt?: string;
+  modifiedAt?: string;
+  authorName?: string;
 }
 
 const BASE_TITLE = "Khadayata Online";
@@ -25,6 +30,11 @@ export default function SEOMeta({
   type = "website",
   schema,
   noIndex = false,
+  breadcrumbs,
+  faq,
+  publishedAt,
+  modifiedAt,
+  authorName,
 }: SEOMetaProps) {
   const fullTitle = title ? `${title} | ${BASE_TITLE}` : `${BASE_TITLE} — Connecting Khadayata Community Worldwide`;
   const canonicalUrl = url ? `${BASE_URL}${url}` : BASE_URL;
@@ -102,7 +112,48 @@ export default function SEOMeta({
         about: { "@id": `${BASE_URL}/#organization` },
         inLanguage: "en-US",
       },
-      ...(schema ? [schema] : []),
+      ...(schema ? (Array.isArray((schema as { "@graph"?: object[] })["@graph"]) ? (schema as { "@graph": object[] })["@graph"] : [schema]) : []),
+      ...(breadcrumbs && breadcrumbs.length > 0
+        ? [{
+            "@type": "BreadcrumbList",
+            "@id": canonicalUrl + "/#breadcrumb",
+            itemListElement: breadcrumbs.map((b, i) => ({
+              "@type": "ListItem",
+              position: i + 1,
+              name: b.name,
+              item: BASE_URL + b.url,
+            })),
+          }]
+        : []),
+      ...(faq && faq.length > 0
+        ? [{
+            "@type": "FAQPage",
+            "@id": canonicalUrl + "/#faq",
+            mainEntity: faq.map((f) => ({
+              "@type": "Question",
+              name: f.question,
+              acceptedAnswer: { "@type": "Answer", text: f.answer },
+            })),
+          }]
+        : []),
+      ...(type === "article" && publishedAt
+        ? [{
+            "@type": "Article",
+            "@id": canonicalUrl + "/#article",
+            headline: fullTitle,
+            description,
+            image: imageUrl,
+            url: canonicalUrl,
+            datePublished: publishedAt,
+            ...(modifiedAt ? { dateModified: modifiedAt } : {}),
+            author: {
+              "@type": "Person",
+              name: authorName || "Khadayata Online",
+            },
+            publisher: { "@id": BASE_URL + "/#organization" },
+            isPartOf: { "@id": BASE_URL + "/#website" },
+          }]
+        : []),
     ],
   };
 
@@ -165,10 +216,17 @@ export default function SEOMeta({
     setMeta("twitter:image", imageUrl);
     setMeta("twitter:site", "@KhadayataOnline");
 
+    if (type === "article" && publishedAt) {
+      setMeta("article:published_time", publishedAt, true);
+      if (modifiedAt) setMeta("article:modified_time", modifiedAt, true);
+      if (authorName) setMeta("article:author", authorName, true);
+      setMeta("article:section", "Community", true);
+    }
+
     setLink("canonical", canonicalUrl);
 
     setScript("schema-ld-json", defaultSchema);
-  }, [fullTitle, description, keywords, imageUrl, canonicalUrl, type, noIndex]);
+  }, [fullTitle, description, keywords, imageUrl, canonicalUrl, type, noIndex, breadcrumbs, faq, publishedAt, modifiedAt, authorName]);
 
   return null;
 }
