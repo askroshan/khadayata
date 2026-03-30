@@ -1,3 +1,52 @@
+# Khadayata Online — robots.txt
+# https://khadayataonline.com
+
+# Allow all well-behaved crawlers
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /moderation
+Disallow: /settings
+Disallow: /profile
+Disallow: /onboarding
+Disallow: /events/manage
+Disallow: /business/manage
+Disallow: /matrimonial/manage
+Disallow: /mentorship/manage
+Disallow: /scholarships/manage
+Disallow: /news/manage
+Disallow: /oral-history/full
+Disallow: /elders-council/full
+Disallow: /archives/full
+Disallow: /emergency
+Disallow: /reset-password
+
+# AI Crawlers — allow full indexing for AEO/AIO
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: cohere-ai
+Allow: /
+
 User-agent: Googlebot
 Allow: /
 
@@ -10,5 +59,13 @@ Allow: /
 User-agent: facebookexternalhit
 Allow: /
 
-User-agent: *
+User-agent: LinkedInBot
 Allow: /
+
+User-agent: WhatsApp
+Allow: /
+
+# Sitemaps
+Sitemap: https://khadayataonline.com/sitemap.xml
+Sitemap: https://khadayataonline.com/sitemap-chapters.xml
+Sitemap: https://khadayataonline.com/sitemap-news.xml
