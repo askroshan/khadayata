@@ -311,7 +311,8 @@ type EmailTemplate =
   | "contact_form_admin"
   | "global_id_assigned"
   | "chapter_transfer_history_update"
-  | "family_invitation_sent";
+  | "family_invitation_sent"
+  | "chapter_admin_invite";
 
 function buildEmailHtml(template: EmailTemplate, vars: Record<string, string>): { subject: string; html: string } {
   const name = vars.name ?? "Member";
@@ -949,6 +950,33 @@ function buildEmailHtml(template: EmailTemplate, vars: Record<string, string>): 
     return {
       subject: inviterName + " has invited you to join " + COMMUNITY_NAME,
       html: baseTemplate(content, inviterName + " wants to connect with you on " + COMMUNITY_NAME + "."),
+    };
+  }
+
+  if (template === "chapter_admin_invite") {
+    const chapterName = vars.chapter_name ?? "your chapter";
+    const chapterCity = vars.chapter_city ?? "";
+    const chapterCountry = vars.chapter_country ?? "";
+    const locationStr = [chapterCity, chapterCountry].filter(Boolean).join(", ");
+    const loginUrl = vars.login_url ?? WEBSITE + "/auth";
+    const adminUrl = vars.admin_url ?? WEBSITE + "/admin";
+    const content =
+      icon("&#127963;", ACCENT) +
+      h1("You've Been Appointed Chapter Admin") +
+      pt("Hi " + name + ",<br/><br/>The Global Admin of <strong>" + COMMUNITY_NAME + "</strong> has appointed you as the <strong>Chapter Admin</strong> for the " + chapterName + ". This is an important leadership role in our community.") +
+      kvGrid([
+        { label: "Chapter", value: chapterName },
+        ...(locationStr ? [{ label: "Location", value: locationStr }] : []),
+        { label: "Role", value: "Chapter Admin" },
+        { label: "Effective", value: new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }) },
+      ]) +
+      alert("As Chapter Admin, you can manage members, events, announcements, roles, and chapter settings for the " + chapterName + ".", "info") +
+      pt("Sign in to your account and navigate to the Admin panel to begin managing your chapter.") +
+      btn("Open Admin Panel", adminUrl) +
+      p("Need help getting started? Sign in at <a href=\"" + loginUrl + "\" style=\"color:" + ACCENT + ";\">khadayataonline.com</a> and visit the Admin section.", "font-size:13px;color:" + TEXT_FAINT + ";margin-top:16px;");
+    return {
+      subject: "You've been appointed Chapter Admin — " + chapterName + " | " + COMMUNITY_NAME,
+      html: baseTemplate(content, "You are now the Chapter Admin for " + chapterName + " on " + COMMUNITY_NAME + "."),
     };
   }
 
