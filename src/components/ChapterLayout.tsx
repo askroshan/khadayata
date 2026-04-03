@@ -22,9 +22,14 @@ interface ChapterLayoutProps {
 }
 
 export function ChapterLayout({ children }: ChapterLayoutProps) {
-  const { chapter, isLoading } = useChapterSubdomain();
+  const { chapter, isLoading, error } = useChapterSubdomain();
   const location = useLocation();
   useSubdomainSSO();
+
+  if (error) {
+    console.error("Chapter layout error:", error);
+    return <>{children}</>;
+  }
 
   if (isLoading) {
     return (

@@ -18,7 +18,7 @@ export function useChapterSubdomain() {
     return null;
   }, []);
 
-  const { data: chapter, isPending } = useQuery({
+  const { data: chapter, isPending, error } = useQuery({
     queryKey: ["chapter-subdomain", subdomain],
     queryFn: async () => {
       if (!subdomain) return null;
@@ -27,10 +27,15 @@ export function useChapterSubdomain() {
         .select("*, countries(name, iso2), states(name, code), cities(name, code)")
         .eq("subdomain", subdomain)
         .maybeSingle();
-      if (error) throw error;
+      if (error) {
+        console.error("Chapter subdomain query error:", error);
+        throw error;
+      }
       return data;
     },
     enabled: !!subdomain,
+    retry: 1,
+    staleTime: 5 * 60 * 1000,
   });
 
   return {
@@ -38,6 +43,7 @@ export function useChapterSubdomain() {
     chapter,
     isChapterSite: !!subdomain,
     isLoading: !!subdomain && isPending,
+    error: !!subdomain ? error : null,
   };
 }
 
