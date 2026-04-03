@@ -27,6 +27,8 @@ export default function BannedKeywordsTab() {
 
   const [keyword, setKeyword] = useState("");
   const [severity, setSeverity] = useState<"low" | "medium" | "high">("medium");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingSeverity, setEditingSeverity] = useState<"low" | "medium" | "high">("medium");
 
   const { data: keywords, isLoading } = useQuery({
     queryKey: ["banned-keywords"],
@@ -53,6 +55,19 @@ export default function BannedKeywordsTab() {
     onSuccess: () => {
       toast({ title: "Keyword added to blocklist" });
       setKeyword("");
+      queryClient.invalidateQueries({ queryKey: ["banned-keywords"] });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const updateSeverity = useMutation({
+    mutationFn: async ({ id, severity }: { id: string; severity: string }) => {
+      const { error } = await supabase.from("banned_keywords").update({ severity }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Severity updated" });
+      setEditingId(null);
       queryClient.invalidateQueries({ queryKey: ["banned-keywords"] });
     },
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
@@ -155,6 +170,30 @@ export default function BannedKeywordsTab() {
                   <Badge className={`text-xs border ${config.color}`}>{config.label}</Badge>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
+                  {editingId === kw.id ? (
+                    <div className="flex items-center gap-1">
+                      <Select value={editingSeverity} onValueChange={(v) => setEditingSeverity(v as "low" | "medium" | "high")}>
+                        <SelectTrigger className="h-6 w-24 text-xs px-2"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="low">Low</SelectItem>
+                          <SelectItem value="medium">Medium</SelectItem>
+                          <SelectItem value="high">High</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button size="sm" className="h-6 text-xs px-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+                        onClick={() => updateSeverity.mutate({ id: kw.id, severity: editingSeverity })} disabled={updateSeverity.isPending}>
+                        Save
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-6 text-xs px-2" onClick={() => setEditingId(null)}>
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button size="sm" variant="ghost" className="h-6 text-xs px-2 opacity-0 group-hover:opacity-100"
+                      onClick={() => { setEditingId(kw.id); setEditingSeverity(kw.severity as "low" | "medium" | "high"); }}>
+                      Edit
+                    </Button>
+                  )}
                   <span className="text-xs text-muted-foreground hidden sm:block">
                     {formatDistanceToNow(new Date(kw.created_at), { addSuffix: true })}
                   </span>

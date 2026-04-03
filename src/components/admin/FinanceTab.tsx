@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { DollarSign, GraduationCap, Heart, Building, TrendingUp, CircleCheck as CheckCircle, Circle as XCircle, Clock, Plus, RefreshCw } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { DollarSign, GraduationCap, Heart, Building, TrendingUp, CircleCheck as CheckCircle, Circle as XCircle, Clock, Plus, RefreshCw, Pencil, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useChapters } from "@/hooks/useMember";
 
@@ -37,6 +38,8 @@ export default function FinanceTab({ myChapterId }: FinanceTabProps) {
   const [appDecisionReason, setAppDecisionReason] = useState("");
   const [createFundOpen, setCreateFundOpen] = useState(false);
   const [newFund, setNewFund] = useState({ name: "", currency: "INR", scope: "chapter", chapter_id: "" });
+  const [editFund, setEditFund] = useState<{ id: string; name: string; currency: string; scope: string; chapter_id: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ type: "medical_aid" | "scholarship" | "hall_booking"; id: string; label: string } | null>(null);
 
   const { data: funds } = useQuery({
     queryKey: ["admin-funds"],
@@ -169,6 +172,42 @@ export default function FinanceTab({ myChapterId }: FinanceTabProps) {
       setCreateFundOpen(false);
       queryClient.invalidateQueries({ queryKey: ["admin-funds"] });
       queryClient.invalidateQueries({ queryKey: ["funds"] });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const updateFund = useMutation({
+    mutationFn: async () => {
+      if (!editFund) return;
+      const { error } = await supabase.from("funds").update({
+        name: editFund.name.trim(),
+        currency: editFund.currency,
+        scope: editFund.scope,
+        chapter_id: editFund.scope === "chapter" ? (editFund.chapter_id || myChapterId || null) : null,
+      }).eq("id", editFund.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Fund updated!" });
+      setEditFund(null);
+      queryClient.invalidateQueries({ queryKey: ["admin-funds"] });
+      queryClient.invalidateQueries({ queryKey: ["funds"] });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const deleteRecord = useMutation({
+    mutationFn: async ({ type, id }: { type: string; id: string }) => {
+      const table = type === "medical_aid" ? "medical_aid_requests" : type === "scholarship" ? "scholarship_applications" : "hall_bookings";
+      const { error } = await supabase.from(table as "medical_aid_requests" | "scholarship_applications" | "hall_bookings").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_, { type }) => {
+      toast({ title: "Record deleted." });
+      setDeleteTarget(null);
+      if (type === "medical_aid") queryClient.invalidateQueries({ queryKey: ["admin-medical-aid", myChapterId] });
+      if (type === "scholarship") queryClient.invalidateQueries({ queryKey: ["admin-scholarship-applications"] });
+      if (type === "hall_booking") queryClient.invalidateQueries({ queryKey: ["admin-hall-bookings", myChapterId] });
     },
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
@@ -347,11 +386,18 @@ export default function FinanceTab({ myChapterId }: FinanceTabProps) {
                           <span>{new Date(r.created_at as string).toLocaleDateString()}</span>
                         </div>
                       </div>
-                      {(r.status as string) === "pending" && (
-                        <Button size="sm" variant="outline" onClick={() => { setSelectedAidRequest(r as Record<string, unknown>); setAidApprovalAmount(String(r.amount_needed ?? "")); }}>
-                          Review
+                      <div className="flex gap-2 shrink-0">
+                        {(r.status as string) === "pending" && (
+                          <Button size="sm" variant="outline" onClick={() => { setSelectedAidRequest(r as Record<string, unknown>); setAidApprovalAmount(String(r.amount_needed ?? "")); }}>
+                            Review
+                          </Button>
+                        )}
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                          aria-label="Delete request"
+                          onClick={() => setDeleteTarget({ type: "medical_aid", id: r.id as string, label: r.patient_name as string })}>
+                          <Trash2 className="w-3.5 h-3.5" />
                         </Button>
-                      )}
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -385,11 +431,21 @@ export default function FinanceTab({ myChapterId }: FinanceTabProps) {
                         {app.essay && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{app.essay as string}</p>}
                         <p className="text-xs text-muted-foreground mt-1">{format(new Date(app.created_at as string), "MMM d, yyyy")}</p>
                       </div>
-                      {((app.status as string) === "submitted" || (app.status as string) === "reviewing") && (
-                        <Button size="sm" variant="outline" onClick={() => setSelectedApplication(app as Record<string, unknown>)}>
-                          Review
+                      <div className="flex gap-2 shrink-0">
+                        {((app.status as string) === "submitted" || (app.status as string) === "reviewing") && (
+                          <Button size="sm" variant="outline" onClick={() => setSelectedApplication(app as Record<string, unknown>)}>
+                            Review
+                          </Button>
+                        )}
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                          aria-label="Delete application"
+                          onClick={() => {
+                            const mem = app.members as { first_name: string; last_name: string } | null;
+                            setDeleteTarget({ type: "scholarship", id: app.id as string, label: `${mem?.first_name} ${mem?.last_name}` });
+                          }}>
+                          <Trash2 className="w-3.5 h-3.5" />
                         </Button>
-                      )}
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -420,18 +476,28 @@ export default function FinanceTab({ myChapterId }: FinanceTabProps) {
                         {b.purpose && <p className="text-xs text-muted-foreground">{b.purpose as string}</p>}
                         {b.guests && <p className="text-xs text-muted-foreground">{b.guests as number} guests expected</p>}
                       </div>
-                      {(b.status as string) === "pending" && (
-                        <div className="flex gap-2 shrink-0">
-                          <Button size="sm" variant="outline" className="text-emerald-600 border-emerald-200"
-                            onClick={() => approveHallBooking.mutate({ id: b.id as string, status: "approved" })}>
-                            <CheckCircle className="w-3.5 h-3.5 mr-1" />Approve
-                          </Button>
-                          <Button size="sm" variant="outline" className="text-destructive border-destructive/30"
-                            onClick={() => approveHallBooking.mutate({ id: b.id as string, status: "rejected" })}>
-                            <XCircle className="w-3.5 h-3.5 mr-1" />Reject
-                          </Button>
-                        </div>
-                      )}
+                      <div className="flex gap-2 shrink-0">
+                        {(b.status as string) === "pending" && (
+                          <>
+                            <Button size="sm" variant="outline" className="text-emerald-600 border-emerald-200"
+                              onClick={() => approveHallBooking.mutate({ id: b.id as string, status: "approved" })}>
+                              <CheckCircle className="w-3.5 h-3.5 mr-1" />Approve
+                            </Button>
+                            <Button size="sm" variant="outline" className="text-destructive border-destructive/30"
+                              onClick={() => approveHallBooking.mutate({ id: b.id as string, status: "rejected" })}>
+                              <XCircle className="w-3.5 h-3.5 mr-1" />Reject
+                            </Button>
+                          </>
+                        )}
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                          aria-label="Delete booking"
+                          onClick={() => {
+                            const mem = b.members as { first_name: string; last_name: string } | null;
+                            setDeleteTarget({ type: "hall_booking", id: b.id as string, label: `${b.hall_name as string} — ${mem?.first_name}` });
+                          }}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -468,10 +534,17 @@ export default function FinanceTab({ myChapterId }: FinanceTabProps) {
                         {chap && <p className="text-xs text-muted-foreground mt-0.5">{chap.name}</p>}
                         <p className="text-xs text-muted-foreground mt-0.5">{fundDonations.length} donations • {f.currency} {fundTotal.toLocaleString()}</p>
                       </div>
-                      <Button size="sm" variant="outline"
-                        onClick={() => toggleFund.mutate({ id: f.id as string, active: !f.active })}>
-                        {f.active ? "Deactivate" : "Activate"}
-                      </Button>
+                      <div className="flex gap-2 shrink-0">
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0"
+                          aria-label="Edit fund"
+                          onClick={() => setEditFund({ id: f.id as string, name: f.name, currency: f.currency, scope: f.scope, chapter_id: (f as { chapter_id?: string }).chapter_id ?? "" })}>
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button size="sm" variant="outline"
+                          onClick={() => toggleFund.mutate({ id: f.id as string, active: !f.active })}>
+                          {f.active ? "Deactivate" : "Activate"}
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -566,6 +639,75 @@ export default function FinanceTab({ myChapterId }: FinanceTabProps) {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Edit Fund Dialog */}
+      <Dialog open={!!editFund} onOpenChange={(open) => { if (!open) setEditFund(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Edit Fund</DialogTitle>
+            <DialogDescription>Update fund name, currency, or scope.</DialogDescription>
+          </DialogHeader>
+          {editFund && (
+            <div className="space-y-3">
+              <div>
+                <Label>Fund Name *</Label>
+                <Input value={editFund.name} onChange={e => setEditFund({ ...editFund, name: e.target.value })} maxLength={200} />
+              </div>
+              <div>
+                <Label>Currency</Label>
+                <Select value={editFund.currency} onValueChange={v => setEditFund({ ...editFund, currency: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{CURRENCIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Scope</Label>
+                <Select value={editFund.scope} onValueChange={v => setEditFund({ ...editFund, scope: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="chapter">Chapter</SelectItem>
+                    <SelectItem value="global">Global</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {editFund.scope === "chapter" && (
+                <div>
+                  <Label>Chapter</Label>
+                  <Select value={editFund.chapter_id} onValueChange={v => setEditFund({ ...editFund, chapter_id: v })}>
+                    <SelectTrigger><SelectValue placeholder="Select chapter" /></SelectTrigger>
+                    <SelectContent>{chapters?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+              )}
+              <Button onClick={() => updateFund.mutate()} disabled={!editFund.name.trim() || updateFund.isPending} className="w-full gradient-warm text-primary-foreground">
+                Save Changes
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Record Confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Record</AlertDialogTitle>
+            <AlertDialogDescription>
+              Permanently delete <strong>{deleteTarget?.label}</strong>? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteTarget && deleteRecord.mutate({ type: deleteTarget.type, id: deleteTarget.id })}
+              disabled={deleteRecord.isPending}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Create Fund Dialog */}
       <Dialog open={createFundOpen} onOpenChange={setCreateFundOpen}>

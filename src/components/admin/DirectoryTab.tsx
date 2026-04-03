@@ -7,7 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Building2, Briefcase, Search, CircleCheck as CheckCircle, CircleX, Clock, MapPin, Phone, ExternalLink } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Building2, Briefcase, Search, CircleCheck as CheckCircle, CircleX, Clock, MapPin, Phone, ExternalLink, Pencil, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 interface DirectoryTabProps {
@@ -19,6 +23,9 @@ export default function DirectoryTab({ myChapterId }: DirectoryTabProps) {
   const queryClient = useQueryClient();
   const [bizSearch, setBizSearch] = useState("");
   const [jobSearch, setJobSearch] = useState("");
+  const [editBiz, setEditBiz] = useState<{ id: string; name: string; description: string; phone: string; website: string; sector: string } | null>(null);
+  const [editJob, setEditJob] = useState<{ id: string; title: string; description: string; location: string; employment_type: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ type: "business" | "job"; id: string; name: string } | null>(null);
 
   const { data: businesses, isLoading: bizLoading } = useQuery({
     queryKey: ["admin-businesses", myChapterId, bizSearch],
@@ -58,6 +65,69 @@ export default function DirectoryTab({ myChapterId }: DirectoryTabProps) {
     onSuccess: (_, { verified }) => {
       toast({ title: verified ? "Business verified" : "Verification removed" });
       queryClient.invalidateQueries({ queryKey: ["admin-businesses"] });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const updateBizMutation = useMutation({
+    mutationFn: async (biz: { id: string; name: string; description: string; phone: string; website: string; sector: string }) => {
+      const { error } = await supabase.from("businesses").update({
+        name: biz.name.trim(),
+        description: biz.description.trim() || null,
+        phone: biz.phone.trim() || null,
+        website: biz.website.trim() || null,
+        sector: biz.sector.trim() || null,
+      }).eq("id", biz.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Business updated" });
+      setEditBiz(null);
+      queryClient.invalidateQueries({ queryKey: ["admin-businesses"] });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const deleteBizMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("businesses").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Business deleted" });
+      setDeleteTarget(null);
+      queryClient.invalidateQueries({ queryKey: ["admin-businesses"] });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const updateJobMutation = useMutation({
+    mutationFn: async (job: { id: string; title: string; description: string; location: string; employment_type: string }) => {
+      const { error } = await supabase.from("jobs").update({
+        title: job.title.trim(),
+        description: job.description.trim() || null,
+        location: job.location.trim() || null,
+        employment_type: job.employment_type || null,
+      }).eq("id", job.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Job updated" });
+      setEditJob(null);
+      queryClient.invalidateQueries({ queryKey: ["admin-jobs"] });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const deleteJobMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("jobs").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Job deleted" });
+      setDeleteTarget(null);
+      queryClient.invalidateQueries({ queryKey: ["admin-jobs"] });
     },
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
@@ -164,7 +234,11 @@ export default function DirectoryTab({ myChapterId }: DirectoryTabProps) {
                             </p>
                           )}
                         </div>
-                        <div className="flex gap-2 shrink-0">
+                        <div className="flex gap-1 shrink-0">
+                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0" aria-label="Edit business"
+                            onClick={() => setEditBiz({ id: b.id, name: b.name, description: b.description ?? "", phone: b.phone ?? "", website: b.website ?? "", sector: b.sector ?? "" })}>
+                            <Pencil className="w-3.5 h-3.5" />
+                          </Button>
                           <Button
                             size="sm"
                             className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white"
@@ -172,6 +246,10 @@ export default function DirectoryTab({ myChapterId }: DirectoryTabProps) {
                             disabled={verifyBizMutation.isPending}
                           >
                             <CheckCircle className="w-3.5 h-3.5 mr-1" /> Verify
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive hover:text-destructive" aria-label="Delete business"
+                            onClick={() => setDeleteTarget({ type: "business", id: b.id, name: b.name })}>
+                            <Trash2 className="w-3.5 h-3.5" />
                           </Button>
                         </div>
                       </div>
@@ -197,15 +275,24 @@ export default function DirectoryTab({ myChapterId }: DirectoryTabProps) {
                           <span className="font-medium text-sm truncate">{b.name}</span>
                           {b.sector && <Badge variant="outline" className="text-xs shrink-0">{b.sector}</Badge>}
                         </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-xs text-destructive border-destructive/30 hover:bg-destructive/5 shrink-0"
-                          onClick={() => verifyBizMutation.mutate({ id: b.id, verified: false })}
-                          disabled={verifyBizMutation.isPending}
-                        >
-                          <CircleX className="w-3.5 h-3.5 mr-1" /> Revoke
-                        </Button>
+                        <div className="flex gap-1 shrink-0">
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0" aria-label="Edit business"
+                            onClick={() => setEditBiz({ id: b.id, name: b.name, description: b.description ?? "", phone: b.phone ?? "", website: b.website ?? "", sector: b.sector ?? "" })}>
+                            <Pencil className="w-3 h-3" />
+                          </Button>
+                          <Button
+                            size="sm" variant="outline"
+                            className="h-7 text-xs text-destructive border-destructive/30 hover:bg-destructive/5"
+                            onClick={() => verifyBizMutation.mutate({ id: b.id, verified: false })}
+                            disabled={verifyBizMutation.isPending}
+                          >
+                            <CircleX className="w-3.5 h-3.5 mr-1" /> Revoke
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive" aria-label="Delete business"
+                            onClick={() => setDeleteTarget({ type: "business", id: b.id, name: b.name })}>
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -259,15 +346,22 @@ export default function DirectoryTab({ myChapterId }: DirectoryTabProps) {
                       </p>
                     )}
                   </div>
-                  <div className="flex gap-2 shrink-0">
+                  <div className="flex gap-1 shrink-0">
+                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0" aria-label="Edit job"
+                      onClick={() => setEditJob({ id: j.id, title: j.title, description: j.description ?? "", location: j.location ?? "", employment_type: j.employment_type ?? "full_time" })}>
+                      <Pencil className="w-3.5 h-3.5" />
+                    </Button>
                     <Button
-                      size="sm"
-                      variant="outline"
+                      size="sm" variant="outline"
                       className="h-8 text-xs text-destructive border-destructive/30 hover:bg-destructive/5"
                       onClick={() => updateJobStatusMutation.mutate({ id: j.id, status: "closed" })}
                       disabled={updateJobStatusMutation.isPending}
                     >
                       <CircleX className="w-3.5 h-3.5 mr-1" /> Close
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive hover:text-destructive" aria-label="Delete job"
+                      onClick={() => setDeleteTarget({ type: "job", id: j.id, name: j.title })}>
+                      <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   </div>
                 </div>
@@ -312,6 +406,80 @@ export default function DirectoryTab({ myChapterId }: DirectoryTabProps) {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Edit Business Dialog */}
+      <Dialog open={!!editBiz} onOpenChange={(open) => { if (!open) setEditBiz(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Business</DialogTitle>
+            <DialogDescription>Update business details.</DialogDescription>
+          </DialogHeader>
+          {editBiz && (
+            <div className="space-y-3">
+              <div><Label>Business Name *</Label><Input value={editBiz.name} onChange={e => setEditBiz({ ...editBiz, name: e.target.value })} maxLength={200} /></div>
+              <div><Label>Sector</Label><Input value={editBiz.sector} onChange={e => setEditBiz({ ...editBiz, sector: e.target.value })} placeholder="e.g. Technology, Retail" maxLength={100} /></div>
+              <div><Label>Description</Label><Textarea value={editBiz.description} onChange={e => setEditBiz({ ...editBiz, description: e.target.value })} rows={3} maxLength={2000} /></div>
+              <div><Label>Phone</Label><Input value={editBiz.phone} onChange={e => setEditBiz({ ...editBiz, phone: e.target.value })} placeholder="+1 555 000 0000" maxLength={30} /></div>
+              <div><Label>Website</Label><Input value={editBiz.website} onChange={e => setEditBiz({ ...editBiz, website: e.target.value })} placeholder="https://..." maxLength={200} /></div>
+              <Button onClick={() => updateBizMutation.mutate(editBiz)} disabled={!editBiz.name.trim() || updateBizMutation.isPending} className="w-full gradient-warm text-primary-foreground">
+                Save Changes
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Job Dialog */}
+      <Dialog open={!!editJob} onOpenChange={(open) => { if (!open) setEditJob(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Job</DialogTitle>
+            <DialogDescription>Update job listing details.</DialogDescription>
+          </DialogHeader>
+          {editJob && (
+            <div className="space-y-3">
+              <div><Label>Job Title *</Label><Input value={editJob.title} onChange={e => setEditJob({ ...editJob, title: e.target.value })} maxLength={200} /></div>
+              <div>
+                <Label>Employment Type</Label>
+                <select className="w-full mt-1 h-9 rounded-md border border-input bg-background px-3 text-sm" value={editJob.employment_type} onChange={e => setEditJob({ ...editJob, employment_type: e.target.value })}>
+                  {["full_time", "part_time", "contract", "internship", "volunteer"].map(t => <option key={t} value={t}>{t.replace("_", " ")}</option>)}
+                </select>
+              </div>
+              <div><Label>Location</Label><Input value={editJob.location} onChange={e => setEditJob({ ...editJob, location: e.target.value })} placeholder="City, Country or Remote" maxLength={200} /></div>
+              <div><Label>Description</Label><Textarea value={editJob.description} onChange={e => setEditJob({ ...editJob, description: e.target.value })} rows={4} maxLength={3000} /></div>
+              <Button onClick={() => updateJobMutation.mutate(editJob)} disabled={!editJob.title.trim() || updateJobMutation.isPending} className="w-full gradient-warm text-primary-foreground">
+                Save Changes
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {deleteTarget?.type === "business" ? "Business" : "Job"}</AlertDialogTitle>
+            <AlertDialogDescription>
+              Permanently delete <strong>{deleteTarget?.name}</strong>? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (!deleteTarget) return;
+                if (deleteTarget.type === "business") deleteBizMutation.mutate(deleteTarget.id);
+                else deleteJobMutation.mutate(deleteTarget.id);
+              }}
+              disabled={deleteBizMutation.isPending || deleteJobMutation.isPending}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

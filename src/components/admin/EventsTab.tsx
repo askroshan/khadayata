@@ -14,7 +14,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Users, MapPin, Plus, CreditCard as Edit, Circle as XCircle, Copy, TrendingUp, ChartBar as BarChart3, Eye, Check } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Calendar, Users, MapPin, Plus, CreditCard as Edit, Circle as XCircle, Copy, Eye, Check, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useCountries, useStates, useCities, useHasStates, useCitiesByCountry, useChapters } from "@/hooks/useMember";
 
@@ -46,7 +47,8 @@ export default function EventsTab({ myChapterId }: EventsTabProps) {
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", description: "", venue: "", starts_at: "", ends_at: "", status: "published" });
+  const [editForm, setEditForm] = useState({ name: "", description: "", venue: "", starts_at: "", ends_at: "", status: "published", category: "", event_type: "in_person", max_capacity: "", fee_amount: "", fee_currency: "INR", contact_email: "", contact_phone: "", organizer_name: "", address_line1: "", cover_image_url: "" });
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [evt, setEvt] = useState({ ...EMPTY_EVENT });
   const [search, setSearch] = useState("");
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
@@ -122,6 +124,20 @@ export default function EventsTab({ myChapterId }: EventsTabProps) {
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
+  const deleteEvent = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("events").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Event deleted" });
+      setDeleteTarget(null);
+      queryClient.invalidateQueries({ queryKey: ["admin-events"] });
+      queryClient.invalidateQueries({ queryKey: ["events"] });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
   const updateEvent = useMutation({
     mutationFn: async () => {
       if (!editId) return;
@@ -132,6 +148,16 @@ export default function EventsTab({ myChapterId }: EventsTabProps) {
         starts_at: editForm.starts_at,
         ends_at: editForm.ends_at,
         status: editForm.status,
+        category: editForm.category || null,
+        event_type: editForm.event_type || null,
+        max_capacity: editForm.max_capacity ? Number(editForm.max_capacity) : null,
+        fee_amount: editForm.fee_amount ? Number(editForm.fee_amount) : null,
+        fee_currency: editForm.fee_currency || "INR",
+        contact_email: editForm.contact_email.trim() || null,
+        contact_phone: editForm.contact_phone.trim() || null,
+        organizer_name: editForm.organizer_name.trim() || null,
+        address_line1: editForm.address_line1.trim() || null,
+        cover_image_url: editForm.cover_image_url.trim() || null,
       }).eq("id", editId);
       if (error) throw error;
     },
@@ -236,7 +262,17 @@ export default function EventsTab({ myChapterId }: EventsTabProps) {
                 size="icon" variant="ghost" className="h-7 w-7" aria-label="Edit event"
                 onClick={() => {
                   setEditId(event.id);
-                  setEditForm({ name: event.name, description: event.description ?? "", venue: event.venue ?? "", starts_at: event.starts_at.slice(0, 16), ends_at: event.ends_at?.slice(0, 16) ?? "", status: event.status });
+                  setEditForm({
+                    name: event.name, description: event.description ?? "", venue: event.venue ?? "",
+                    starts_at: event.starts_at.slice(0, 16), ends_at: event.ends_at?.slice(0, 16) ?? "",
+                    status: event.status, category: event.category ?? "", event_type: event.event_type ?? "in_person",
+                    max_capacity: event.max_capacity != null ? String(event.max_capacity) : "",
+                    fee_amount: event.fee_amount != null ? String(event.fee_amount) : "",
+                    fee_currency: event.fee_currency ?? "INR",
+                    contact_email: event.contact_email ?? "", contact_phone: event.contact_phone ?? "",
+                    organizer_name: event.organizer_name ?? "", address_line1: event.address_line1 ?? "",
+                    cover_image_url: event.cover_image_url ?? "",
+                  });
                   setEditOpen(true);
                 }}
               >
@@ -258,6 +294,12 @@ export default function EventsTab({ myChapterId }: EventsTabProps) {
                   <XCircle className="w-3.5 h-3.5" />
                 </Button>
               )}
+              <Button
+                size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive" aria-label="Delete event"
+                onClick={() => setDeleteTarget({ id: event.id, name: event.name })}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </Button>
             </div>
           </div>
 
@@ -423,19 +465,45 @@ export default function EventsTab({ myChapterId }: EventsTabProps) {
 
       {/* Edit Event Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Event</DialogTitle>
-            <DialogDescription>Update event details and status.</DialogDescription>
+            <DialogDescription>Update all event details and status.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            <div><Label>Event Name *</Label><Input value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} maxLength={200} /></div>
-            <div><Label>Description</Label><Textarea value={editForm.description} onChange={e => setEditForm({...editForm, description: e.target.value})} rows={3} maxLength={5000} /></div>
-            <div><Label>Venue</Label><Input value={editForm.venue} onChange={e => setEditForm({...editForm, venue: e.target.value})} /></div>
-            <div className="grid grid-cols-2 gap-3">
-              <div><Label>Starts At</Label><Input type="datetime-local" value={editForm.starts_at} onChange={e => setEditForm({...editForm, starts_at: e.target.value})} /></div>
-              <div><Label>Ends At</Label><Input type="datetime-local" value={editForm.ends_at} onChange={e => setEditForm({...editForm, ends_at: e.target.value})} /></div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="sm:col-span-2"><Label>Event Name *</Label><Input value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} maxLength={200} /></div>
+            <div><Label>Category</Label>
+              <Select value={editForm.category || "__none__"} onValueChange={v => setEditForm({...editForm, category: v === "__none__" ? "" : v})}>
+                <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">None</SelectItem>
+                  {EVENT_CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
+            <div><Label>Event Type</Label>
+              <Select value={editForm.event_type} onValueChange={v => setEditForm({...editForm, event_type: v})}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{EVENT_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="sm:col-span-2"><Label>Description</Label><Textarea value={editForm.description} onChange={e => setEditForm({...editForm, description: e.target.value})} rows={3} maxLength={5000} /></div>
+            <div><Label>Organizer Name</Label><Input value={editForm.organizer_name} onChange={e => setEditForm({...editForm, organizer_name: e.target.value})} /></div>
+            <div><Label>Max Capacity</Label><Input type="number" value={editForm.max_capacity} onChange={e => setEditForm({...editForm, max_capacity: e.target.value})} /></div>
+            <div><Label>Starts At</Label><Input type="datetime-local" value={editForm.starts_at} onChange={e => setEditForm({...editForm, starts_at: e.target.value})} /></div>
+            <div><Label>Ends At</Label><Input type="datetime-local" value={editForm.ends_at} onChange={e => setEditForm({...editForm, ends_at: e.target.value})} /></div>
+            <div><Label>Fee Amount</Label><Input type="number" value={editForm.fee_amount} onChange={e => setEditForm({...editForm, fee_amount: e.target.value})} placeholder="0 = free" /></div>
+            <div><Label>Fee Currency</Label>
+              <Select value={editForm.fee_currency} onValueChange={v => setEditForm({...editForm, fee_currency: v})}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{["INR", "USD", "GBP", "KES", "AED"].map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div><Label>Venue</Label><Input value={editForm.venue} onChange={e => setEditForm({...editForm, venue: e.target.value})} /></div>
+            <div><Label>Address</Label><Input value={editForm.address_line1} onChange={e => setEditForm({...editForm, address_line1: e.target.value})} /></div>
+            <div><Label>Contact Email</Label><Input type="email" value={editForm.contact_email} onChange={e => setEditForm({...editForm, contact_email: e.target.value})} /></div>
+            <div><Label>Contact Phone</Label><Input value={editForm.contact_phone} onChange={e => setEditForm({...editForm, contact_phone: e.target.value})} /></div>
+            <div className="sm:col-span-2"><Label>Cover Image URL</Label><Input value={editForm.cover_image_url} onChange={e => setEditForm({...editForm, cover_image_url: e.target.value})} placeholder="https://..." /></div>
             <div><Label>Status</Label>
               <Select value={editForm.status} onValueChange={v => setEditForm({...editForm, status: v})}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -446,10 +514,34 @@ export default function EventsTab({ myChapterId }: EventsTabProps) {
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={() => updateEvent.mutate()} disabled={!editForm.name.trim() || updateEvent.isPending} className="w-full gradient-hero text-primary-foreground">Save Changes</Button>
+            <div className="sm:col-span-2">
+              <Button onClick={() => updateEvent.mutate()} disabled={!editForm.name.trim() || updateEvent.isPending} className="w-full gradient-hero text-primary-foreground">Save Changes</Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Event Confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Event</AlertDialogTitle>
+            <AlertDialogDescription>
+              Permanently delete <strong>{deleteTarget?.name}</strong>? All RSVPs will also be removed. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteTarget && deleteEvent.mutate(deleteTarget.id)}
+              disabled={deleteEvent.isPending}
+            >
+              Delete Event
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

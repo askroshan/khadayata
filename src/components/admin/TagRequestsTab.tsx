@@ -1,11 +1,13 @@
 import { supabase } from "@/integrations/supabase/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Tag, Check, X } from "lucide-react";
+import { useState } from "react";
+import { Tag, Check, X, Trash2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface TagRequest {
@@ -24,6 +26,20 @@ export default function TagRequestsTab({ tagRequests }: TagRequestsTabProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  const deleteTag = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("tag_requests").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Tag request deleted" });
+      setDeleteId(null);
+      queryClient.invalidateQueries({ queryKey: ["admin-tag-requests"] });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
 
   const decide = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
@@ -62,12 +78,33 @@ export default function TagRequestsTab({ tagRequests }: TagRequestsTabProps) {
           </Button>
         </div>
       ) : (
-        <Badge variant={tr.status === "approved" ? "default" : "destructive"} className="capitalize shrink-0">{tr.status}</Badge>
+        <div className="flex items-center gap-2 shrink-0">
+          <Badge variant={tr.status === "approved" ? "default" : "destructive"} className="capitalize">{tr.status}</Badge>
+          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive" aria-label="Delete tag request" onClick={() => setDeleteId(tr.id)}>
+            <Trash2 className="w-3.5 h-3.5" />
+          </Button>
+        </div>
       )}
     </div>
   );
 
   return (
+    <>
+    <AlertDialog open={!!deleteId} onOpenChange={(open) => { if (!open) setDeleteId(null); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete Tag Request</AlertDialogTitle>
+          <AlertDialogDescription>Permanently delete this tag request? It will be removed from all lists.</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            onClick={() => deleteId && deleteTag.mutate(deleteId)} disabled={deleteTag.isPending}>
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     <Tabs defaultValue="pending">
       <TabsList className="mb-4">
         <TabsTrigger value="pending">
@@ -111,5 +148,6 @@ export default function TagRequestsTab({ tagRequests }: TagRequestsTabProps) {
         </Card>
       </TabsContent>
     </Tabs>
+    </>
   );
 }

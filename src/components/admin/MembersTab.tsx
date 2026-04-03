@@ -8,7 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronUp, ChevronDown, ExternalLink, Search, Download, X } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { ChevronUp, ChevronDown, ExternalLink, Search, Download, X, Pencil } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 
@@ -59,6 +63,34 @@ export default function MembersTab({ members, myChapterId }: MembersTabProps) {
   const [filterLevel, setFilterLevel] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [page, setPage] = useState(1);
+  const [editMember, setEditMember] = useState<{ id: string; first_name: string; last_name: string; chapter_id: string } | null>(null);
+
+  const { data: chapters } = useQuery({
+    queryKey: ["chapters-list"],
+    queryFn: async () => {
+      const { data } = await supabase.from("chapters").select("id, name").order("name");
+      return data ?? [];
+    },
+    enabled: !!editMember,
+  });
+
+  const editMemberMutation = useMutation({
+    mutationFn: async () => {
+      if (!editMember) return;
+      const { error } = await supabase.from("members").update({
+        first_name: editMember.first_name.trim(),
+        last_name: editMember.last_name.trim(),
+        chapter_id: editMember.chapter_id || null,
+      }).eq("id", editMember.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Member updated" });
+      setEditMember(null);
+      queryClient.invalidateQueries({ queryKey: ["admin-members"] });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
 
   const updateLevel = useMutation({
     mutationFn: async ({ memberId, level }: { memberId: string; level: number }) => {
@@ -97,6 +129,36 @@ export default function MembersTab({ members, myChapterId }: MembersTabProps) {
   const clearFilters = () => { setSearch(""); setFilterLevel(""); setFilterStatus(""); setPage(1); };
 
   return (
+    <>
+    <Dialog open={!!editMember} onOpenChange={(open) => { if (!open) setEditMember(null); }}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Edit Member</DialogTitle>
+          <DialogDescription>Update member name and chapter assignment.</DialogDescription>
+        </DialogHeader>
+        {editMember && (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>First Name</Label><Input value={editMember.first_name} onChange={e => setEditMember({ ...editMember, first_name: e.target.value })} maxLength={100} /></div>
+              <div><Label>Last Name</Label><Input value={editMember.last_name} onChange={e => setEditMember({ ...editMember, last_name: e.target.value })} maxLength={100} /></div>
+            </div>
+            <div>
+              <Label>Chapter</Label>
+              <Select value={editMember.chapter_id || "__none__"} onValueChange={v => setEditMember({ ...editMember, chapter_id: v === "__none__" ? "" : v })}>
+                <SelectTrigger><SelectValue placeholder="Select chapter" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">No Chapter</SelectItem>
+                  {chapters?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={() => editMemberMutation.mutate()} disabled={!editMember.first_name.trim() || editMemberMutation.isPending} className="w-full gradient-warm text-primary-foreground">
+              Save Changes
+            </Button>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
     <TooltipProvider>
       <div className="space-y-3">
         <div className="flex flex-wrap gap-2 items-center">
@@ -209,6 +271,19 @@ export default function MembersTab({ members, myChapterId }: MembersTabProps) {
                               </TooltipTrigger>
                               {!inScope && <TooltipContent>Cannot change level: member belongs to a different chapter</TooltipContent>}
                             </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="icon" variant="ghost" className="h-7 w-7"
+                                  disabled={!inScope}
+                                  aria-label="Edit member"
+                                  onClick={() => inScope && setEditMember({ id: m.id, first_name: m.first_name, last_name: m.last_name, chapter_id: m.chapter_id ?? "" })}
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              {!inScope && <TooltipContent>Cannot edit: member belongs to a different chapter</TooltipContent>}
+                            </Tooltip>
                             <Button size="icon" variant="ghost" className="h-7 w-7" asChild title="View profile">
                               <Link to={`/member/${m.id}`} aria-label="View member profile">
                                 <ExternalLink className="w-4 h-4" />
@@ -239,5 +314,6 @@ export default function MembersTab({ members, myChapterId }: MembersTabProps) {
         )}
       </div>
     </TooltipProvider>
+    </>
   );
 }

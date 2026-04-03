@@ -13,7 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { MessageSquare, Send, Plus, Clock, CircleCheck as CheckCircle, Circle as XCircle, ChevronRight, Users } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { MessageSquare, Send, Plus, Clock, CircleCheck as CheckCircle, Circle as XCircle, ChevronRight, Users, Pencil, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 interface Template {
@@ -53,6 +54,9 @@ export default function WhatsAppTab() {
   const [newTemplate, setNewTemplate] = useState({
     name: "", language: "en", category: "UTILITY", header_text: "", body_text: "", footer_text: "",
   });
+  const [editTemplate, setEditTemplate] = useState<Template | null>(null);
+  const [deleteTemplateId, setDeleteTemplateId] = useState<string | null>(null);
+  const [deleteMessageId, setDeleteMessageId] = useState<string | null>(null);
 
   const { data: templates } = useQuery({
     queryKey: ["whatsapp-templates"],
@@ -91,6 +95,53 @@ export default function WhatsAppTab() {
       return data ?? [];
     },
     enabled: !!user && bulkMode,
+  });
+
+  const updateTemplate = useMutation({
+    mutationFn: async () => {
+      if (!editTemplate) return;
+      const { error } = await supabase.from("whatsapp_templates").update({
+        name: editTemplate.name.trim().toLowerCase().replace(/\s+/g, "_"),
+        language: editTemplate.language,
+        category: editTemplate.category,
+        header_text: editTemplate.header_text?.trim() || null,
+        body_text: editTemplate.body_text.trim(),
+        footer_text: editTemplate.footer_text?.trim() || null,
+      }).eq("id", editTemplate.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Template updated" });
+      setEditTemplate(null);
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-templates"] });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const deleteTemplate = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("whatsapp_templates").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Template deleted" });
+      setDeleteTemplateId(null);
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-templates"] });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const deleteMessage = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("whatsapp_messages").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Message removed from history" });
+      setDeleteMessageId(null);
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-messages"] });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
   const createTemplate = useMutation({
@@ -231,13 +282,17 @@ export default function WhatsAppTab() {
                       <p className="text-sm mt-1 text-muted-foreground">{t.body_text}</p>
                       {t.footer_text && <p className="text-xs text-muted-foreground/60 mt-1">{t.footer_text}</p>}
                     </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => { setSelectedTemplate(t.id); setSendOpen(true); }}
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </Button>
+                    <div className="flex gap-1 shrink-0">
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" aria-label="Edit template" onClick={() => setEditTemplate(t)}>
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive hover:text-destructive" aria-label="Delete template" onClick={() => setDeleteTemplateId(t.id)}>
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => { setSelectedTemplate(t.id); setSendOpen(true); }}>
+                        <ChevronRight className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -259,9 +314,14 @@ export default function WhatsAppTab() {
                   {m.template && <span className="text-muted-foreground ml-2 text-xs">via {(m.template as { name: string }).name}</span>}
                   {m.error && <p className="text-xs text-destructive mt-0.5 truncate">{m.error}</p>}
                 </div>
-                <span className="text-xs text-muted-foreground shrink-0">
-                  {m.sent_at ? formatDistanceToNow(new Date(m.sent_at), { addSuffix: true }) : "—"}
-                </span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs text-muted-foreground">
+                    {m.sent_at ? formatDistanceToNow(new Date(m.sent_at), { addSuffix: true }) : "—"}
+                  </span>
+                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive" aria-label="Delete message" onClick={() => setDeleteMessageId(m.id)}>
+                    <Trash2 className="w-3 h-3" />
+                  </Button>
+                </div>
               </div>
             ))
           )}
@@ -338,6 +398,97 @@ export default function WhatsAppTab() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Template Dialog */}
+      <Dialog open={!!editTemplate} onOpenChange={(open) => { if (!open) setEditTemplate(null); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-display">Edit Template</DialogTitle>
+            <DialogDescription>Changes will take effect immediately in the system, but Meta approval is required for sending.</DialogDescription>
+          </DialogHeader>
+          {editTemplate && (
+            <div className="space-y-3">
+              <div>
+                <Label>Template Name (lowercase, underscores)</Label>
+                <Input value={editTemplate.name} onChange={e => setEditTemplate({ ...editTemplate, name: e.target.value })} className="mt-1" />
+              </div>
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <Label>Language</Label>
+                  <Select value={editTemplate.language} onValueChange={v => setEditTemplate({ ...editTemplate, language: v })}>
+                    <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="en">English</SelectItem>
+                      <SelectItem value="hi">Hindi</SelectItem>
+                      <SelectItem value="gu">Gujarati</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex-1">
+                  <Label>Category</Label>
+                  <Select value={editTemplate.category} onValueChange={v => setEditTemplate({ ...editTemplate, category: v })}>
+                    <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="UTILITY">Utility</SelectItem>
+                      <SelectItem value="MARKETING">Marketing</SelectItem>
+                      <SelectItem value="AUTHENTICATION">Authentication</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <Label>Header (optional)</Label>
+                <Input value={editTemplate.header_text ?? ""} onChange={e => setEditTemplate({ ...editTemplate, header_text: e.target.value })} className="mt-1" />
+              </div>
+              <div>
+                <Label>{"Body * (use {{1}}, {{2}} for variables)"}</Label>
+                <Textarea value={editTemplate.body_text} onChange={e => setEditTemplate({ ...editTemplate, body_text: e.target.value })} rows={3} className="mt-1" />
+              </div>
+              <div>
+                <Label>Footer (optional)</Label>
+                <Input value={editTemplate.footer_text ?? ""} onChange={e => setEditTemplate({ ...editTemplate, footer_text: e.target.value })} className="mt-1" />
+              </div>
+              <Button onClick={() => updateTemplate.mutate()} disabled={!editTemplate.name.trim() || !editTemplate.body_text.trim() || updateTemplate.isPending} className="w-full gradient-hero text-primary-foreground">
+                Save Template
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Template Confirmation */}
+      <AlertDialog open={!!deleteTemplateId} onOpenChange={(open) => { if (!open) setDeleteTemplateId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Template</AlertDialogTitle>
+            <AlertDialogDescription>Permanently delete this WhatsApp template? It cannot be recovered.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteTemplateId && deleteTemplate.mutate(deleteTemplateId)} disabled={deleteTemplate.isPending}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Message Confirmation */}
+      <AlertDialog open={!!deleteMessageId} onOpenChange={(open) => { if (!open) setDeleteMessageId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove from History</AlertDialogTitle>
+            <AlertDialogDescription>Remove this message record from history? This only removes the log entry, not any message already delivered.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteMessageId && deleteMessage.mutate(deleteMessageId)} disabled={deleteMessage.isPending}>
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Create template dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>

@@ -10,7 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { MessageSquare, Send, Users, CircleCheck as CheckCircle, Circle as XCircle, Clock, Info } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { MessageSquare, Send, Users, CircleCheck as CheckCircle, Circle as XCircle, Clock, Info, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 interface SmsMessage {
@@ -36,6 +37,7 @@ export default function SMSTab() {
   const [singlePhone, setSinglePhone] = useState("");
   const [singleCountryCode, setSingleCountryCode] = useState("1");
   const [singleBody, setSingleBody] = useState("");
+  const [deleteMessageId, setDeleteMessageId] = useState<string | null>(null);
   const [blastGroupId, setBlastGroupId] = useState("");
   const [blastCampaignName, setBlastCampaignName] = useState("");
   const [blastBody, setBlastBody] = useState("");
@@ -51,6 +53,19 @@ export default function SMSTab() {
       return (data ?? []) as SmsMessage[];
     },
     enabled: !!user,
+  });
+
+  const deleteMessage = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("sms_messages").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Message removed from history" });
+      setDeleteMessageId(null);
+      queryClient.invalidateQueries({ queryKey: ["sms-history"] });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
   const sendSingle = useMutation({
@@ -264,16 +279,37 @@ export default function SMSTab() {
                   <p className="text-xs text-muted-foreground mt-0.5 truncate">{m.body}</p>
                   {m.error && <p className="text-xs text-destructive mt-0.5">{m.error}</p>}
                 </div>
-                <span className="text-xs text-muted-foreground shrink-0">
-                  {m.sent_at
-                    ? formatDistanceToNow(new Date(m.sent_at), { addSuffix: true })
-                    : formatDistanceToNow(new Date(m.created_at), { addSuffix: true })}
-                </span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs text-muted-foreground">
+                    {m.sent_at
+                      ? formatDistanceToNow(new Date(m.sent_at), { addSuffix: true })
+                      : formatDistanceToNow(new Date(m.created_at), { addSuffix: true })}
+                  </span>
+                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive" aria-label="Delete message" onClick={() => setDeleteMessageId(m.id)}>
+                    <Trash2 className="w-3 h-3" />
+                  </Button>
+                </div>
               </div>
             ))
           )}
         </TabsContent>
       </Tabs>
+
+      <AlertDialog open={!!deleteMessageId} onOpenChange={(open) => { if (!open) setDeleteMessageId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove from History</AlertDialogTitle>
+            <AlertDialogDescription>Remove this SMS record from history? This only removes the log entry.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteMessageId && deleteMessage.mutate(deleteMessageId)} disabled={deleteMessage.isPending}>
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
