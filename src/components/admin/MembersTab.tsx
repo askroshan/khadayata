@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,9 +10,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { ChevronUp, ChevronDown, ExternalLink, Search, Download, X, Pencil } from "lucide-react";
+import { ChevronUp, ChevronDown, ExternalLink, Search, Download, X, Pencil, UserPlus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 
@@ -64,6 +62,8 @@ export default function MembersTab({ members, myChapterId }: MembersTabProps) {
   const [filterStatus, setFilterStatus] = useState("");
   const [page, setPage] = useState(1);
   const [editMember, setEditMember] = useState<{ id: string; first_name: string; last_name: string; chapter_id: string } | null>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteForm, setInviteForm] = useState({ email: "", first_name: "", last_name: "", chapter_id: "" });
 
   const { data: chapters } = useQuery({
     queryKey: ["chapters-list"],
@@ -71,7 +71,7 @@ export default function MembersTab({ members, myChapterId }: MembersTabProps) {
       const { data } = await supabase.from("chapters").select("id, name").order("name");
       return data ?? [];
     },
-    enabled: !!editMember,
+    enabled: !!editMember || inviteOpen,
   });
 
   const editMemberMutation = useMutation({
@@ -87,6 +87,36 @@ export default function MembersTab({ members, myChapterId }: MembersTabProps) {
     onSuccess: () => {
       toast({ title: "Member updated" });
       setEditMember(null);
+      queryClient.invalidateQueries({ queryKey: ["admin-members"] });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const inviteMemberMutation = useMutation({
+    mutationFn: async () => {
+      if (!inviteForm.email.trim()) throw new Error("Email is required");
+      if (!inviteForm.first_name.trim()) throw new Error("First name is required");
+      const { data: authData, error: authError } = await supabase.auth.admin.inviteUserByEmail(inviteForm.email.trim(), {
+        data: {
+          first_name: inviteForm.first_name.trim(),
+          last_name: inviteForm.last_name.trim(),
+        },
+      });
+      if (authError) throw authError;
+      if (authData?.user) {
+        const { error: memberError } = await supabase.from("members").insert({
+          user_id: authData.user.id,
+          first_name: inviteForm.first_name.trim(),
+          last_name: inviteForm.last_name.trim(),
+          chapter_id: inviteForm.chapter_id || null,
+        });
+        if (memberError) throw memberError;
+      }
+    },
+    onSuccess: () => {
+      toast({ title: "Invitation sent", description: `An invite email has been sent to ${inviteForm.email}` });
+      setInviteForm({ email: "", first_name: "", last_name: "", chapter_id: "" });
+      setInviteOpen(false);
       queryClient.invalidateQueries({ queryKey: ["admin-members"] });
     },
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
@@ -130,6 +160,34 @@ export default function MembersTab({ members, myChapterId }: MembersTabProps) {
 
   return (
     <>
+    <Dialog open={inviteOpen} onOpenChange={(open) => { if (!open) { setInviteOpen(false); setInviteForm({ email: "", first_name: "", last_name: "", chapter_id: "" }); } }}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Invite New Member</DialogTitle>
+          <DialogDescription>Send an email invitation to join the community.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div><Label>Email *</Label><Input type="email" value={inviteForm.email} onChange={e => setInviteForm({ ...inviteForm, email: e.target.value })} placeholder="member@example.com" /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><Label>First Name *</Label><Input value={inviteForm.first_name} onChange={e => setInviteForm({ ...inviteForm, first_name: e.target.value })} maxLength={100} /></div>
+            <div><Label>Last Name</Label><Input value={inviteForm.last_name} onChange={e => setInviteForm({ ...inviteForm, last_name: e.target.value })} maxLength={100} /></div>
+          </div>
+          <div>
+            <Label>Assign to Chapter</Label>
+            <Select value={inviteForm.chapter_id || "__none__"} onValueChange={v => setInviteForm({ ...inviteForm, chapter_id: v === "__none__" ? "" : v })}>
+              <SelectTrigger><SelectValue placeholder="No chapter (assign later)" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">No chapter (assign later)</SelectItem>
+                {chapters?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button onClick={() => inviteMemberMutation.mutate()} disabled={!inviteForm.email.trim() || !inviteForm.first_name.trim() || inviteMemberMutation.isPending} className="w-full gradient-warm text-primary-foreground">
+            <UserPlus className="w-4 h-4 mr-1" /> Send Invitation
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
     <Dialog open={!!editMember} onOpenChange={(open) => { if (!open) setEditMember(null); }}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
@@ -191,9 +249,14 @@ export default function MembersTab({ members, myChapterId }: MembersTabProps) {
               <X className="w-3 h-3 mr-1" /> Clear
             </Button>
           )}
-          <Button variant="outline" size="sm" onClick={() => exportCSV(filtered)} className="h-9 text-xs ml-auto">
-            <Download className="w-3.5 h-3.5 mr-1" /> Export CSV
-          </Button>
+          <div className="flex gap-2 ml-auto">
+            <Button variant="outline" size="sm" onClick={() => exportCSV(filtered)} className="h-9 text-xs">
+              <Download className="w-3.5 h-3.5 mr-1" /> Export CSV
+            </Button>
+            <Button size="sm" onClick={() => setInviteOpen(true)} className="h-9 text-xs gradient-warm text-primary-foreground">
+              <UserPlus className="w-3.5 h-3.5 mr-1" /> Invite Member
+            </Button>
+          </div>
         </div>
 
         <p className="text-xs text-muted-foreground">{filtered.length} member{filtered.length !== 1 ? "s" : ""} found</p>

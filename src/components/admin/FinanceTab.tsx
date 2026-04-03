@@ -40,6 +40,10 @@ export default function FinanceTab({ myChapterId }: FinanceTabProps) {
   const [newFund, setNewFund] = useState({ name: "", currency: "INR", scope: "chapter", chapter_id: "" });
   const [editFund, setEditFund] = useState<{ id: string; name: string; currency: string; scope: string; chapter_id: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ type: "medical_aid" | "scholarship" | "hall_booking"; id: string; label: string } | null>(null);
+  const [createAidOpen, setCreateAidOpen] = useState(false);
+  const [newAid, setNewAid] = useState({ patient_name: "", relation: "self", condition_summary: "", amount_needed: "", currency: "INR" });
+  const [createBookingOpen, setCreateBookingOpen] = useState(false);
+  const [newBooking, setNewBooking] = useState({ hall_name: "", purpose: "", booking_date: "", start_time: "09:00", end_time: "12:00", guests: "" });
 
   const { data: funds } = useQuery({
     queryKey: ["admin-funds"],
@@ -212,6 +216,60 @@ export default function FinanceTab({ myChapterId }: FinanceTabProps) {
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
+  const createAidMutation = useMutation({
+    mutationFn: async () => {
+      if (!newAid.patient_name.trim()) throw new Error("Patient name is required");
+      const { data: member } = await supabase.from("members").select("id").eq("user_id", user?.id ?? "").maybeSingle();
+      if (!member) throw new Error("Member profile not found");
+      const { error } = await supabase.from("medical_aid_requests").insert({
+        patient_name: newAid.patient_name.trim(),
+        relation: newAid.relation,
+        condition_summary: newAid.condition_summary.trim() || null,
+        amount_needed: newAid.amount_needed ? Number(newAid.amount_needed) : null,
+        currency: newAid.currency,
+        member_id: member.id,
+        chapter_id: myChapterId || null,
+        status: "pending",
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Medical aid request created" });
+      setNewAid({ patient_name: "", relation: "self", condition_summary: "", amount_needed: "", currency: "INR" });
+      setCreateAidOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["admin-medical-aid", myChapterId] });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const createBookingMutation = useMutation({
+    mutationFn: async () => {
+      if (!newBooking.hall_name.trim()) throw new Error("Hall name is required");
+      if (!newBooking.booking_date) throw new Error("Booking date is required");
+      const { data: member } = await supabase.from("members").select("id").eq("user_id", user?.id ?? "").maybeSingle();
+      if (!member) throw new Error("Member profile not found");
+      const { error } = await supabase.from("hall_bookings").insert({
+        hall_name: newBooking.hall_name.trim(),
+        purpose: newBooking.purpose.trim() || null,
+        booking_date: newBooking.booking_date,
+        start_time: newBooking.start_time,
+        end_time: newBooking.end_time,
+        guests: newBooking.guests ? Number(newBooking.guests) : null,
+        member_id: member.id,
+        chapter_id: myChapterId || null,
+        status: "pending",
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Hall booking request created" });
+      setNewBooking({ hall_name: "", purpose: "", booking_date: "", start_time: "09:00", end_time: "12:00", guests: "" });
+      setCreateBookingOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["admin-hall-bookings", myChapterId] });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
   const toggleFund = useMutation({
     mutationFn: async ({ id, active }: { id: string; active: boolean }) => {
       const { error } = await supabase.from("funds").update({ active }).eq("id", id);
@@ -364,6 +422,11 @@ export default function FinanceTab({ myChapterId }: FinanceTabProps) {
 
         {/* Medical Aid */}
         <TabsContent value="medical-aid" className="mt-4 space-y-4">
+          <div className="flex justify-end">
+            <Button size="sm" onClick={() => setCreateAidOpen(true)} className="gradient-warm text-primary-foreground gap-1">
+              <Plus className="w-3.5 h-3.5" />New Request
+            </Button>
+          </div>
           <div className="space-y-3">
             {(medicalAidRequests ?? []).length === 0 ? (
               <p className="text-muted-foreground text-sm text-center py-8">No medical aid requests</p>
@@ -456,6 +519,11 @@ export default function FinanceTab({ myChapterId }: FinanceTabProps) {
 
         {/* Hall Bookings */}
         <TabsContent value="hall-bookings" className="mt-4 space-y-4">
+          <div className="flex justify-end">
+            <Button size="sm" onClick={() => setCreateBookingOpen(true)} className="gradient-warm text-primary-foreground gap-1">
+              <Plus className="w-3.5 h-3.5" />New Booking
+            </Button>
+          </div>
           <div className="space-y-3">
             {(hallBookings ?? []).length === 0 ? (
               <p className="text-muted-foreground text-sm text-center py-8">No hall booking requests</p>
@@ -708,6 +776,67 @@ export default function FinanceTab({ myChapterId }: FinanceTabProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Create Medical Aid Request Dialog */}
+      <Dialog open={createAidOpen} onOpenChange={(open) => { if (!open) { setCreateAidOpen(false); setNewAid({ patient_name: "", relation: "self", condition_summary: "", amount_needed: "", currency: "INR" }); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>New Medical Aid Request</DialogTitle>
+            <DialogDescription>Submit a medical aid request on behalf of a member.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div><Label>Patient Name *</Label><Input value={newAid.patient_name} onChange={e => setNewAid({ ...newAid, patient_name: e.target.value })} placeholder="Full name of patient" maxLength={200} /></div>
+            <div>
+              <Label>Relation to Member</Label>
+              <Select value={newAid.relation} onValueChange={v => setNewAid({ ...newAid, relation: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {["self", "spouse", "child", "parent", "sibling", "other"].map(r => (
+                    <SelectItem key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div><Label>Condition Summary</Label><Textarea value={newAid.condition_summary} onChange={e => setNewAid({ ...newAid, condition_summary: e.target.value })} rows={3} placeholder="Describe the medical condition and treatment needed..." maxLength={2000} /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Amount Needed</Label><Input type="number" value={newAid.amount_needed} onChange={e => setNewAid({ ...newAid, amount_needed: e.target.value })} placeholder="0" min="0" /></div>
+              <div>
+                <Label>Currency</Label>
+                <Select value={newAid.currency} onValueChange={v => setNewAid({ ...newAid, currency: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{CURRENCIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            </div>
+            <Button onClick={() => createAidMutation.mutate()} disabled={!newAid.patient_name.trim() || createAidMutation.isPending} className="w-full gradient-warm text-primary-foreground">
+              <Plus className="w-4 h-4 mr-1" /> Submit Request
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Hall Booking Dialog */}
+      <Dialog open={createBookingOpen} onOpenChange={(open) => { if (!open) { setCreateBookingOpen(false); setNewBooking({ hall_name: "", purpose: "", booking_date: "", start_time: "09:00", end_time: "12:00", guests: "" }); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>New Hall Booking</DialogTitle>
+            <DialogDescription>Create a hall booking request.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div><Label>Hall Name *</Label><Input value={newBooking.hall_name} onChange={e => setNewBooking({ ...newBooking, hall_name: e.target.value })} placeholder="e.g. Community Hall, Banquet Hall" maxLength={200} /></div>
+            <div><Label>Purpose</Label><Input value={newBooking.purpose} onChange={e => setNewBooking({ ...newBooking, purpose: e.target.value })} placeholder="e.g. Wedding reception, Cultural event" maxLength={500} /></div>
+            <div><Label>Booking Date *</Label><Input type="date" value={newBooking.booking_date} onChange={e => setNewBooking({ ...newBooking, booking_date: e.target.value })} /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Start Time</Label><Input type="time" value={newBooking.start_time} onChange={e => setNewBooking({ ...newBooking, start_time: e.target.value })} /></div>
+              <div><Label>End Time</Label><Input type="time" value={newBooking.end_time} onChange={e => setNewBooking({ ...newBooking, end_time: e.target.value })} /></div>
+            </div>
+            <div><Label>Expected Guests</Label><Input type="number" value={newBooking.guests} onChange={e => setNewBooking({ ...newBooking, guests: e.target.value })} placeholder="Number of guests" min="1" /></div>
+            <Button onClick={() => createBookingMutation.mutate()} disabled={!newBooking.hall_name.trim() || !newBooking.booking_date || createBookingMutation.isPending} className="w-full gradient-warm text-primary-foreground">
+              <Plus className="w-4 h-4 mr-1" /> Submit Booking
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Create Fund Dialog */}
       <Dialog open={createFundOpen} onOpenChange={setCreateFundOpen}>

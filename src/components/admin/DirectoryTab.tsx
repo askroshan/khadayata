@@ -11,8 +11,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Building2, Briefcase, Search, CircleCheck as CheckCircle, CircleX, Clock, MapPin, Phone, ExternalLink, Pencil, Trash2 } from "lucide-react";
+import { Building2, Briefcase, Search, CircleCheck as CheckCircle, CircleX, Clock, MapPin, Phone, ExternalLink, Pencil, Trash2, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface DirectoryTabProps {
   myChapterId: string | null;
@@ -26,6 +27,10 @@ export default function DirectoryTab({ myChapterId }: DirectoryTabProps) {
   const [editBiz, setEditBiz] = useState<{ id: string; name: string; description: string; phone: string; website: string; sector: string } | null>(null);
   const [editJob, setEditJob] = useState<{ id: string; title: string; description: string; location: string; employment_type: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ type: "business" | "job"; id: string; name: string } | null>(null);
+  const [createBizOpen, setCreateBizOpen] = useState(false);
+  const [newBiz, setNewBiz] = useState({ name: "", sector: "", description: "", phone: "", website: "" });
+  const [createJobOpen, setCreateJobOpen] = useState(false);
+  const [newJob, setNewJob] = useState({ title: "", description: "", location: "", employment_type: "full_time" });
 
   const { data: businesses, isLoading: bizLoading } = useQuery({
     queryKey: ["admin-businesses", myChapterId, bizSearch],
@@ -132,6 +137,51 @@ export default function DirectoryTab({ myChapterId }: DirectoryTabProps) {
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
+  const createBizMutation = useMutation({
+    mutationFn: async () => {
+      if (!newBiz.name.trim()) throw new Error("Business name is required");
+      const { error } = await supabase.from("businesses").insert({
+        name: newBiz.name.trim(),
+        sector: newBiz.sector.trim() || null,
+        description: newBiz.description.trim() || null,
+        phone: newBiz.phone.trim() || null,
+        website: newBiz.website.trim() || null,
+        chapter_id: myChapterId || null,
+        verified: false,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Business listing created" });
+      setNewBiz({ name: "", sector: "", description: "", phone: "", website: "" });
+      setCreateBizOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["admin-businesses"] });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const createJobMutation = useMutation({
+    mutationFn: async () => {
+      if (!newJob.title.trim()) throw new Error("Job title is required");
+      const { error } = await supabase.from("jobs").insert({
+        title: newJob.title.trim(),
+        description: newJob.description.trim() || null,
+        location: newJob.location.trim() || null,
+        employment_type: newJob.employment_type,
+        chapter_id: myChapterId || null,
+        status: "open",
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Job listing created" });
+      setNewJob({ title: "", description: "", location: "", employment_type: "full_time" });
+      setCreateJobOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["admin-jobs"] });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
   const updateJobStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const { error } = await supabase.from("jobs").update({ status }).eq("id", id);
@@ -179,19 +229,29 @@ export default function DirectoryTab({ myChapterId }: DirectoryTabProps) {
       </div>
 
       <Tabs defaultValue="businesses">
-        <TabsList>
-          <TabsTrigger value="businesses" className="gap-1.5">
-            <Building2 className="w-3.5 h-3.5" />
-            Businesses
-            {pendingBiz.length > 0 && (
-              <Badge className="ml-1 h-4 px-1.5 text-[9px] bg-amber-500 text-white border-0">{pendingBiz.length}</Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="jobs" className="gap-1.5">
-            <Briefcase className="w-3.5 h-3.5" />
-            Jobs ({openJobs.length})
-          </TabsTrigger>
-        </TabsList>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <TabsList>
+            <TabsTrigger value="businesses" className="gap-1.5">
+              <Building2 className="w-3.5 h-3.5" />
+              Businesses
+              {pendingBiz.length > 0 && (
+                <Badge className="ml-1 h-4 px-1.5 text-[9px] bg-amber-500 text-white border-0">{pendingBiz.length}</Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="jobs" className="gap-1.5">
+              <Briefcase className="w-3.5 h-3.5" />
+              Jobs ({openJobs.length})
+            </TabsTrigger>
+          </TabsList>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" className="h-8 gap-1 text-xs" onClick={() => setCreateBizOpen(true)}>
+              <Plus className="w-3.5 h-3.5" /> Add Business
+            </Button>
+            <Button size="sm" variant="outline" className="h-8 gap-1 text-xs" onClick={() => setCreateJobOpen(true)}>
+              <Plus className="w-3.5 h-3.5" /> Add Job
+            </Button>
+          </div>
+        </div>
 
         {/* Businesses Tab */}
         <TabsContent value="businesses" className="mt-4 space-y-3">
@@ -406,6 +466,55 @@ export default function DirectoryTab({ myChapterId }: DirectoryTabProps) {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Create Business Dialog */}
+      <Dialog open={createBizOpen} onOpenChange={(open) => { if (!open) { setCreateBizOpen(false); setNewBiz({ name: "", sector: "", description: "", phone: "", website: "" }); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Business Listing</DialogTitle>
+            <DialogDescription>Create a new business listing for the directory.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div><Label>Business Name *</Label><Input value={newBiz.name} onChange={e => setNewBiz({ ...newBiz, name: e.target.value })} placeholder="e.g. Patel & Sons Trading Co." maxLength={200} /></div>
+            <div><Label>Sector</Label><Input value={newBiz.sector} onChange={e => setNewBiz({ ...newBiz, sector: e.target.value })} placeholder="e.g. Technology, Retail, Healthcare" maxLength={100} /></div>
+            <div><Label>Description</Label><Textarea value={newBiz.description} onChange={e => setNewBiz({ ...newBiz, description: e.target.value })} rows={3} maxLength={2000} /></div>
+            <div><Label>Phone</Label><Input value={newBiz.phone} onChange={e => setNewBiz({ ...newBiz, phone: e.target.value })} placeholder="+1 555 000 0000" maxLength={30} /></div>
+            <div><Label>Website</Label><Input value={newBiz.website} onChange={e => setNewBiz({ ...newBiz, website: e.target.value })} placeholder="https://..." maxLength={200} /></div>
+            <Button onClick={() => createBizMutation.mutate()} disabled={!newBiz.name.trim() || createBizMutation.isPending} className="w-full gradient-warm text-primary-foreground">
+              <Plus className="w-4 h-4 mr-1" /> Create Listing
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Job Dialog */}
+      <Dialog open={createJobOpen} onOpenChange={(open) => { if (!open) { setCreateJobOpen(false); setNewJob({ title: "", description: "", location: "", employment_type: "full_time" }); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Job Listing</DialogTitle>
+            <DialogDescription>Create a new job posting for the community.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div><Label>Job Title *</Label><Input value={newJob.title} onChange={e => setNewJob({ ...newJob, title: e.target.value })} placeholder="e.g. Software Engineer" maxLength={200} /></div>
+            <div>
+              <Label>Employment Type</Label>
+              <Select value={newJob.employment_type} onValueChange={v => setNewJob({ ...newJob, employment_type: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {["full_time", "part_time", "contract", "internship", "volunteer"].map(t => (
+                    <SelectItem key={t} value={t}>{t.replace("_", " ")}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div><Label>Location</Label><Input value={newJob.location} onChange={e => setNewJob({ ...newJob, location: e.target.value })} placeholder="City, Country or Remote" maxLength={200} /></div>
+            <div><Label>Description</Label><Textarea value={newJob.description} onChange={e => setNewJob({ ...newJob, description: e.target.value })} rows={4} maxLength={3000} /></div>
+            <Button onClick={() => createJobMutation.mutate()} disabled={!newJob.title.trim() || createJobMutation.isPending} className="w-full gradient-warm text-primary-foreground">
+              <Plus className="w-4 h-4 mr-1" /> Post Job
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Business Dialog */}
       <Dialog open={!!editBiz} onOpenChange={(open) => { if (!open) setEditBiz(null); }}>

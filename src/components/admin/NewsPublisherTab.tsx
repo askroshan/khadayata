@@ -7,8 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Newspaper, Eye, Clock, Trash2, ExternalLink, Pin } from "lucide-react";
+import { Newspaper, Eye, Clock, Trash2, ExternalLink, Pin, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
@@ -28,6 +32,8 @@ export default function NewsPublisherTab({ myChapterId }: Props) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState("__all__");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newArticle, setNewArticle] = useState({ title: "", summary: "", body: "", category: "", cover_image_url: "", status: "draft" });
 
   const { data: articles } = useQuery({
     queryKey: ["publisher-articles", user?.id, statusFilter],
@@ -64,6 +70,39 @@ export default function NewsPublisherTab({ myChapterId }: Props) {
       return data ?? [];
     },
     enabled: !!user,
+  });
+
+  const createArticle = useMutation({
+    mutationFn: async (publish: boolean) => {
+      if (!newArticle.title.trim()) throw new Error("Title is required");
+      const { error } = await supabase.from("content_news").insert({
+        title: newArticle.title.trim(),
+        summary: newArticle.summary.trim() || null,
+        body: newArticle.body.trim() || null,
+        category: newArticle.category.trim() || null,
+        cover_image_url: newArticle.cover_image_url.trim() || null,
+        status: publish ? "published" : "draft",
+        published_at: publish ? new Date().toISOString() : null,
+        created_by: user!.id,
+        chapter_id: myChapterId || null,
+        article_type: "news",
+        scope: myChapterId ? "chapter" : "global",
+        tags: [],
+        images: [],
+        schedule: {},
+        suspended: false,
+        pinned: false,
+      });
+      if (error) throw error;
+    },
+    onSuccess: (_, publish) => {
+      toast({ title: publish ? "Article published" : "Article saved as draft" });
+      setNewArticle({ title: "", summary: "", body: "", category: "", cover_image_url: "", status: "draft" });
+      setCreateOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["publisher-articles"] });
+      queryClient.invalidateQueries({ queryKey: ["news"] });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
   const updateStatus = useMutation({
@@ -153,11 +192,9 @@ export default function NewsPublisherTab({ myChapterId }: Props) {
               <SelectItem value="archived">Archived</SelectItem>
             </SelectContent>
           </Select>
-          <Link to="/news">
-            <Button size="sm" className="gradient-hero text-primary-foreground gap-1">
-              <Newspaper className="w-3.5 h-3.5" />Write Article
-            </Button>
-          </Link>
+          <Button size="sm" className="gradient-hero text-primary-foreground gap-1" onClick={() => setCreateOpen(true)}>
+            <Plus className="w-3.5 h-3.5" />Write Article
+          </Button>
         </div>
       </div>
 
@@ -230,6 +267,43 @@ export default function NewsPublisherTab({ myChapterId }: Props) {
           </Card>
         ))}
       </div>
+
+      <Dialog open={createOpen} onOpenChange={(open) => { if (!open) { setCreateOpen(false); setNewArticle({ title: "", summary: "", body: "", category: "", cover_image_url: "", status: "draft" }); } }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Write New Article</DialogTitle>
+            <DialogDescription>Create a news article. Save as draft or publish immediately.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div><Label>Title *</Label><Input value={newArticle.title} onChange={e => setNewArticle({ ...newArticle, title: e.target.value })} placeholder="Article headline..." maxLength={300} /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Category</Label>
+                <Select value={newArticle.category || "__none__"} onValueChange={v => setNewArticle({ ...newArticle, category: v === "__none__" ? "" : v })}>
+                  <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">None</SelectItem>
+                    {["Community", "Events", "Culture", "Education", "Health", "Business", "Sports", "General"].map(c => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div><Label>Cover Image URL</Label><Input value={newArticle.cover_image_url} onChange={e => setNewArticle({ ...newArticle, cover_image_url: e.target.value })} placeholder="https://..." /></div>
+            </div>
+            <div><Label>Summary</Label><Textarea value={newArticle.summary} onChange={e => setNewArticle({ ...newArticle, summary: e.target.value })} rows={2} placeholder="Brief summary shown in listings..." maxLength={500} /></div>
+            <div><Label>Body</Label><Textarea value={newArticle.body} onChange={e => setNewArticle({ ...newArticle, body: e.target.value })} rows={8} placeholder="Full article content..." maxLength={20000} /></div>
+            <div className="flex gap-2 pt-1">
+              <Button variant="outline" className="flex-1" onClick={() => createArticle.mutate(false)} disabled={!newArticle.title.trim() || createArticle.isPending}>
+                Save as Draft
+              </Button>
+              <Button className="flex-1 gradient-hero text-primary-foreground" onClick={() => createArticle.mutate(true)} disabled={!newArticle.title.trim() || createArticle.isPending}>
+                Publish Now
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
