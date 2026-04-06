@@ -127,22 +127,26 @@ export default function MembersTab({ members, myChapterId }: MembersTabProps) {
     mutationFn: async () => {
       if (!inviteForm.email.trim()) throw new Error("Email is required");
       if (!inviteForm.first_name.trim()) throw new Error("First name is required");
-      const { data: authData, error: authError } = await supabase.auth.admin.inviteUserByEmail(inviteForm.email.trim(), {
-        data: {
-          first_name: inviteForm.first_name.trim(),
-          last_name: inviteForm.last_name.trim(),
-        },
-      });
-      if (authError) throw authError;
-      if (authData?.user) {
-        const { error: memberError } = await supabase.from("members").insert({
-          user_id: authData.user.id,
-          first_name: inviteForm.first_name.trim(),
-          last_name: inviteForm.last_name.trim(),
-          chapter_id: inviteForm.chapter_id || null,
-        });
-        if (memberError) throw memberError;
-      }
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invite-member`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${session?.access_token ?? ""}`,
+            "Apikey": import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({
+            email: inviteForm.email.trim(),
+            first_name: inviteForm.first_name.trim(),
+            last_name: inviteForm.last_name.trim(),
+            chapter_id: inviteForm.chapter_id || null,
+          }),
+        }
+      );
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error ?? "Failed to send invitation");
     },
     onSuccess: () => {
       toast({ title: "Invitation sent", description: `An invite email has been sent to ${inviteForm.email}` });
