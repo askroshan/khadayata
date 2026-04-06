@@ -9,8 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
-import { ChevronUp, ChevronDown, ExternalLink, Search, Download, X, Pencil, UserPlus } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { ChevronUp, ChevronDown, ExternalLink, Search, Download, X, Pencil, UserPlus, ShieldBan, Lock, Clock as Unlock, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 
@@ -34,6 +36,7 @@ interface MembersTabProps {
   members: Member[] | undefined;
   myChapterId: string | null;
   canInvite?: boolean;
+  isGlobalAdmin?: boolean;
 }
 
 const LEVEL_LABELS: Record<number, string> = { 0: "Basic", 1: "Verified", 2: "Trusted", 3: "Senior", 4: "Elder", 5: "Patron" };
@@ -60,7 +63,7 @@ function exportCSV(members: Member[]) {
   URL.revokeObjectURL(url);
 }
 
-export default function MembersTab({ members, myChapterId, canInvite = false }: MembersTabProps) {
+export default function MembersTab({ members, myChapterId, canInvite = false, isGlobalAdmin = false }: MembersTabProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
@@ -73,6 +76,25 @@ export default function MembersTab({ members, myChapterId, canInvite = false }: 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteForm, setInviteForm] = useState({ email: "", first_name: "", last_name: "", chapter_id: "" });
   const [memberCommitteeRoles, setMemberCommitteeRoles] = useState<Record<string, string>>({});
+
+  const [suspendTarget, setSuspendTarget] = useState<{ id: string; name: string } | null>(null);
+  const [suspendReason, setSuspendReason] = useState("");
+  const [blockTarget, setBlockTarget] = useState<{ id: string; name: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [actionOpen, setActionOpen] = useState<string | null>(null);
+
+  const { data: memberStatuses } = useQuery({
+    queryKey: ["admin-member-statuses", myChapterId],
+    queryFn: async () => {
+      let q = supabase.from("members").select("id, suspended, blocked").limit(500);
+      if (myChapterId) q = q.eq("chapter_id", myChapterId);
+      const { data } = await q;
+      const map: Record<string, { suspended: boolean; blocked: boolean }> = {};
+      data?.forEach((m) => { map[m.id] = { suspended: m.suspended, blocked: m.blocked }; });
+      return map;
+    },
+    enabled: isGlobalAdmin,
+  });
 
   const { data: chapters } = useQuery({
     queryKey: ["chapters-list"],
@@ -129,33 +151,25 @@ export default function MembersTab({ members, myChapterId, canInvite = false }: 
       if (!inviteForm.email.trim()) throw new Error("Email is required");
       if (!inviteForm.first_name.trim()) throw new Error("First name is required");
       const { data: { session } } = await supabase.auth.getSession();
-      try {
-        const res = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invite-member`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${session?.access_token ?? ""}`,
-              "Apikey": import.meta.env.VITE_SUPABASE_ANON_KEY,
-            },
-            body: JSON.stringify({
-              email: inviteForm.email.trim(),
-              first_name: inviteForm.first_name.trim(),
-              last_name: inviteForm.last_name.trim(),
-              chapter_id: inviteForm.chapter_id || null,
-            }),
-          }
-        );
-        const result = await res.json();
-        if (!res.ok) {
-          console.error("Invite member failed:", { status: res.status, error: result });
-          throw new Error(result.error ?? "Failed to send invitation");
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invite-member`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${session?.access_token ?? ""}`,
+            "Apikey": import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({
+            email: inviteForm.email.trim(),
+            first_name: inviteForm.first_name.trim(),
+            last_name: inviteForm.last_name.trim(),
+            chapter_id: inviteForm.chapter_id || null,
+          }),
         }
-      } catch (err) {
-        console.error("Invite member error:", err);
-        throw err;
-      }
+      );
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error ?? "Failed to send invitation");
     },
     onSuccess: () => {
       toast({ title: "Invitation sent", description: `An invite email has been sent to ${inviteForm.email}` });
@@ -181,11 +195,6 @@ export default function MembersTab({ members, myChapterId, canInvite = false }: 
   const updateCommitteeRole = useMutation({
     mutationFn: async ({ memberId, roleId, roleName }: { memberId: string; roleId: string; roleName: string }) => {
       if (!editMember?.chapter_id) throw new Error("No chapter assigned");
-      const existingRoles = memberRoles?.filter(r => {
-        const role = r.roles as CommitteeRole | null;
-        return role?.name !== roleName;
-      }) ?? [];
-      const otherRoleIds = existingRoles.map(r => r.role_id);
       const { data: existingAssignment } = await supabase
         .from("role_assignments")
         .select("id")
@@ -211,6 +220,56 @@ export default function MembersTab({ members, myChapterId, canInvite = false }: 
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
+  const suspendMember = useMutation({
+    mutationFn: async ({ memberId, suspend }: { memberId: string; suspend: boolean }) => {
+      const { error } = await supabase.from("members").update({
+        suspended: suspend,
+        suspended_at: suspend ? new Date().toISOString() : null,
+        suspended_reason: suspend ? suspendReason.trim() || null : null,
+      }).eq("id", memberId);
+      if (error) throw error;
+    },
+    onSuccess: (_, { suspend }) => {
+      toast({ title: suspend ? "Member suspended" : "Member unsuspended" });
+      setSuspendTarget(null);
+      setSuspendReason("");
+      queryClient.invalidateQueries({ queryKey: ["admin-members"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-member-statuses"] });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const blockMember = useMutation({
+    mutationFn: async ({ memberId, block }: { memberId: string; block: boolean }) => {
+      const { error } = await supabase.from("members").update({
+        blocked: block,
+        blocked_at: block ? new Date().toISOString() : null,
+      }).eq("id", memberId);
+      if (error) throw error;
+    },
+    onSuccess: (_, { block }) => {
+      toast({ title: block ? "Member blocked" : "Member unblocked" });
+      setBlockTarget(null);
+      queryClient.invalidateQueries({ queryKey: ["admin-members"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-member-statuses"] });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const deleteMember = useMutation({
+    mutationFn: async (memberId: string) => {
+      const { error } = await supabase.from("members").delete().eq("id", memberId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Member deleted permanently" });
+      setDeleteTarget(null);
+      queryClient.invalidateQueries({ queryKey: ["admin-members"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-member-statuses"] });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
   const filtered = useMemo(() => {
     if (!members) return [];
     let list = [...members];
@@ -226,6 +285,8 @@ export default function MembersTab({ members, myChapterId, canInvite = false }: 
     }
     if (filterStatus === "complete") list = list.filter((m) => m.onboarding_completed);
     if (filterStatus === "pending") list = list.filter((m) => !m.onboarding_completed);
+    if (filterStatus === "suspended") list = list.filter((m) => memberStatuses?.[m.id]?.suspended);
+    if (filterStatus === "blocked") list = list.filter((m) => memberStatuses?.[m.id]?.blocked);
     if (dateFrom) {
       const fromDate = new Date(dateFrom);
       list = list.filter((m) => m.created_at && new Date(m.created_at) >= fromDate);
@@ -236,13 +297,22 @@ export default function MembersTab({ members, myChapterId, canInvite = false }: 
       list = list.filter((m) => m.created_at && new Date(m.created_at) <= toDate);
     }
     return list;
-  }, [members, search, filterLevel, filterStatus, dateFrom, dateTo]);
+  }, [members, search, filterLevel, filterStatus, dateFrom, dateTo, memberStatuses]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const hasFilters = search || (filterLevel && filterLevel !== "all") || (filterStatus && filterStatus !== "all") || dateFrom || dateTo;
 
   const clearFilters = () => { setSearch(""); setFilterLevel(""); setFilterStatus(""); setDateFrom(""); setDateTo(""); setPage(1); };
+
+  const getMemberStatusBadge = (memberId: string) => {
+    if (!memberStatuses) return null;
+    const s = memberStatuses[memberId];
+    if (!s) return null;
+    if (s.blocked) return <Badge className="bg-red-600 text-white border-0 text-[10px]">Blocked</Badge>;
+    if (s.suspended) return <Badge className="bg-amber-600 text-white border-0 text-[10px]">Suspended</Badge>;
+    return null;
+  };
 
   return (
     <>
@@ -274,6 +344,7 @@ export default function MembersTab({ members, myChapterId, canInvite = false }: 
         </div>
       </DialogContent>
     </Dialog>
+
     <Dialog open={!!editMember} onOpenChange={(open) => { if (!open) setEditMember(null); }}>
       <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -332,6 +403,142 @@ export default function MembersTab({ members, myChapterId, canInvite = false }: 
         )}
       </DialogContent>
     </Dialog>
+
+    {/* Suspend member dialog */}
+    <AlertDialog open={!!suspendTarget} onOpenChange={(open) => { if (!open) { setSuspendTarget(null); setSuspendReason(""); } }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Suspend Member</AlertDialogTitle>
+          <AlertDialogDescription>
+            Suspend <strong>{suspendTarget?.name}</strong>? They will lose access to most platform features until unsuspended.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <div className="py-2">
+          <Label>Reason (optional)</Label>
+          <Textarea value={suspendReason} onChange={e => setSuspendReason(e.target.value)} placeholder="Reason for suspension..." rows={2} maxLength={500} />
+        </div>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-amber-600 text-white hover:bg-amber-700"
+            onClick={() => suspendTarget && suspendMember.mutate({ memberId: suspendTarget.id, suspend: true })}
+            disabled={suspendMember.isPending}
+          >
+            Suspend Member
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    {/* Block member dialog */}
+    <AlertDialog open={!!blockTarget} onOpenChange={(open) => { if (!open) setBlockTarget(null); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Block Member</AlertDialogTitle>
+          <AlertDialogDescription>
+            Block <strong>{blockTarget?.name}</strong>? This is more severe than suspension -- the member will be completely locked out of the platform.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-red-600 text-white hover:bg-red-700"
+            onClick={() => blockTarget && blockMember.mutate({ memberId: blockTarget.id, block: true })}
+            disabled={blockMember.isPending}
+          >
+            Block Member
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    {/* Delete member dialog */}
+    <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Permanently Delete Member</AlertDialogTitle>
+          <AlertDialogDescription>
+            Permanently delete <strong>{deleteTarget?.name}</strong>? This will remove all their data including profile, contacts, and related records. This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            onClick={() => deleteTarget && deleteMember.mutate(deleteTarget.id)}
+            disabled={deleteMember.isPending}
+          >
+            Delete Permanently
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    {/* Member actions dropdown */}
+    <Dialog open={!!actionOpen} onOpenChange={(open) => { if (!open) setActionOpen(null); }}>
+      <DialogContent className="max-w-xs">
+        <DialogHeader>
+          <DialogTitle>Member Actions</DialogTitle>
+          <DialogDescription>Choose an action for this member.</DialogDescription>
+        </DialogHeader>
+        {actionOpen && (() => {
+          const m = members?.find(mem => mem.id === actionOpen);
+          if (!m) return null;
+          const status = memberStatuses?.[m.id];
+          const isSuspended = status?.suspended ?? false;
+          const isBlocked = status?.blocked ?? false;
+          return (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">{m.first_name} {m.last_name}</p>
+              <div className="flex flex-wrap gap-1">
+                {getMemberStatusBadge(m.id)}
+              </div>
+              <div className="space-y-2 pt-2 border-t">
+                {isSuspended ? (
+                  <Button
+                    variant="outline" className="w-full justify-start gap-2 text-emerald-700"
+                    onClick={() => { suspendMember.mutate({ memberId: m.id, suspend: false }); setActionOpen(null); }}
+                    disabled={suspendMember.isPending}
+                  >
+                    <Unlock className="w-4 h-4" /> Unsuspend Member
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline" className="w-full justify-start gap-2 text-amber-700"
+                    onClick={() => { setSuspendTarget({ id: m.id, name: `${m.first_name} ${m.last_name}` }); setActionOpen(null); }}
+                  >
+                    <Lock className="w-4 h-4" /> Suspend Member
+                  </Button>
+                )}
+                {isBlocked ? (
+                  <Button
+                    variant="outline" className="w-full justify-start gap-2 text-emerald-700"
+                    onClick={() => { blockMember.mutate({ memberId: m.id, block: false }); setActionOpen(null); }}
+                    disabled={blockMember.isPending}
+                  >
+                    <Unlock className="w-4 h-4" /> Unblock Member
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline" className="w-full justify-start gap-2 text-red-700"
+                    onClick={() => { setBlockTarget({ id: m.id, name: `${m.first_name} ${m.last_name}` }); setActionOpen(null); }}
+                  >
+                    <ShieldBan className="w-4 h-4" /> Block Member
+                  </Button>
+                )}
+                <Button
+                  variant="outline" className="w-full justify-start gap-2 text-destructive"
+                  onClick={() => { setDeleteTarget({ id: m.id, name: `${m.first_name} ${m.last_name}` }); setActionOpen(null); }}
+                >
+                  <Trash2 className="w-4 h-4" /> Delete Permanently
+                </Button>
+              </div>
+            </div>
+          );
+        })()}
+      </DialogContent>
+    </Dialog>
+
     <TooltipProvider>
       <div className="space-y-3">
         <div className="flex flex-wrap gap-2 items-center">
@@ -357,6 +564,8 @@ export default function MembersTab({ members, myChapterId, canInvite = false }: 
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="complete">Complete</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
+              {isGlobalAdmin && <SelectItem value="suspended">Suspended</SelectItem>}
+              {isGlobalAdmin && <SelectItem value="blocked">Blocked</SelectItem>}
             </SelectContent>
           </Select>
           <Input
@@ -414,9 +623,15 @@ export default function MembersTab({ members, myChapterId, canInvite = false }: 
                 <tbody>
                   {paginated.map((m) => {
                     const inScope = !myChapterId || m.chapter_id === myChapterId;
+                    const status = memberStatuses?.[m.id];
                     return (
-                      <tr key={m.id} className={`border-b border-border last:border-0 hover:bg-muted/30 ${!inScope ? "opacity-60" : ""}`}>
-                        <td className="p-3 font-medium">{m.first_name} {m.last_name}</td>
+                      <tr key={m.id} className={`border-b border-border last:border-0 hover:bg-muted/30 ${!inScope ? "opacity-60" : ""} ${status?.blocked ? "bg-red-50/50" : status?.suspended ? "bg-amber-50/50" : ""}`}>
+                        <td className="p-3 font-medium">
+                          <div className="flex items-center gap-2">
+                            {m.first_name} {m.last_name}
+                            {getMemberStatusBadge(m.id)}
+                          </div>
+                        </td>
                         <td className="p-3 text-muted-foreground">{(m.chapters as { name: string } | null)?.name ?? "—"}</td>
                         <td className="p-3">
                           <Badge variant="outline">L{m.verification_level} — {LEVEL_LABELS[m.verification_level] ?? "Unknown"}</Badge>
@@ -488,6 +703,21 @@ export default function MembersTab({ members, myChapterId, canInvite = false }: 
                                 <ExternalLink className="w-4 h-4" />
                               </Link>
                             </Button>
+                            {isGlobalAdmin && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="icon" variant="ghost"
+                                    className="h-7 w-7 text-destructive hover:text-destructive"
+                                    aria-label="Member admin actions"
+                                    onClick={() => setActionOpen(m.id)}
+                                  >
+                                    <ShieldBan className="w-3.5 h-3.5" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Suspend / Block / Delete</TooltipContent>
+                              </Tooltip>
+                            )}
                           </div>
                         </td>
                       </tr>

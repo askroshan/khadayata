@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Shield, TriangleAlert as AlertTriangle, Flag, LayoutDashboard, Building2, Calendar, DollarSign, Newspaper, ChartBar as BarChart2, ChevronDown, Users, BookOpen, Zap } from "lucide-react";
+import { Shield, TriangleAlert as AlertTriangle, Flag, LayoutDashboard, Building2, Calendar, DollarSign, Newspaper, ChartBar as BarChart2, ChevronDown, Users, BookOpen, Zap, Trash2 } from "lucide-react";
 import AdminStats from "@/components/admin/AdminStats";
 import MembersTab from "@/components/admin/MembersTab";
 import RolesTab from "@/components/admin/RolesTab";
@@ -29,6 +29,7 @@ import SMSTab from "@/components/admin/SMSTab";
 import BannedKeywordsTab from "@/components/admin/BannedKeywordsTab";
 import ChaptersTab from "@/components/admin/ChaptersTab";
 import AnalyticsTab from "@/components/admin/AnalyticsTab";
+import BulkContentTab from "@/components/admin/BulkContentTab";
 
 export default function Admin() {
   const { user, loading } = useAuth();
@@ -195,6 +196,11 @@ export default function Admin() {
                   <BookOpen className="w-3 h-3 mr-1" /> Announce
                 </Button>
               )}
+              {isGlobalAdmin && (
+                <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => setSearchParams({ tab: 'bulk-content' })}>
+                  <Trash2 className="w-3 h-3 mr-1" /> Bulk Delete
+                </Button>
+              )}
               {canViewAudits && (
                 <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => setSearchParams({ tab: 'audits' })}>
                   <LayoutDashboard className="w-3 h-3 mr-1" /> Audits
@@ -228,6 +234,7 @@ export default function Admin() {
               {(isGlobalAdmin || isChapterAdmin) && <TabsTrigger value="samiti" className="text-xs sm:text-sm">Samiti</TabsTrigger>}
               {isGlobalAdmin && <TabsTrigger value="whatsapp" className="text-xs sm:text-sm">WhatsApp</TabsTrigger>}
               {isGlobalAdmin && <TabsTrigger value="sms" className="text-xs sm:text-sm">SMS</TabsTrigger>}
+              {isGlobalAdmin && <TabsTrigger value="bulk-content" className="gap-1 text-xs sm:text-sm"><Trash2 className="w-3.5 h-3.5" />Bulk Delete</TabsTrigger>}
               {(isGlobalAdmin || isModerator) && <TabsTrigger value="keywords" className="text-xs sm:text-sm">Keywords</TabsTrigger>}
               {(isGlobalAdmin || isChapterAdmin) && <TabsTrigger value="analytics" className="gap-1 text-xs sm:text-sm"><BarChart2 className="w-3.5 h-3.5" />Analytics</TabsTrigger>}
             </TabsList>
@@ -240,7 +247,7 @@ export default function Admin() {
           )}
           {canVerifyMembers && (
             <TabsContent value="members" className="mt-4">
-              <MembersTab members={allMembers} myChapterId={myChapterId} canInvite={canInviteMembers} />
+              <MembersTab members={allMembers} myChapterId={myChapterId} canInvite={canInviteMembers} isGlobalAdmin={isGlobalAdmin} />
             </TabsContent>
           )}
           {(isGlobalAdmin || isChapterAdmin || isDataSteward) && (
@@ -311,6 +318,11 @@ export default function Admin() {
           {isGlobalAdmin && (
             <TabsContent value="sms" className="mt-4">
               <SMSTab />
+            </TabsContent>
+          )}
+          {isGlobalAdmin && (
+            <TabsContent value="bulk-content" className="mt-4">
+              <BulkContentTab />
             </TabsContent>
           )}
           {(isGlobalAdmin || isModerator) && (
