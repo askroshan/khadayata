@@ -312,7 +312,8 @@ type EmailTemplate =
   | "global_id_assigned"
   | "chapter_transfer_history_update"
   | "family_invitation_sent"
-  | "chapter_admin_invite";
+  | "chapter_admin_invite"
+  | "member_invitation";
 
 function buildEmailHtml(template: EmailTemplate, vars: Record<string, string>): { subject: string; html: string } {
   const name = vars.name ?? "Member";
@@ -977,6 +978,25 @@ function buildEmailHtml(template: EmailTemplate, vars: Record<string, string>): 
     return {
       subject: "You've been appointed Chapter Admin — " + chapterName + " | " + COMMUNITY_NAME,
       html: baseTemplate(content, "You are now the Chapter Admin for " + chapterName + " on " + COMMUNITY_NAME + "."),
+    };
+  }
+
+  if (template === "member_invitation") {
+    const inviterName = vars.inviter_name ?? "The Admin";
+    const chapterName = vars.chapter_name ?? "";
+    const acceptUrl = vars.accept_url ?? WEBSITE + "/auth";
+    const content =
+      icon("&#127881;", ACCENT) +
+      h1("You've Been Invited to Join " + COMMUNITY_NAME) +
+      pt("Hi " + name + ",<br/><br/><strong>" + inviterName + "</strong> has invited you to join <strong>" + COMMUNITY_NAME + "</strong> — the global platform connecting the Khadayata community across heritage, chapters, and identity.") +
+      (chapterName ? kvGrid([{ label: "Your Chapter", value: chapterName }]) : "") +
+      alert("This invitation link is unique to you and expires in 24 hours. Please set your password before it expires.", "warning") +
+      pt("Click the button below to set your password and complete your registration:") +
+      btn("Accept Invitation & Set Password", acceptUrl) +
+      p("If you did not expect this invitation, you can safely ignore this email. No account will be created until you accept.", "font-size:13px;color:" + TEXT_FAINT + ";margin-top:16px;");
+    return {
+      subject: "You've been invited to join " + COMMUNITY_NAME,
+      html: baseTemplate(content, inviterName + " has invited you to join " + COMMUNITY_NAME + "."),
     };
   }
 
