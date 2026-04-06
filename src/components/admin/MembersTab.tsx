@@ -33,6 +33,7 @@ interface CommitteeRole {
 interface MembersTabProps {
   members: Member[] | undefined;
   myChapterId: string | null;
+  canInvite?: boolean;
 }
 
 const LEVEL_LABELS: Record<number, string> = { 0: "Basic", 1: "Verified", 2: "Trusted", 3: "Senior", 4: "Elder", 5: "Patron" };
@@ -59,7 +60,7 @@ function exportCSV(members: Member[]) {
   URL.revokeObjectURL(url);
 }
 
-export default function MembersTab({ members, myChapterId }: MembersTabProps) {
+export default function MembersTab({ members, myChapterId, canInvite = false }: MembersTabProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
@@ -375,8 +376,11 @@ export default function MembersTab({ members, myChapterId }: MembersTabProps) {
             <Button variant="outline" size="sm" onClick={() => exportCSV(filtered)} className="h-9 text-xs">
               <Download className="w-3.5 h-3.5 mr-1" /> Export CSV
             </Button>
-            {!myChapterId && (
-              <Button size="sm" onClick={() => setInviteOpen(true)} className="h-9 text-xs gradient-warm text-primary-foreground">
+            {canInvite && (
+              <Button size="sm" onClick={() => {
+                setInviteForm({ email: "", first_name: "", last_name: "", chapter_id: myChapterId ?? "" });
+                setInviteOpen(true);
+              }} className="h-9 text-xs gradient-warm text-primary-foreground">
                 <UserPlus className="w-3.5 h-3.5 mr-1" /> Invite Member
               </Button>
             )}

@@ -33,7 +33,7 @@ import AnalyticsTab from "@/components/admin/AnalyticsTab";
 export default function Admin() {
   const { user, loading } = useAuth();
   const { isAnyAdmin, isModerator, roles, isLoading: rolesLoading, isGlobalAdmin, isChapterAdmin, myChapterId, isDataSteward, isDirectoryManager, isEventManager, isFinanceAdmin, isPublisher } = useRoles();
-  const { canVerifyMembers, canManageTransfers, canViewAudits, canManageAnnouncements, canManageDirectory, canManageEvents, canManageFunds, canPublishNews } = usePermissions();
+  const { canVerifyMembers, canManageTransfers, canViewAudits, canManageAnnouncements, canManageDirectory, canManageEvents, canManageFunds, canPublishNews, canInviteMembers } = usePermissions();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const { data: allMembers } = useQuery({
@@ -240,7 +240,7 @@ export default function Admin() {
           )}
           {canVerifyMembers && (
             <TabsContent value="members" className="mt-4">
-              <MembersTab members={allMembers} myChapterId={myChapterId} />
+              <MembersTab members={allMembers} myChapterId={myChapterId} canInvite={canInviteMembers} />
             </TabsContent>
           )}
           {(isGlobalAdmin || isChapterAdmin || isDataSteward) && (

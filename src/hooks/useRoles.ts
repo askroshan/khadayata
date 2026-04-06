@@ -107,6 +107,7 @@ export function usePermissions() {
     // Members
     canVerifyMembers: isGlobalAdmin || isDataSteward || isChapterAdmin || isModerator,
     canEditAnyMember: isGlobalAdmin || isDataSteward || isChapterAdmin || isModerator,
+    canInviteMembers: isGlobalAdmin || isChapterAdmin || isDataSteward || isModerator,
     
     // Events
     canManageEvents: isGlobalAdmin || isEventManager || isModerator,
