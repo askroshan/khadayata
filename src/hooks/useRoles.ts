@@ -25,9 +25,9 @@ interface RoleAssignment {
 
 export function useRoles() {
   const { user } = useAuth();
-  const { member } = useMember();
+  const { member, isLoading: memberLoading } = useMember();
 
-  const { data: roleAssignments, isLoading } = useQuery({
+  const { data: roleAssignments, isLoading: rolesLoading } = useQuery({
     queryKey: ["my-roles", member?.id],
     queryFn: async () => {
       if (!member) return [];
@@ -41,6 +41,8 @@ export function useRoles() {
     },
     enabled: !!member,
   });
+
+  const isLoading = memberLoading ? true : member === null ? false : rolesLoading;
 
   const roles = roleAssignments?.map((ra) => ra.roles?.name).filter(Boolean) as string[] ?? [];
 
