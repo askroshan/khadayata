@@ -230,11 +230,11 @@ export default function AnalyticsTab({ myChapterId }: Props) {
   const { data: chapterStats } = useQuery({
     queryKey: ["analytics-chapters"],
     queryFn: async () => {
-      const { data } = await supabase.from("chapters").select("id, is_active");
+      const { data } = await supabase.from("chapters").select("id, settings");
       if (!data) return null;
       return {
         total: data.length,
-        active: data.filter(c => c.is_active !== false).length,
+        active: data.filter(c => (c.settings as { is_active?: boolean } | null)?.is_active !== false).length,
       };
     },
     enabled: isGlobal,

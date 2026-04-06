@@ -22,7 +22,7 @@ export default function AdminStats({ members, isChapterScoped, myChapterId }: Ad
   const { data: activeEventsCount } = useQuery({
     queryKey: ["admin-active-events", myChapterId],
     queryFn: async () => {
-      let q = supabase.from("events").select("id", { count: "exact", head: true }).gte("start_datetime", new Date().toISOString()).eq("status", "published");
+      let q = supabase.from("events").select("id", { count: "exact", head: true }).gte("starts_at", new Date().toISOString()).eq("status", "published");
       if (myChapterId) q = q.eq("chapter_id", myChapterId);
       const { count } = await q;
       return count ?? 0;
@@ -32,7 +32,7 @@ export default function AdminStats({ members, isChapterScoped, myChapterId }: Ad
   const { data: chaptersCount } = useQuery({
     queryKey: ["admin-chapters-count"],
     queryFn: async () => {
-      const { count } = await supabase.from("chapters").select("id", { count: "exact", head: true }).eq("is_active", true);
+      const { count } = await supabase.from("chapters").select("id", { count: "exact", head: true });
       return count ?? 0;
     },
     enabled: !isChapterScoped,
