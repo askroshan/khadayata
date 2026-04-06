@@ -133,12 +133,15 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const { data: memberInsert, error: memberError } = await adminClient.from("members").insert({
-      user_id: newUser.user!.id,
-      first_name: first_name.trim(),
-      last_name: last_name?.trim() ?? "",
-      chapter_id: chapter_id || null,
-    }).select("id").single();
+    const { data: memberInsert, error: memberError } = await adminClient.from("members")
+      .update({
+        first_name: first_name.trim(),
+        last_name: last_name?.trim() ?? "",
+        chapter_id: chapter_id || null,
+      })
+      .eq("user_id", newUser.user!.id)
+      .select("id")
+      .single();
 
     if (memberError) {
       await adminClient.auth.admin.deleteUser(newUser.user!.id);
