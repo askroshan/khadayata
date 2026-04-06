@@ -1,4 +1,4 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRoles, usePermissions } from "@/hooks/useRoles";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,7 +7,9 @@ import AppLayout from "@/components/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Shield, TriangleAlert as AlertTriangle, Flag, LayoutDashboard, Building2, Calendar, DollarSign, Newspaper, ChartBar as BarChart2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Shield, TriangleAlert as AlertTriangle, Flag, LayoutDashboard, Building2, Calendar, DollarSign, Newspaper, ChartBar as BarChart2, ChevronDown, Users, BookOpen, Zap } from "lucide-react";
 import AdminStats from "@/components/admin/AdminStats";
 import MembersTab from "@/components/admin/MembersTab";
 import RolesTab from "@/components/admin/RolesTab";
@@ -32,6 +34,7 @@ export default function Admin() {
   const { user, loading } = useAuth();
   const { isAnyAdmin, isModerator, roles, isLoading: rolesLoading, isGlobalAdmin, isChapterAdmin, myChapterId, isDataSteward, isDirectoryManager, isEventManager, isFinanceAdmin, isPublisher } = useRoles();
   const { canVerifyMembers, canManageTransfers, canViewAudits, canManageAnnouncements, canManageDirectory, canManageEvents, canManageFunds, canPublishNews } = usePermissions();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const { data: allMembers } = useQuery({
     queryKey: ["admin-members", myChapterId],
@@ -110,14 +113,14 @@ export default function Admin() {
   return (
     <AppLayout title="Admin">
       <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-display font-bold">Admin Dashboard</h1>
             <p className="text-sm text-muted-foreground">
               {isGlobalAdmin ? "Global governance, moderation & analytics" : "Chapter governance, moderation & analytics"}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Badge className="bg-primary/10 text-primary border-0">
               <Shield className="w-3 h-3 mr-1" />
               {roles.join(", ") || "Member"}
@@ -132,7 +135,78 @@ export default function Admin() {
 
         {canVerifyMembers && <AdminStats members={allMembers} isChapterScoped={!!myChapterId} myChapterId={myChapterId} />}
 
-        <Tabs defaultValue={isDataSteward && !isGlobalAdmin ? "verification" : isDirectoryManager && !isGlobalAdmin ? "directory" : isEventManager && !isGlobalAdmin ? "events" : isFinanceAdmin && !isGlobalAdmin ? "finance" : isPublisher && !isGlobalAdmin ? "publisher" : isModerator && !isGlobalAdmin ? "reports" : "members"}>
+        <Collapsible className="border border-border rounded-lg p-3 bg-muted/30">
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" className="w-full justify-between h-auto py-2 px-3 font-semibold">
+              <span className="flex items-center gap-2">
+                <Zap className="w-4 h-4 text-primary" />
+                Quick Access — Admin CRUD Operations
+              </span>
+              <ChevronDown className="w-4 h-4 transition-transform" />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-2 space-y-2 pt-2 border-t border-border">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+              {canVerifyMembers && (
+                <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => searchParams.get('tab') !== 'members' && setSearchParams({ tab: 'members' })}>
+                  <Users className="w-3 h-3 mr-1" /> Members
+                </Button>
+              )}
+              {isGlobalAdmin && (
+                <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => setSearchParams({ tab: 'chapters' })}>
+                  <Building2 className="w-3 h-3 mr-1" /> Chapters
+                </Button>
+              )}
+              {canManageEvents && (
+                <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => setSearchParams({ tab: 'events' })}>
+                  <Calendar className="w-3 h-3 mr-1" /> Events
+                </Button>
+              )}
+              {(isGlobalAdmin || isChapterAdmin || isDataSteward) && (
+                <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => setSearchParams({ tab: 'roles' })}>
+                  <Shield className="w-3 h-3 mr-1" /> Roles
+                </Button>
+              )}
+              {canManageDirectory && (
+                <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => setSearchParams({ tab: 'directory' })}>
+                  <Building2 className="w-3 h-3 mr-1" /> Directory
+                </Button>
+              )}
+              {canManageFunds && (
+                <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => setSearchParams({ tab: 'finance' })}>
+                  <DollarSign className="w-3 h-3 mr-1" /> Finance
+                </Button>
+              )}
+              {canPublishNews && (
+                <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => setSearchParams({ tab: 'publisher' })}>
+                  <Newspaper className="w-3 h-3 mr-1" /> News
+                </Button>
+              )}
+              {(isAnyAdmin || isModerator) && (
+                <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => setSearchParams({ tab: 'reports' })}>
+                  <Flag className="w-3 h-3 mr-1" /> Reports
+                </Button>
+              )}
+              {canManageAnnouncements && (
+                <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => setSearchParams({ tab: 'announcements' })}>
+                  <BookOpen className="w-3 h-3 mr-1" /> Announce
+                </Button>
+              )}
+              {canViewAudits && (
+                <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => setSearchParams({ tab: 'audits' })}>
+                  <LayoutDashboard className="w-3 h-3 mr-1" /> Audits
+                </Button>
+              )}
+              {(isGlobalAdmin || isChapterAdmin) && (
+                <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => setSearchParams({ tab: 'analytics' })}>
+                  <BarChart2 className="w-3 h-3 mr-1" /> Analytics
+                </Button>
+              )}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+
+        <Tabs defaultValue={searchParams.get('tab') || (isDataSteward && !isGlobalAdmin ? "verification" : isDirectoryManager && !isGlobalAdmin ? "directory" : isEventManager && !isGlobalAdmin ? "events" : isFinanceAdmin && !isGlobalAdmin ? "finance" : isPublisher && !isGlobalAdmin ? "publisher" : isModerator && !isGlobalAdmin ? "reports" : "members")}>
           <div className="overflow-x-auto pb-1 -mb-1">
             <TabsList className="flex w-max min-w-full h-auto gap-1">
               {isDataSteward && <TabsTrigger value="verification" className="gap-1 text-xs sm:text-sm"><LayoutDashboard className="w-3.5 h-3.5" />Verification</TabsTrigger>}
