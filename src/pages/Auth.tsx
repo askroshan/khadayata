@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Navigate, Link, useSearchParams } from "react-router-dom";
+import { Navigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,7 @@ export default function Auth() {
   const [searchParams] = useSearchParams();
   const redirectTo = searchParams.get("redirect") ?? "/dashboard";
   const [isSignUp, setIsSignUp] = useState(false);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -35,6 +36,29 @@ export default function Auth() {
   );
   if (user) return <Navigate to={redirectTo} replace />;
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const emailResult = emailSchema.safeParse(email);
+    if (!emailResult.success) { toast({ title: "Invalid email", description: emailResult.error.errors[0].message, variant: "destructive" }); return; }
+    setSubmitting(true);
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-reset-email`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Apikey": import.meta.env.VITE_SUPABASE_ANON_KEY },
+          body: JSON.stringify({ email, type: "recovery" }),
+        }
+      );
+      if (!res.ok) throw new Error("Request failed");
+    } catch {
+    } finally {
+      setSubmitting(false);
+    }
+    toast({ title: "Check your email", description: "If an account exists, we've sent a password reset link." });
+    setIsForgotPassword(false);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const emailResult = emailSchema.safeParse(email);
@@ -45,7 +69,7 @@ export default function Auth() {
     const { error } = isSignUp ? await signUp(email, password) : await signIn(email, password);
     setSubmitting(false);
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); }
-    else if (isSignUp) { toast({ title: "Check your email", description: "We've sent you a confirmation link." }); }
+    else if (isSignUp) { toast({ title: "Check your email", description: "We've sent you a verification link." }); }
   };
 
   return (
@@ -56,7 +80,7 @@ export default function Auth() {
         url="/auth"
         noIndex={true}
       />
-      <div className="flex min-h-[calc(100vh-68px)]">
+      <div className="flex min-h-[calc(100vh-68px)]" key={isForgotPassword ? "forgot" : isSignUp ? "signup" : "signin"}>
         {/* Left side - immersive branding */}
         <div className="hidden lg:flex lg:w-1/2 relative items-center justify-center">
           <img src={heroTemple} alt="Kotyark Temple — Khadayata Heritage" className="absolute inset-0 w-full h-full object-cover" />
@@ -89,34 +113,61 @@ export default function Auth() {
                 <img src={LOGO} alt="Khadayata" style={{ height: 52, mixBlendMode: "multiply" }} />
               </div>
               <CardTitle className="text-2xl font-display">
-                {isSignUp ? "Join the Community" : "Welcome Back"}
+                {isForgotPassword ? "Reset Password" : isSignUp ? "Join the Community" : "Welcome Back"}
               </CardTitle>
               <CardDescription>
-                {isSignUp ? "Create your account to connect with the Khadayata family" : "Sign in to your Khadayata Online account"}
+                {isForgotPassword
+                  ? "Enter your email and we'll send you a reset link"
+                  : isSignUp
+                  ? "Create your account to connect with the Khadayata family"
+                  : "Sign in to your Khadayata Online account"}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required maxLength={255} className="h-11" />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="password">Password</Label>
-                    {!isSignUp && <Link to="/reset-password" className="text-xs text-primary hover:underline">Forgot password?</Link>}
+              {isForgotPassword ? (
+                <form onSubmit={handleForgotPassword} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input id="email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required maxLength={255} className="h-11" />
                   </div>
-                  <Input id="password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} maxLength={128} className="h-11" />
-                </div>
-                <Button type="submit" className="w-full h-12 gradient-hero text-primary-foreground shadow-glow text-base" disabled={submitting}>
-                  {submitting ? "Please wait..." : isSignUp ? "Create Account" : "Sign In"}
-                </Button>
-              </form>
-              <div className="mt-6 text-center">
-                <button type="button" onClick={() => setIsSignUp(!isSignUp)} className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                  {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Sign up free"}
-                </button>
-              </div>
+                  <Button type="submit" className="w-full h-12 gradient-hero text-primary-foreground shadow-glow text-base" disabled={submitting}>
+                    {submitting ? "Sending..." : "Send Reset Link"}
+                  </Button>
+                  <div className="text-center">
+                    <button type="button" onClick={() => { setIsForgotPassword(false); setEmail(""); }} className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                      Back to Sign In
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <>
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input id="email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required maxLength={255} className="h-11" />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="password">Password</Label>
+                        {!isSignUp && (
+                          <button type="button" onClick={() => { setIsForgotPassword(true); setPassword(""); }} className="text-xs text-primary hover:underline">
+                            Forgot password?
+                          </button>
+                        )}
+                      </div>
+                      <Input id="password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} maxLength={128} className="h-11" />
+                    </div>
+                    <Button type="submit" className="w-full h-12 gradient-hero text-primary-foreground shadow-glow text-base" disabled={submitting}>
+                      {submitting ? "Please wait..." : isSignUp ? "Create Account" : "Sign In"}
+                    </Button>
+                  </form>
+                  <div className="mt-6 text-center">
+                    <button type="button" onClick={() => setIsSignUp(!isSignUp)} className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                      {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Sign up free"}
+                    </button>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
