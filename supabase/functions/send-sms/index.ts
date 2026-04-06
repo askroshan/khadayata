@@ -72,7 +72,7 @@ Deno.serve(async (req: Request) => {
       .eq("user_id", user.id)
       .maybeSingle();
 
-    const cleanNumber = String(to).replace(/^\+/, "").replace(/^1/, "");
+    const cleanNumber = String(to).replace(/^\+/, "");
     const resolvedCountryCode = country_code ?? "1";
 
     const easifyPayload = {
@@ -84,6 +84,9 @@ Deno.serve(async (req: Request) => {
       force_send: 0,
     };
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+
     const easifyResponse = await fetch(`${EASIFY_BASE}/sms/send`, {
       method: "POST",
       headers: {
@@ -91,7 +94,8 @@ Deno.serve(async (req: Request) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(easifyPayload),
-    });
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timeout));
 
     const easifyResult = await easifyResponse.json();
     const success = easifyResponse.ok;

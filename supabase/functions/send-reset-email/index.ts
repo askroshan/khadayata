@@ -82,6 +82,9 @@ Deno.serve(async (req: Request) => {
     const varKey = linkType === "signup" ? "verification_url" : "reset_url";
 
     console.log("Calling send-email with template:", template, "for:", normalizedEmail);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+
     const emailRes = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
       method: "POST",
       headers: {
@@ -97,7 +100,8 @@ Deno.serve(async (req: Request) => {
           [varKey]: linkData.properties.action_link,
         },
       }),
-    });
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timeout));
 
     console.log("send-email response status:", emailRes.status);
     if (!emailRes.ok) {

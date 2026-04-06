@@ -41,11 +41,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       options: { emailRedirectTo: `${window.location.origin}/reset-password` },
     });
     if (!error) {
-      supabase.functions.invoke("send-reset-email", {
-        body: { email, type: "signup" },
-      }).catch((err) => {
-        console.error("Failed to send verification email:", err);
-      });
+      try {
+        await supabase.functions.invoke("send-reset-email", {
+          body: { email, type: "signup" },
+        });
+      } catch (emailErr) {
+        console.error("Failed to send verification email:", emailErr);
+        return { error: new Error("Signup successful but email verification failed. Please contact support.") };
+      }
     }
     return { error: error as Error | null };
   };

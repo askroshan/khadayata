@@ -162,12 +162,23 @@ function baseTemplate(content: string, preheader: string): string {
   );
 }
 
+function escapeHtml(text: string): string {
+  const map: { [key: string]: string } = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;",
+  };
+  return text.replace(/[&<>"']/g, (char) => map[char]);
+}
+
 function h1(text: string): string {
-  return '<h1 style="margin:0 0 20px;font-size:26px;font-weight:800;color:' + TEXT + ';letter-spacing:-0.5px;line-height:1.25;">' + text + "</h1>";
+  return '<h1 style="margin:0 0 20px;font-size:26px;font-weight:800;color:' + TEXT + ';letter-spacing:-0.5px;line-height:1.25;">' + escapeHtml(text) + "</h1>";
 }
 
 function p(text: string, style: string): string {
-  return '<p style="margin:0 0 20px;font-size:15px;color:' + TEXT_MUTED + ';line-height:1.75;' + style + '">' + text + "</p>";
+  return '<p style="margin:0 0 20px;font-size:15px;color:' + TEXT_MUTED + ';line-height:1.75;' + style + '">' + escapeHtml(text) + "</p>";
 }
 
 function pt(text: string): string { return p(text, ""); }
@@ -177,8 +188,8 @@ function btn(label: string, href: string): string {
     '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:32px auto 0;">' +
     "<tr>" +
     '<td style="border-radius:6px;background:linear-gradient(135deg,' + HEADER_SAFFRON + ' 0%,' + ACCENT_LIGHT + ' 100%);box-shadow:0 4px 14px rgba(200,94,10,0.35);">' +
-    '<a href="' + href + '" style="display:inline-block;background:transparent;color:#FFFFFF;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:6px;letter-spacing:0.4px;">' +
-    label + " &rarr;" +
+    '<a href="' + escapeHtml(href) + '" style="display:inline-block;background:transparent;color:#FFFFFF;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:6px;letter-spacing:0.4px;">' +
+    escapeHtml(label) + " &rarr;" +
     "</a>" +
     "</td>" +
     "</tr>" +
@@ -192,8 +203,8 @@ function infoRows(rows: Array<{ label: string; value: string }>): string {
     inner +=
       '<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:10px;">' +
       "<tr>" +
-      '<td style="font-size:11px;font-weight:600;color:' + TEXT_FAINT + ';text-transform:uppercase;letter-spacing:1px;width:120px;vertical-align:top;padding-top:2px;">' + r.label + "</td>" +
-      '<td style="font-size:14px;color:' + TEXT + ';font-weight:500;vertical-align:top;">' + r.value + "</td>" +
+      '<td style="font-size:11px;font-weight:600;color:' + TEXT_FAINT + ';text-transform:uppercase;letter-spacing:1px;width:120px;vertical-align:top;padding-top:2px;">' + escapeHtml(r.label) + "</td>" +
+      '<td style="font-size:14px;color:' + TEXT + ';font-weight:500;vertical-align:top;">' + escapeHtml(r.value) + "</td>" +
       "</tr>" +
       "</table>";
   }
@@ -211,8 +222,8 @@ function kvGrid(pairs: Array<{ label: string; value: string }>): string {
   for (const p of pairs) {
     rows +=
       "<tr>" +
-      '<td style="font-size:12px;color:' + TEXT_FAINT + ';font-weight:600;text-transform:uppercase;letter-spacing:0.8px;padding:5px 12px 5px 0;width:130px;vertical-align:top;">' + p.label + "</td>" +
-      '<td style="font-size:14px;color:' + TEXT + ';font-weight:500;padding:5px 0;vertical-align:top;">' + p.value + "</td>" +
+      '<td style="font-size:12px;color:' + TEXT_FAINT + ';font-weight:600;text-transform:uppercase;letter-spacing:0.8px;padding:5px 12px 5px 0;width:130px;vertical-align:top;">' + escapeHtml(p.label) + "</td>" +
+      '<td style="font-size:14px;color:' + TEXT + ';font-weight:500;padding:5px 0;vertical-align:top;">' + escapeHtml(p.value) + "</td>" +
       "</tr>";
   }
   return (
@@ -234,14 +245,14 @@ function alert(content: string, type: string): string {
   return (
     '<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:' + bg + ';border-left:3px solid ' + border + ';border-radius:0 6px 6px 0;margin:16px 0;">' +
     "<tr><td style=\"padding:14px 18px;font-size:14px;color:" + color + ";line-height:1.65;font-weight:500;\">" +
-    content +
+    escapeHtml(content) +
     "</td></tr>" +
     "</table>"
   );
 }
 
 function label(text: string): string {
-  return '<p style="margin:0 0 8px;font-size:10px;font-weight:700;color:' + ACCENT + ';letter-spacing:2.5px;text-transform:uppercase;">' + text + "</p>";
+  return '<p style="margin:0 0 8px;font-size:10px;font-weight:700;color:' + ACCENT + ';letter-spacing:2.5px;text-transform:uppercase;">' + escapeHtml(text) + "</p>";
 }
 
 function icon(emoji: string, color: string): string {
@@ -257,7 +268,7 @@ function icon(emoji: string, color: string): string {
 function quote(text: string): string {
   return (
     '<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:' + FOOTER_BG + ';border-left:4px solid ' + ACCENT_LIGHT + ';border-radius:0 6px 6px 0;margin:0 0 24px;">' +
-    '<tr><td style="padding:16px 20px;font-size:15px;color:' + TEXT_MUTED + ';font-style:italic;line-height:1.75;">&ldquo;' + text + '&rdquo;</td></tr>' +
+    '<tr><td style="padding:16px 20px;font-size:15px;color:' + TEXT_MUTED + ';font-style:italic;line-height:1.75;">&ldquo;' + escapeHtml(text) + '&rdquo;</td></tr>' +
     "</table>"
   );
 }
@@ -1072,6 +1083,9 @@ Deno.serve(async (req: Request) => {
     };
 
     console.log("Calling Emailit API for template:", template);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+
     const emailRes = await fetch(EMAILIT_API, {
       method: "POST",
       headers: {
@@ -1079,7 +1093,8 @@ Deno.serve(async (req: Request) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
-    });
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timeout));
 
     const emailResult = await emailRes.json().catch(() => ({}));
     console.log("Emailit response status:", emailRes.status, "result:", emailResult);

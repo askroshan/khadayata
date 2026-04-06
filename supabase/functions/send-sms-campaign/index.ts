@@ -80,6 +80,9 @@ Deno.serve(async (req: Request) => {
       media: "",
     };
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+
     const easifyResponse = await fetch(`${EASIFY_BASE}/sms/campaign/send`, {
       method: "POST",
       headers: {
@@ -87,7 +90,8 @@ Deno.serve(async (req: Request) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(campaignPayload),
-    });
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timeout));
 
     const easifyResult = await easifyResponse.json();
     const success = easifyResponse.ok;

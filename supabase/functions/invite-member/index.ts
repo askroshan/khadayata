@@ -172,6 +172,7 @@ Deno.serve(async (req: Request) => {
     if (!emailRes.ok) {
       const emailErr = await emailRes.text();
       await adminClient.auth.admin.deleteUser(newUser.user!.id);
+      await adminClient.from("members").delete().eq("id", memberInsert.id);
       return new Response(JSON.stringify({ error: "Failed to send invitation email: " + emailErr }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
