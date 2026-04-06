@@ -25,6 +25,11 @@ interface Member {
   chapters: { name: string } | null;
 }
 
+interface CommitteeRole {
+  id: string;
+  name: string;
+}
+
 interface MembersTabProps {
   members: Member[] | undefined;
   myChapterId: string | null;
@@ -64,6 +69,7 @@ export default function MembersTab({ members, myChapterId }: MembersTabProps) {
   const [editMember, setEditMember] = useState<{ id: string; first_name: string; last_name: string; chapter_id: string } | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteForm, setInviteForm] = useState({ email: "", first_name: "", last_name: "", chapter_id: "" });
+  const [memberCommitteeRoles, setMemberCommitteeRoles] = useState<Record<string, string>>({});
 
   const { data: chapters } = useQuery({
     queryKey: ["chapters-list"],
@@ -72,6 +78,29 @@ export default function MembersTab({ members, myChapterId }: MembersTabProps) {
       return data ?? [];
     },
     enabled: !!editMember || inviteOpen,
+  });
+
+  const { data: committeeRoles } = useQuery({
+    queryKey: ["committee-roles", editMember?.chapter_id],
+    queryFn: async () => {
+      if (!editMember?.chapter_id) return [];
+      const { data } = await supabase.from("roles").select("id, name").eq("chapter_id", editMember.chapter_id).ilike("name", "%Committee%");
+      return data ?? [];
+    },
+    enabled: !!editMember?.chapter_id,
+  });
+
+  const { data: memberRoles } = useQuery({
+    queryKey: ["member-roles", editMember?.id],
+    queryFn: async () => {
+      if (!editMember?.id) return [];
+      const { data } = await supabase
+        .from("role_assignments")
+        .select("role_id, roles(id, name)")
+        .eq("member_id", editMember.id);
+      return data ?? [];
+    },
+    enabled: !!editMember?.id,
   });
 
   const editMemberMutation = useMutation({
@@ -134,6 +163,39 @@ export default function MembersTab({ members, myChapterId }: MembersTabProps) {
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
+  const updateCommitteeRole = useMutation({
+    mutationFn: async ({ memberId, roleId, roleName }: { memberId: string; roleId: string; roleName: string }) => {
+      if (!editMember?.chapter_id) throw new Error("No chapter assigned");
+      const existingRoles = memberRoles?.filter(r => {
+        const role = r.roles as CommitteeRole | null;
+        return role?.name !== roleName;
+      }) ?? [];
+      const otherRoleIds = existingRoles.map(r => r.role_id);
+      const { data: existingAssignment } = await supabase
+        .from("role_assignments")
+        .select("id")
+        .eq("member_id", memberId)
+        .eq("role_id", roleId)
+        .maybeSingle();
+      if (existingAssignment) {
+        const { error } = await supabase.from("role_assignments").delete().eq("id", existingAssignment.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("role_assignments").insert({
+          member_id: memberId,
+          role_id: roleId,
+          start_date: new Date().toISOString().split("T")[0],
+        });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      toast({ title: "Committee role updated" });
+      queryClient.invalidateQueries({ queryKey: ["member-roles", editMember?.id] });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
   const filtered = useMemo(() => {
     if (!members) return [];
     let list = [...members];
@@ -189,10 +251,10 @@ export default function MembersTab({ members, myChapterId }: MembersTabProps) {
       </DialogContent>
     </Dialog>
     <Dialog open={!!editMember} onOpenChange={(open) => { if (!open) setEditMember(null); }}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Member</DialogTitle>
-          <DialogDescription>Update member name and chapter assignment.</DialogDescription>
+          <DialogDescription>Update member name, chapter assignment, and committee roles.</DialogDescription>
         </DialogHeader>
         {editMember && (
           <div className="space-y-3">
@@ -210,6 +272,35 @@ export default function MembersTab({ members, myChapterId }: MembersTabProps) {
                 </SelectContent>
               </Select>
             </div>
+            {editMember.chapter_id && committeeRoles && committeeRoles.length > 0 && (
+              <div>
+                <Label>Committee Roles</Label>
+                <div className="space-y-2 mt-2">
+                  {committeeRoles.map(role => {
+                    const isAssigned = memberRoles?.some(mr => {
+                      const r = mr.roles as CommitteeRole | null;
+                      return r?.id === role.id;
+                    });
+                    return (
+                      <div key={role.id} className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id={`role-${role.id}`}
+                          checked={isAssigned ?? false}
+                          onChange={e => {
+                            if (e.target.checked || isAssigned) {
+                              updateCommitteeRole.mutate({ memberId: editMember.id, roleId: role.id, roleName: role.name });
+                            }
+                          }}
+                          className="h-4 w-4 rounded border-border"
+                        />
+                        <Label htmlFor={`role-${role.id}`} className="flex-1 cursor-pointer font-normal">{role.name}</Label>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             <Button onClick={() => editMemberMutation.mutate()} disabled={!editMember.first_name.trim() || editMemberMutation.isPending} className="w-full gradient-warm text-primary-foreground">
               Save Changes
             </Button>
@@ -253,9 +344,11 @@ export default function MembersTab({ members, myChapterId }: MembersTabProps) {
             <Button variant="outline" size="sm" onClick={() => exportCSV(filtered)} className="h-9 text-xs">
               <Download className="w-3.5 h-3.5 mr-1" /> Export CSV
             </Button>
-            <Button size="sm" onClick={() => setInviteOpen(true)} className="h-9 text-xs gradient-warm text-primary-foreground">
-              <UserPlus className="w-3.5 h-3.5 mr-1" /> Invite Member
-            </Button>
+            {!myChapterId && (
+              <Button size="sm" onClick={() => setInviteOpen(true)} className="h-9 text-xs gradient-warm text-primary-foreground">
+                <UserPlus className="w-3.5 h-3.5 mr-1" /> Invite Member
+              </Button>
+            )}
           </div>
         </div>
 

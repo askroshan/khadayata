@@ -24,7 +24,7 @@ interface RolesTabProps {
   myChapterId: string | null;
 }
 
-const CHAPTER_ROLES = ["Chapter Admin", "Event Manager", "Moderator", "Publisher", "Finance Admin", "Directory Manager", "Data Steward"];
+const CHAPTER_ROLES = ["Chapter Admin", "Event Manager", "Moderator", "Publisher", "Finance Admin", "Directory Manager", "Data Steward", "Committee Chair", "Committee Secretary", "Committee Treasurer", "Committee Member"];
 
 export default function RolesTab({ roleAssignments, myChapterId }: RolesTabProps) {
   const { toast } = useToast();

@@ -49,6 +49,7 @@ export default function ChaptersTab() {
   const [inviteChapter, setInviteChapter] = useState<Chapter | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Chapter | null>(null);
   const [revokeTarget, setRevokeTarget] = useState<{ chapterId: string; adminId: string; memberName: string } | null>(null);
+  const [committeeChapter, setCommitteeChapter] = useState<Chapter | null>(null);
 
   const [form, setForm] = useState(EMPTY_FORM);
   const [editForm, setEditForm] = useState(EMPTY_FORM);
@@ -350,6 +351,9 @@ export default function ChaptersTab() {
                   <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-primary hover:text-primary" onClick={() => { setInviteChapter(ch); setInviteForm({ memberId: "", email: "", name: "" }); setMemberSearch(""); }} aria-label="Assign chapter admin">
                     <UserPlus className="w-3.5 h-3.5" />
                   </Button>
+                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-primary hover:text-primary" onClick={() => setCommitteeChapter(ch)} aria-label="Manage committee">
+                    <Users className="w-3.5 h-3.5" />
+                  </Button>
                   <Button
                     size="sm" variant="ghost"
                     className={`h-7 w-7 p-0 ${ch.is_active ? "text-destructive hover:text-destructive" : "text-success hover:text-success"}`}
@@ -550,6 +554,171 @@ export default function ChaptersTab() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Committee Management Dialog */}
+      <CommitteeManagementDialog chapter={committeeChapter} onClose={() => setCommitteeChapter(null)} />
     </div>
+  );
+}
+
+interface CommitteeManagementDialogProps {
+  chapter: Chapter | null;
+  onClose: () => void;
+}
+
+function CommitteeManagementDialog({ chapter, onClose }: CommitteeManagementDialogProps) {
+  const { toast } = useToast();
+  const [selectedRole, setSelectedRole] = useState("");
+  const [selectedMember, setSelectedMember] = useState("");
+
+  const { data: committeeRoles } = useQuery({
+    queryKey: ["committee-roles", chapter?.id],
+    queryFn: async () => {
+      if (!chapter?.id) return [];
+      const { data } = await supabase.from("roles").select("id, name").eq("chapter_id", chapter.id).ilike("name", "%Committee%");
+      return data ?? [];
+    },
+    enabled: !!chapter?.id,
+  });
+
+  const { data: chapterMembers } = useQuery({
+    queryKey: ["committee-members", chapter?.id],
+    queryFn: async () => {
+      if (!chapter?.id) return [];
+      const { data } = await supabase.from("members").select("id, first_name, last_name").eq("chapter_id", chapter.id).order("first_name");
+      return data ?? [];
+    },
+    enabled: !!chapter?.id,
+  });
+
+  const { data: committeeAssignments } = useQuery({
+    queryKey: ["committee-assignments", chapter?.id],
+    queryFn: async () => {
+      if (!chapter?.id) return [];
+      const { data } = await supabase
+        .from("role_assignments")
+        .select("id, member_id, role_id, members(first_name, last_name), roles(name)")
+        .eq("chapter_id", chapter.id);
+      return data?.filter(ra => {
+        const role = ra.roles as { name: string } | null;
+        return role?.name?.includes("Committee");
+      }) ?? [];
+    },
+    enabled: !!chapter?.id,
+  });
+
+  const assignCommitteeRole = useMutation({
+    mutationFn: async () => {
+      if (!selectedMember || !selectedRole || !chapter?.id) throw new Error("Select member and role");
+      const role = committeeRoles?.find(r => r.id === selectedRole);
+      if (!role) throw new Error("Role not found");
+      const { error } = await supabase.from("role_assignments").insert({
+        member_id: selectedMember,
+        role_id: selectedRole,
+        start_date: new Date().toISOString().split("T")[0],
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Committee member assigned!" });
+      setSelectedMember("");
+      setSelectedRole("");
+      const queryClient = useQueryClient();
+      queryClient.invalidateQueries({ queryKey: ["committee-assignments", chapter?.id] });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const removeCommitteeRole = useMutation({
+    mutationFn: async (assignmentId: string) => {
+      const { error } = await supabase.from("role_assignments").delete().eq("id", assignmentId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Committee member removed." });
+      const queryClient = useQueryClient();
+      queryClient.invalidateQueries({ queryKey: ["committee-assignments", chapter?.id] });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  return (
+    <Dialog open={!!chapter} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2"><Users className="w-4 h-4" />Manage Committee — {chapter?.name}</DialogTitle>
+          <DialogDescription>Assign committee roles to chapter members.</DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="space-y-3 p-3 bg-muted/30 rounded-lg">
+            <h4 className="font-medium text-sm">Assign Committee Role</h4>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Member</Label>
+                <Select value={selectedMember} onValueChange={setSelectedMember}>
+                  <SelectTrigger><SelectValue placeholder="Select member..." /></SelectTrigger>
+                  <SelectContent>
+                    {chapterMembers?.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>{m.first_name} {m.last_name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Role</Label>
+                <Select value={selectedRole} onValueChange={setSelectedRole}>
+                  <SelectTrigger><SelectValue placeholder="Select role..." /></SelectTrigger>
+                  <SelectContent>
+                    {committeeRoles?.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <Button
+              onClick={() => assignCommitteeRole.mutate()}
+              disabled={!selectedMember || !selectedRole || assignCommitteeRole.isPending}
+              className="w-full gradient-hero text-primary-foreground"
+            >
+              <UserPlus className="w-4 h-4 mr-1" />Assign Role
+            </Button>
+          </div>
+
+          <div>
+            <h4 className="font-medium text-sm mb-3">Current Committee Members</h4>
+            {committeeAssignments && committeeAssignments.length > 0 ? (
+              <div className="space-y-2">
+                {committeeAssignments.map((ra) => {
+                  const member = ra.members as { first_name: string; last_name: string } | null;
+                  const role = ra.roles as { name: string } | null;
+                  return (
+                    <div key={ra.id} className="flex items-center justify-between p-2 bg-muted/50 rounded">
+                      <div>
+                        <p className="text-sm font-medium">{member?.first_name} {member?.last_name}</p>
+                        <p className="text-xs text-muted-foreground">{role?.name}</p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                        onClick={() => removeCommitteeRole.mutate(ra.id)}
+                        disabled={removeCommitteeRole.isPending}
+                        aria-label={`Remove ${member?.first_name} from committee`}
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground p-2">No committee members assigned yet</p>
+            )}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
