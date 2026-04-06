@@ -51,7 +51,10 @@ export default function Admin() {
   const { data: roleAssignments } = useQuery({
     queryKey: ["admin-roles", myChapterId],
     queryFn: async () => {
-      let q = supabase.from("role_assignments").select("*, roles(name, scope), members(first_name, last_name), chapters(name)").order("created_at", { ascending: false });
+      let q = supabase
+        .from("role_assignments")
+        .select("id, role_id, member_id, chapter_id, start_date, end_date, created_at, roles(name, scope), members(first_name, last_name), chapters(name)")
+        .order("created_at", { ascending: false });
       if (myChapterId) q = q.eq("chapter_id", myChapterId);
       const { data } = await q;
       return data ?? [];
