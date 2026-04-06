@@ -106,18 +106,23 @@ export function FamilyInviteDialog({ memberId }: FamilyInviteDialogProps) {
           ? `${inviterData.first_name} ${inviterData.last_name}`.trim()
           : "A community member";
         const acceptUrl = `${window.location.origin}/accept-family-invite/${inserted.acceptance_token}`;
-        await supabase.functions.invoke("send-email", {
-          body: {
-            template: "family_invitation_sent",
-            to: form.email.trim(),
-            vars: {
-              name: form.name.trim(),
-              inviter_name: inviterName,
-              relation: form.relation,
-              join_url: acceptUrl,
+        try {
+          await supabase.functions.invoke("send-email", {
+            body: {
+              template: "family_invitation_sent",
+              to: form.email.trim(),
+              vars: {
+                name: form.name.trim(),
+                inviter_name: inviterName,
+                relation: form.relation,
+                join_url: acceptUrl,
+              },
             },
-          },
-        });
+          });
+        } catch (emailErr) {
+          console.error("Failed to send family invitation email:", emailErr);
+          throw new Error(`Invitation created but email send failed: ${(emailErr as Error).message}`);
+        }
       }
     },
     onSuccess: () => {

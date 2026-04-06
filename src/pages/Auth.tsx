@@ -46,15 +46,25 @@ export default function Auth() {
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-reset-email`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json", "Apikey": import.meta.env.VITE_SUPABASE_ANON_KEY },
+          headers: {
+            "Content-Type": "application/json",
+            "Apikey": import.meta.env.VITE_SUPABASE_ANON_KEY
+          },
           body: JSON.stringify({ email, type: "recovery" }),
         }
       );
-      if (!res.ok) throw new Error("Request failed");
-    } catch {
-    } finally {
+      if (!res.ok) {
+        const errBody = await res.text().catch(() => "Unknown error");
+        console.error("Password reset request failed:", { status: res.status, error: errBody });
+        throw new Error("Failed to send reset email");
+      }
+    } catch (err) {
+      console.error("Forgot password error:", err);
+      toast({ title: "Error", description: "Failed to send reset email. Please try again.", variant: "destructive" });
       setSubmitting(false);
+      return;
     }
+    setSubmitting(false);
     toast({ title: "Check your email", description: "If an account exists, we've sent a password reset link." });
     setIsForgotPassword(false);
   };

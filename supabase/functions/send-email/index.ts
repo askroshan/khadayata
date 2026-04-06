@@ -1031,8 +1031,10 @@ Deno.serve(async (req: Request) => {
   try {
     const emailitKey = Deno.env.get("EMAILIT_API_KEY");
     if (!emailitKey) {
+      const errMsg = "Email not configured. Add EMAILIT_API_KEY secret.";
+      console.error(errMsg);
       return new Response(
-        JSON.stringify({ error: "Email not configured. Add EMAILIT_API_KEY secret." }),
+        JSON.stringify({ error: errMsg }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
@@ -1046,6 +1048,7 @@ Deno.serve(async (req: Request) => {
       override_html?: string;
       name?: string;
     };
+    console.log("send-email request", { template, to, vars_keys: Object.keys(vars) });
 
     if (topLevelName && !vars.name) {
       vars.name = topLevelName;
@@ -1068,6 +1071,7 @@ Deno.serve(async (req: Request) => {
       reply_to: REPLY_TO,
     };
 
+    console.log("Calling Emailit API for template:", template);
     const emailRes = await fetch(EMAILIT_API, {
       method: "POST",
       headers: {
@@ -1078,19 +1082,23 @@ Deno.serve(async (req: Request) => {
     });
 
     const emailResult = await emailRes.json().catch(() => ({}));
+    console.log("Emailit response status:", emailRes.status, "result:", emailResult);
 
     if (!emailRes.ok) {
+      console.error("Emailit API error", { status: emailRes.status, details: emailResult });
       return new Response(
         JSON.stringify({ error: "Emailit error", details: emailResult }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
+    console.log("Email sent successfully:", emailResult.id);
     return new Response(
       JSON.stringify({ success: true, result: emailResult }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {
+    console.error("send-email exception:", err);
     return new Response(
       JSON.stringify({ error: (err as Error).message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },

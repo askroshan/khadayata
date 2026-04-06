@@ -43,7 +43,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!error) {
       supabase.functions.invoke("send-reset-email", {
         body: { email, type: "signup" },
-      }).catch(() => {});
+      }).catch((err) => {
+        console.error("Failed to send verification email:", err);
+      });
     }
     return { error: error as Error | null };
   };
