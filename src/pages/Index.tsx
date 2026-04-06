@@ -6,7 +6,7 @@ import {
   ArrowRight, Heart, Calendar, MapPin, Search, Star,
   ChevronRight, Newspaper, UserCheck, Music, Sparkles,
 } from "lucide-react";
-import { useTotalMemberCount, useTotalChapterCount, useTotalBusinessCount } from "@/hooks/useChapter";
+import { useTotalMemberCount, useTotalChapterCount, useTotalBusinessCount, useTotalCountryCount } from "@/hooks/useChapter";
 import SEOMeta from "@/components/SEOMeta";
 
 const LOGO = "/Screenshot_2026-03-16_at_9.18.14_AM.png";
@@ -93,11 +93,12 @@ export default function Index() {
   const { data: totalMembers } = useTotalMemberCount();
   const { data: totalChapters } = useTotalChapterCount();
   const { data: totalBusinesses } = useTotalBusinessCount();
+  const { data: totalCountries } = useTotalCountryCount();
 
   const liveStats = [
     { value: totalMembers ? `${totalMembers.toLocaleString()}+` : "50,000+", label: "Members Worldwide", color: "#F39C12" },
     { value: totalChapters ? totalChapters.toString() : "67", label: "Chapters", color: "#E91E63" },
-    { value: "28", label: "Countries", color: "#1E88E5" },
+    { value: totalCountries ? totalCountries.toString() : "28", label: "Countries", color: "#1E88E5" },
     { value: totalBusinesses ? `${totalBusinesses.toLocaleString()}+` : "315+", label: "Businesses", color: "#43A047" },
   ];
 

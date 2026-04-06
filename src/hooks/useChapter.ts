@@ -228,3 +228,18 @@ export function useTotalBusinessCount() {
     staleTime: 60_000,
   });
 }
+
+/** Total country count */
+export function useTotalCountryCount() {
+  return useQuery({
+    queryKey: ["total-country-count"],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("countries")
+        .select("id", { count: "exact", head: true });
+      if (error) throw error;
+      return count ?? 0;
+    },
+    staleTime: 60_000,
+  });
+}
