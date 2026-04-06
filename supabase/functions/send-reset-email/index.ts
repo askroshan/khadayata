@@ -42,7 +42,8 @@ Deno.serve(async (req: Request) => {
     });
 
     if (linkErr) {
-      if (linkErr.message?.includes("User not found")) {
+      const msg = (linkErr.message ?? "").toLowerCase();
+      if (msg.includes("not found") || msg.includes("no user")) {
         return new Response(JSON.stringify({ success: true }), {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
