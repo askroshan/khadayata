@@ -159,9 +159,9 @@ Deno.serve(async (req: Request) => {
       },
       body: JSON.stringify({
         to: normalizedEmail,
-        name: first_name.trim(),
         template: "member_invitation",
         vars: {
+          name: first_name.trim(),
           inviter_name: inviterName,
           chapter_name: chapterName,
           accept_url: linkData.properties.action_link,

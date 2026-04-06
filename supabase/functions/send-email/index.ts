@@ -1,4 +1,4 @@
-import { createClient } from "npm:@supabase/supabase-js@2";
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -25,6 +25,7 @@ const CARD = "#FFFFFF";
 // Header: rich saffron-to-gold gradient (no black)
 const HEADER_SAFFRON = "#C85E0A";   // deep saffron — 6.1:1 on white
 const HEADER_GOLD = "#D4860A";      // warm gold
+const HEADER_BG = "#1A1108";         // deep warm dark for ID card bg
 const HEADER_TEXT = "#FFFFFF";      // white on saffron — 4.9:1 ✓
 const HEADER_SUBTEXT = "#FFE0B2";   // soft peach on saffron — readable
 // Body
@@ -1037,13 +1038,18 @@ Deno.serve(async (req: Request) => {
     }
 
     const body = await req.json();
-    const { template, to, vars = {}, override_subject, override_html } = body as {
+    const { template, to, vars = {}, override_subject, override_html, name: topLevelName } = body as {
       template: EmailTemplate;
       to: string | string[];
       vars?: Record<string, string>;
       override_subject?: string;
       override_html?: string;
+      name?: string;
     };
+
+    if (topLevelName && !vars.name) {
+      vars.name = topLevelName;
+    }
 
     if (!to || !template) {
       return new Response(

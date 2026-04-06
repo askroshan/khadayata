@@ -36,40 +36,46 @@ Deno.serve(async (req: Request) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    const { data: users } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
-    const authUser = users?.users?.find(u => u.email?.toLowerCase() === normalizedEmail);
-
-    if (!authUser) {
-      return new Response(JSON.stringify({ success: true }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
       type: linkType,
       email: normalizedEmail,
     });
 
-    if (linkErr || !linkData?.properties?.action_link) {
-      return new Response(JSON.stringify({ error: linkErr?.message ?? "Failed to generate link" }), {
+    if (linkErr) {
+      if (linkErr.message?.includes("User not found")) {
+        return new Response(JSON.stringify({ success: true }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ error: linkErr.message }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const { data: member } = await adminClient
-      .from("members")
-      .select("first_name")
-      .eq("user_id", authUser.id)
-      .maybeSingle();
+    if (!linkData?.properties?.action_link) {
+      return new Response(JSON.stringify({ error: "Failed to generate link" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    const firstName = member?.first_name ?? authUser.user_metadata?.first_name ?? "Member";
+    const userId = linkData.user?.id;
+    let firstName = "Member";
+    if (userId) {
+      const { data: member } = await adminClient
+        .from("members")
+        .select("first_name")
+        .eq("user_id", userId)
+        .maybeSingle();
+      firstName = member?.first_name ?? linkData.user?.user_metadata?.first_name ?? "Member";
+    }
 
     const template = linkType === "signup" ? "email_verification" : "password_reset";
     const varKey = linkType === "signup" ? "verification_url" : "reset_url";
 
-    await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+    const emailRes = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -78,13 +84,21 @@ Deno.serve(async (req: Request) => {
       },
       body: JSON.stringify({
         to: normalizedEmail,
-        name: firstName,
         template,
         vars: {
+          name: firstName,
           [varKey]: linkData.properties.action_link,
         },
       }),
     });
+
+    if (!emailRes.ok) {
+      const errBody = await emailRes.text().catch(() => "Unknown error");
+      return new Response(JSON.stringify({ error: "Email send failed", details: errBody }), {
+        status: 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
