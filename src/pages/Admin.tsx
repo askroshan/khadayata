@@ -206,7 +206,7 @@ export default function Admin() {
           </CollapsibleContent>
         </Collapsible>
 
-        <Tabs defaultValue={searchParams.get('tab') || (isDataSteward && !isGlobalAdmin ? "verification" : isDirectoryManager && !isGlobalAdmin ? "directory" : isEventManager && !isGlobalAdmin ? "events" : isFinanceAdmin && !isGlobalAdmin ? "finance" : isPublisher && !isGlobalAdmin ? "publisher" : isModerator && !isGlobalAdmin ? "reports" : "members")}>
+        <Tabs defaultValue={searchParams.get('tab') || (isDataSteward && !isGlobalAdmin ? "verification" : isDirectoryManager && !isGlobalAdmin ? "directory" : isEventManager && !isGlobalAdmin ? "events" : isFinanceAdmin && !isGlobalAdmin ? "finance" : isPublisher && !isGlobalAdmin ? "publisher" : isModerator && !isGlobalAdmin ? "reports" : "members")} onValueChange={(tab) => setSearchParams({ tab })}>
           <div className="overflow-x-auto pb-1 -mb-1">
             <TabsList className="flex w-max min-w-full h-auto gap-1">
               {isDataSteward && <TabsTrigger value="verification" className="gap-1 text-xs sm:text-sm"><LayoutDashboard className="w-3.5 h-3.5" />Verification</TabsTrigger>}

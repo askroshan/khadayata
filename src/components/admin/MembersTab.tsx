@@ -65,6 +65,8 @@ export default function MembersTab({ members, myChapterId }: MembersTabProps) {
   const [search, setSearch] = useState("");
   const [filterLevel, setFilterLevel] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(1);
   const [editMember, setEditMember] = useState<{ id: string; first_name: string; last_name: string; chapter_id: string } | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -211,14 +213,23 @@ export default function MembersTab({ members, myChapterId }: MembersTabProps) {
     }
     if (filterStatus === "complete") list = list.filter((m) => m.onboarding_completed);
     if (filterStatus === "pending") list = list.filter((m) => !m.onboarding_completed);
+    if (dateFrom) {
+      const fromDate = new Date(dateFrom);
+      list = list.filter((m) => m.created_at && new Date(m.created_at) >= fromDate);
+    }
+    if (dateTo) {
+      const toDate = new Date(dateTo);
+      toDate.setHours(23, 59, 59, 999);
+      list = list.filter((m) => m.created_at && new Date(m.created_at) <= toDate);
+    }
     return list;
-  }, [members, search, filterLevel, filterStatus]);
+  }, [members, search, filterLevel, filterStatus, dateFrom, dateTo]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const hasFilters = search || (filterLevel && filterLevel !== "all") || (filterStatus && filterStatus !== "all");
+  const hasFilters = search || (filterLevel && filterLevel !== "all") || (filterStatus && filterStatus !== "all") || dateFrom || dateTo;
 
-  const clearFilters = () => { setSearch(""); setFilterLevel(""); setFilterStatus(""); setPage(1); };
+  const clearFilters = () => { setSearch(""); setFilterLevel(""); setFilterStatus(""); setDateFrom(""); setDateTo(""); setPage(1); };
 
   return (
     <>
@@ -335,6 +346,22 @@ export default function MembersTab({ members, myChapterId }: MembersTabProps) {
               <SelectItem value="pending">Pending</SelectItem>
             </SelectContent>
           </Select>
+          <Input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+            className="h-9 w-32 text-sm"
+            placeholder="From date"
+            title="Joined from date"
+          />
+          <Input
+            type="date"
+            value={dateTo}
+            onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+            className="h-9 w-32 text-sm"
+            placeholder="To date"
+            title="Joined to date"
+          />
           {hasFilters && (
             <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9 text-xs text-destructive">
               <X className="w-3 h-3 mr-1" /> Clear

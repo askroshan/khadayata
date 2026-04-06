@@ -71,11 +71,18 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    label: "Admin Management",
+    items: [
+      { icon: Users, label: "Members", path: "/admin?tab=members", adminOnly: true },
+      { icon: Building2, label: "Chapters", path: "/admin?tab=chapters", adminOnly: true },
+      { icon: Flag, label: "Moderation", path: "/moderation", adminOnly: true },
+      { icon: Shield, label: "Admin Dashboard", path: "/admin", adminOnly: true },
+    ],
+  },
+  {
     label: "Account",
     items: [
       { icon: User, label: "My Profile", path: "/profile" },
-      { icon: Flag, label: "Moderation", path: "/moderation", adminOnly: true },
-      { icon: Shield, label: "Admin", path: "/admin", adminOnly: true },
       { icon: Settings, label: "Settings", path: "/settings" },
     ],
   },
