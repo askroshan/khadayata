@@ -17,14 +17,15 @@ import { format } from "date-fns";
 interface Chapter {
   id: string;
   name: string;
-  city: string | null;
-  country: string | null;
-  is_active: boolean;
+  slug: string;
+  subdomain: string;
   created_at: string;
   settings?: {
     contact?: { phone?: string; email?: string; url?: string };
     theme?: string;
     subdomain?: string;
+    city?: string;
+    country?: string;
   } | null;
   member_count?: number;
   admin_names?: string[];
@@ -37,7 +38,7 @@ interface ChapterAdmin {
   start_date: string;
 }
 
-const EMPTY_FORM = { name: "", city: "", country: "", phone: "", email: "", url: "", subdomain: "" };
+const EMPTY_FORM = { name: "", city: "", country: "", phone: "", email: "", url: "", subdomain: "", slug: "" };
 
 export default function ChaptersTab() {
   const { toast } = useToast();
@@ -62,7 +63,7 @@ export default function ChaptersTab() {
     queryFn: async () => {
       const { data: chaptersData, error } = await supabase
         .from("chapters")
-        .select("id, name, city, country, is_active, created_at, settings")
+        .select("id, name, slug, subdomain, created_at, settings")
         .order("name");
       if (error) throw error;
 
@@ -120,18 +121,20 @@ export default function ChaptersTab() {
 
   const createChapter = useMutation({
     mutationFn: async () => {
+      const slug = form.slug.trim() || form.name.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+      const subdomain = form.subdomain.trim() || slug;
       const { error } = await supabase.from("chapters").insert({
         name: form.name.trim(),
-        city: form.city.trim() || null,
-        country: form.country.trim() || null,
-        is_active: true,
+        slug,
+        subdomain,
         settings: {
+          city: form.city.trim() || null,
+          country: form.country.trim() || null,
           contact: {
             phone: form.phone.trim() || null,
             email: form.email.trim() || null,
             url: form.url.trim() || null,
           },
-          subdomain: form.subdomain.trim() || null,
         },
       });
       if (error) throw error;
@@ -148,10 +151,14 @@ export default function ChaptersTab() {
   const updateChapter = useMutation({
     mutationFn: async () => {
       if (!editChapter) return;
+      const existing = editChapter.settings ?? {};
       const { error } = await supabase.from("chapters").update({
         name: editForm.name.trim(),
-        city: editForm.city.trim() || null,
-        country: editForm.country.trim() || null,
+        settings: {
+          ...existing,
+          city: editForm.city.trim() || null,
+          country: editForm.country.trim() || null,
+        },
       }).eq("id", editChapter.id);
       if (error) throw error;
     },
@@ -190,7 +197,11 @@ export default function ChaptersTab() {
 
   const toggleActive = useMutation({
     mutationFn: async ({ id, active }: { id: string; active: boolean }) => {
-      const { error } = await supabase.from("chapters").update({ is_active: active }).eq("id", id);
+      const ch = (chapters as (Chapter & { admins: ChapterAdmin[] })[] | undefined)?.find(c => c.id === id);
+      const existing = ch?.settings ?? {};
+      const { error } = await supabase.from("chapters").update({
+        settings: { ...existing, is_active: active },
+      }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: (_, vars) => {
@@ -234,8 +245,8 @@ export default function ChaptersTab() {
             vars: {
               name: memberName,
               chapter_name: inviteChapter.name,
-              chapter_city: inviteChapter.city ?? "",
-              chapter_country: inviteChapter.country ?? "",
+              chapter_city: inviteChapter.settings?.city ?? "",
+              chapter_country: inviteChapter.settings?.country ?? "",
               login_url: `${window.location.origin}/auth`,
               admin_url: `${window.location.origin}/admin`,
             },
@@ -268,7 +279,7 @@ export default function ChaptersTab() {
 
   const openEdit = (ch: Chapter) => {
     setEditChapter(ch);
-    setEditForm({ name: ch.name, city: ch.city ?? "", country: ch.country ?? "", phone: "", email: "", url: "", subdomain: "" });
+    setEditForm({ name: ch.name, city: ch.settings?.city ?? "", country: ch.settings?.country ?? "", phone: "", email: "", url: "", subdomain: ch.subdomain ?? "", slug: ch.slug ?? "" });
   };
 
   const openSettings = (ch: Chapter) => {
@@ -303,17 +314,17 @@ export default function ChaptersTab() {
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {(chapters as (Chapter & { admins: ChapterAdmin[] })[] | undefined)?.map((ch) => (
-          <Card key={ch.id} className={`shadow-card transition-all ${!ch.is_active ? "opacity-60" : ""}`}>
+          <Card key={ch.id} className={`shadow-card transition-all ${ch.settings?.is_active === false ? "opacity-60" : ""}`}>
             <CardContent className="p-4">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="font-display font-semibold text-sm truncate">{ch.name}</h3>
-                    {!ch.is_active && <Badge variant="outline" className="text-xs shrink-0">Inactive</Badge>}
+                    {ch.settings?.is_active === false && <Badge variant="outline" className="text-xs shrink-0">Inactive</Badge>}
                   </div>
-                  {(ch.city || ch.country) && (
+                  {(ch.settings?.city || ch.settings?.country) && (
                     <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
-                      <ChevronRight className="w-3 h-3" />{[ch.city, ch.country].filter(Boolean).join(", ")}
+                      <ChevronRight className="w-3 h-3" />{[ch.settings?.city, ch.settings?.country].filter(Boolean).join(", ")}
                     </p>
                   )}
                   <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
@@ -356,10 +367,10 @@ export default function ChaptersTab() {
                   </Button>
                   <Button
                     size="sm" variant="ghost"
-                    className={`h-7 w-7 p-0 ${ch.is_active ? "text-destructive hover:text-destructive" : "text-success hover:text-success"}`}
-                    onClick={() => toggleActive.mutate({ id: ch.id, active: !ch.is_active })}
+                    className={`h-7 w-7 p-0 ${ch.settings?.is_active !== false ? "text-destructive hover:text-destructive" : "text-success hover:text-success"}`}
+                    onClick={() => toggleActive.mutate({ id: ch.id, active: ch.settings?.is_active === false })}
                     disabled={toggleActive.isPending}
-                    aria-label={ch.is_active ? "Deactivate chapter" : "Activate chapter"}
+                    aria-label={ch.settings?.is_active !== false ? "Deactivate chapter" : "Activate chapter"}
                   >
                     <Power className="w-3.5 h-3.5" />
                   </Button>
