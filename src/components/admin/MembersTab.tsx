@@ -18,6 +18,7 @@ import { format } from "date-fns";
 
 interface Member {
   id: string;
+  user_id: string;
   first_name: string;
   last_name: string;
   verification_level: number;
@@ -258,8 +259,26 @@ export default function MembersTab({ members, myChapterId, canInvite = false, is
 
   const deleteMember = useMutation({
     mutationFn: async (memberId: string) => {
-      const { error } = await supabase.from("members").delete().eq("id", memberId);
-      if (error) throw error;
+      const memberData = members?.find((m) => m.id === memberId);
+      if (!memberData) throw new Error("Member not found");
+
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-user`;
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ user_id: memberData.user_id }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to delete user");
+      }
     },
     onSuccess: () => {
       toast({ title: "Member deleted permanently" });

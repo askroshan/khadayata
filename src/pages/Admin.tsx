@@ -40,7 +40,7 @@ export default function Admin() {
   const { data: allMembers } = useQuery({
     queryKey: ["admin-members", myChapterId],
     queryFn: async () => {
-      let q = supabase.from("members").select("id, first_name, last_name, verification_level, onboarding_completed, chapter_id, created_at, chapters(name)").order("created_at", { ascending: false }).limit(200);
+      let q = supabase.from("members").select("id, user_id, first_name, last_name, verification_level, onboarding_completed, chapter_id, created_at, chapters(name)").order("created_at", { ascending: false }).limit(200);
       if (myChapterId) q = q.eq("chapter_id", myChapterId);
       const { data, error } = await q;
       if (error) throw error;
