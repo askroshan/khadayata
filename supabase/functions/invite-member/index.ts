@@ -77,6 +77,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const normalizedEmail = email.trim().toLowerCase();
+    const safeLastName = last_name?.trim() || "Member";
 
     const { data: existingUsers } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
     const existingAuthUser = existingUsers?.users?.find(u => u.email?.toLowerCase() === normalizedEmail);
@@ -105,11 +106,11 @@ Deno.serve(async (req: Request) => {
       chapterName = ch?.name ?? "";
     }
 
-    const { data: newUser, error: createErr } = await adminClient.auth.admin.createUser({
+    const { data: newUserData, error: createErr } = await adminClient.auth.admin.createUser({
       email: normalizedEmail,
       user_metadata: {
         first_name: first_name.trim(),
-        last_name: last_name?.trim() ?? "",
+        last_name: safeLastName,
       },
       email_confirm: false,
     });
@@ -121,31 +122,43 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    const newUserId = newUserData.user!.id;
+
+    const { data: memberInsert, error: memberError } = await adminClient
+      .from("members")
+      .update({
+        first_name: first_name.trim(),
+        last_name: safeLastName,
+        chapter_id: chapter_id || null,
+      })
+      .eq("user_id", newUserId)
+      .select("id")
+      .maybeSingle();
+
+    if (memberError) {
+      await adminClient.auth.admin.deleteUser(newUserId);
+      return new Response(JSON.stringify({ error: "Failed to create member profile: " + memberError.message }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!memberInsert) {
+      await adminClient.auth.admin.deleteUser(newUserId);
+      return new Response(JSON.stringify({ error: "Member profile not created by trigger. Please retry." }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
       type: "invite",
       email: normalizedEmail,
     });
 
     if (linkErr || !linkData?.properties?.action_link) {
+      await adminClient.auth.admin.deleteUser(newUserId);
       return new Response(JSON.stringify({ error: linkErr?.message ?? "Failed to generate invite link" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const { data: memberInsert, error: memberError } = await adminClient.from("members")
-      .update({
-        first_name: first_name.trim(),
-        last_name: last_name?.trim() ?? "",
-        chapter_id: chapter_id || null,
-      })
-      .eq("user_id", newUser.user!.id)
-      .select("id")
-      .single();
-
-    if (memberError) {
-      await adminClient.auth.admin.deleteUser(newUser.user!.id);
-      return new Response(JSON.stringify({ error: memberError.message }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -174,8 +187,7 @@ Deno.serve(async (req: Request) => {
 
     if (!emailRes.ok) {
       const emailErr = await emailRes.text();
-      await adminClient.auth.admin.deleteUser(newUser.user!.id);
-      await adminClient.from("members").delete().eq("id", memberInsert.id);
+      await adminClient.auth.admin.deleteUser(newUserId);
       return new Response(JSON.stringify({ error: "Failed to send invitation email: " + emailErr }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -183,7 +195,7 @@ Deno.serve(async (req: Request) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, user_id: newUser.user!.id, member_id: memberInsert.id }),
+      JSON.stringify({ success: true, user_id: newUserId, member_id: memberInsert.id }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {

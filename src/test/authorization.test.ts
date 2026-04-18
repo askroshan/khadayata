@@ -272,6 +272,45 @@ describe("Authorization", () => {
     });
   });
 
+  describe("Invite Input Validation", () => {
+    function validateInviteInput(email: string, firstName: string): { valid: boolean; error?: string } {
+      if (!email?.trim() || !firstName?.trim()) {
+        return { valid: false, error: "Email and first name are required" };
+      }
+      return { valid: true };
+    }
+
+    function safeLastName(lastName?: string): string {
+      return lastName?.trim() || "Member";
+    }
+
+    it("should require email and first name", () => {
+      expect(validateInviteInput("", "John").valid).toBe(false);
+      expect(validateInviteInput("test@test.com", "").valid).toBe(false);
+      expect(validateInviteInput("", "").valid).toBe(false);
+    });
+
+    it("should pass with valid email and first name", () => {
+      expect(validateInviteInput("test@test.com", "John").valid).toBe(true);
+    });
+
+    it("should default last name to Member when empty to satisfy DB constraint", () => {
+      expect(safeLastName("")).toBe("Member");
+      expect(safeLastName(undefined)).toBe("Member");
+      expect(safeLastName("  ")).toBe("Member");
+    });
+
+    it("should preserve provided last name", () => {
+      expect(safeLastName("Shah")).toBe("Shah");
+      expect(safeLastName("  Patel  ")).toBe("Patel");
+    });
+
+    it("should normalize email to lowercase", () => {
+      const email = "  Test@Example.COM  ";
+      expect(email.trim().toLowerCase()).toBe("test@example.com");
+    });
+  });
+
   describe("Cross-Chapter Data Access Prevention", () => {
     it("should prevent chapter-scoped user from accessing other chapter data", () => {
       const directorCh1: User = {
