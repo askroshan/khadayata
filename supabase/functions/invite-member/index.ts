@@ -82,6 +82,9 @@ Deno.serve(async (req: Request) => {
     const { data: existingUsers } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
     const existingAuthUser = existingUsers?.users?.find(u => u.email?.toLowerCase() === normalizedEmail);
 
+    let targetUserId: string;
+    let createdNewUser = false;
+
     if (existingAuthUser) {
       const { data: existingMember } = await adminClient
         .from("members")
@@ -94,6 +97,25 @@ Deno.serve(async (req: Request) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+      targetUserId = existingAuthUser.id;
+    } else {
+      const { data: newUserData, error: createErr } = await adminClient.auth.admin.createUser({
+        email: normalizedEmail,
+        user_metadata: {
+          first_name: first_name.trim(),
+          last_name: safeLastName,
+        },
+        email_confirm: false,
+      });
+
+      if (createErr || !newUserData?.user) {
+        return new Response(JSON.stringify({ error: createErr?.message ?? "Failed to create user" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      targetUserId = newUserData.user.id;
+      createdNewUser = true;
     }
 
     let chapterName = "";
@@ -106,49 +128,49 @@ Deno.serve(async (req: Request) => {
       chapterName = ch?.name ?? "";
     }
 
-    const { data: newUserData, error: createErr } = await adminClient.auth.admin.createUser({
-      email: normalizedEmail,
-      user_metadata: {
-        first_name: first_name.trim(),
-        last_name: safeLastName,
-      },
-      email_confirm: false,
-    });
-
-    if (createErr) {
-      return new Response(JSON.stringify({ error: createErr.message }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const newUserId = newUserData.user!.id;
-
-    const { data: memberInsert, error: memberError } = await adminClient
+    const { data: existingMemberRow } = await adminClient
       .from("members")
-      .update({
-        first_name: first_name.trim(),
-        last_name: safeLastName,
-        chapter_id: chapter_id || null,
-      })
-      .eq("user_id", newUserId)
       .select("id")
+      .eq("user_id", targetUserId)
       .maybeSingle();
 
-    if (memberError) {
-      await adminClient.auth.admin.deleteUser(newUserId);
-      return new Response(JSON.stringify({ error: "Failed to create member profile: " + memberError.message }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    let memberId: string | null = existingMemberRow?.id ?? null;
 
-    if (!memberInsert) {
-      await adminClient.auth.admin.deleteUser(newUserId);
-      return new Response(JSON.stringify({ error: "Member profile not created by trigger. Please retry." }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (memberId) {
+      const { error: updErr } = await adminClient
+        .from("members")
+        .update({
+          first_name: first_name.trim(),
+          last_name: safeLastName,
+          chapter_id: chapter_id || null,
+        })
+        .eq("id", memberId);
+      if (updErr) {
+        if (createdNewUser) await adminClient.auth.admin.deleteUser(targetUserId);
+        return new Response(JSON.stringify({ error: "Failed to update member profile: " + updErr.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    } else {
+      const { data: inserted, error: insErr } = await adminClient
+        .from("members")
+        .insert({
+          user_id: targetUserId,
+          first_name: first_name.trim(),
+          last_name: safeLastName,
+          chapter_id: chapter_id || null,
+        })
+        .select("id")
+        .maybeSingle();
+      if (insErr || !inserted) {
+        if (createdNewUser) await adminClient.auth.admin.deleteUser(targetUserId);
+        return new Response(JSON.stringify({ error: "Failed to create member profile: " + (insErr?.message ?? "unknown") }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      memberId = inserted.id;
     }
 
     const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
@@ -157,7 +179,7 @@ Deno.serve(async (req: Request) => {
     });
 
     if (linkErr || !linkData?.properties?.action_link) {
-      await adminClient.auth.admin.deleteUser(newUserId);
+      if (createdNewUser) await adminClient.auth.admin.deleteUser(targetUserId);
       return new Response(JSON.stringify({ error: linkErr?.message ?? "Failed to generate invite link" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -187,7 +209,7 @@ Deno.serve(async (req: Request) => {
 
     if (!emailRes.ok) {
       const emailErr = await emailRes.text();
-      await adminClient.auth.admin.deleteUser(newUserId);
+      if (createdNewUser) await adminClient.auth.admin.deleteUser(targetUserId);
       return new Response(JSON.stringify({ error: "Failed to send invitation email: " + emailErr }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -195,7 +217,7 @@ Deno.serve(async (req: Request) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, user_id: newUserId, member_id: memberInsert.id }),
+      JSON.stringify({ success: true, user_id: targetUserId, member_id: memberId, reused_existing_user: !createdNewUser }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
