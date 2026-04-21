@@ -79,11 +79,16 @@ Deno.serve(async (req: Request) => {
     const normalizedEmail = email.trim().toLowerCase();
     const safeLastName = last_name?.trim() || "Member";
 
-    const { data: existingUsers } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
+    console.log("[invite-member] Starting invite for:", normalizedEmail);
+
+    const { data: existingUsers, error: listErr } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
+    if (listErr) {
+      console.error("[invite-member] listUsers error:", listErr);
+    }
     const existingAuthUser = existingUsers?.users?.find(u => u.email?.toLowerCase() === normalizedEmail);
+    console.log("[invite-member] existingAuthUser:", existingAuthUser?.id ?? "none");
 
     let targetUserId: string;
-    let createdNewUser = false;
 
     if (existingAuthUser) {
       const { data: existingMember } = await adminClient
@@ -99,23 +104,7 @@ Deno.serve(async (req: Request) => {
       }
       targetUserId = existingAuthUser.id;
     } else {
-      const { data: newUserData, error: createErr } = await adminClient.auth.admin.createUser({
-        email: normalizedEmail,
-        user_metadata: {
-          first_name: first_name.trim(),
-          last_name: safeLastName,
-        },
-        email_confirm: false,
-      });
-
-      if (createErr || !newUserData?.user) {
-        return new Response(JSON.stringify({ error: createErr?.message ?? "Failed to create user" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      targetUserId = newUserData.user.id;
-      createdNewUser = true;
+      targetUserId = "";
     }
 
     let chapterName = "";
@@ -128,6 +117,46 @@ Deno.serve(async (req: Request) => {
       chapterName = ch?.name ?? "";
     }
 
+    let actionLink: string | null = null;
+
+    if (!existingAuthUser) {
+      console.log("[invite-member] Generating invite link (will create user)");
+      const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
+        type: "invite",
+        email: normalizedEmail,
+        options: {
+          data: {
+            first_name: first_name.trim(),
+            last_name: safeLastName,
+          },
+        },
+      });
+      if (linkErr || !linkData?.properties?.action_link || !linkData?.user) {
+        console.error("[invite-member] generateLink(invite) error:", linkErr);
+        return new Response(JSON.stringify({ error: "Failed to generate invite link: " + (linkErr?.message ?? "unknown") }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      targetUserId = linkData.user.id;
+      actionLink = linkData.properties.action_link;
+      console.log("[invite-member] Created user via invite link:", targetUserId);
+    } else {
+      console.log("[invite-member] Reusing existing auth user, generating magiclink");
+      const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
+        type: "magiclink",
+        email: normalizedEmail,
+      });
+      if (linkErr || !linkData?.properties?.action_link) {
+        console.error("[invite-member] generateLink(magiclink) error:", linkErr);
+        return new Response(JSON.stringify({ error: "Failed to generate invite link: " + (linkErr?.message ?? "unknown") }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      actionLink = linkData.properties.action_link;
+    }
+
     const { data: existingMemberRow } = await adminClient
       .from("members")
       .select("id")
@@ -135,6 +164,7 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
 
     let memberId: string | null = existingMemberRow?.id ?? null;
+    console.log("[invite-member] existingMemberRow:", memberId ?? "none");
 
     if (memberId) {
       const { error: updErr } = await adminClient
@@ -146,6 +176,7 @@ Deno.serve(async (req: Request) => {
         })
         .eq("id", memberId);
       if (updErr) {
+        console.error("[invite-member] update member error:", updErr);
         return new Response(JSON.stringify({ error: "Failed to update member profile: " + updErr.message }), {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -163,6 +194,7 @@ Deno.serve(async (req: Request) => {
         .select("id")
         .maybeSingle();
       if (insErr || !inserted) {
+        console.error("[invite-member] insert member error:", insErr);
         return new Response(JSON.stringify({ error: "Failed to create member profile: " + (insErr?.message ?? "unknown") }), {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -171,20 +203,9 @@ Deno.serve(async (req: Request) => {
       memberId = inserted.id;
     }
 
-    const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
-      type: "invite",
-      email: normalizedEmail,
-    });
-
-    if (linkErr || !linkData?.properties?.action_link) {
-      return new Response(JSON.stringify({ error: linkErr?.message ?? "Failed to generate invite link" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const inviterName = [callerMember.first_name, callerMember.last_name].filter(Boolean).join(" ") || "The Admin";
 
+    console.log("[invite-member] Sending email via send-email function");
     const emailRes = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
       method: "POST",
       headers: {
@@ -199,24 +220,27 @@ Deno.serve(async (req: Request) => {
           name: first_name.trim(),
           inviter_name: inviterName,
           chapter_name: chapterName,
-          accept_url: linkData.properties.action_link,
+          accept_url: actionLink,
         },
       }),
     });
 
     if (!emailRes.ok) {
       const emailErr = await emailRes.text();
+      console.error("[invite-member] send-email error:", emailRes.status, emailErr);
       return new Response(JSON.stringify({ error: "Failed to send invitation email: " + emailErr }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
+    console.log("[invite-member] Success for", normalizedEmail);
     return new Response(
-      JSON.stringify({ success: true, user_id: targetUserId, member_id: memberId, reused_existing_user: !createdNewUser }),
+      JSON.stringify({ success: true, user_id: targetUserId, member_id: memberId, reused_existing_user: !!existingAuthUser }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
+    console.error("[invite-member] exception:", err);
     return new Response(JSON.stringify({ error: (err as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
