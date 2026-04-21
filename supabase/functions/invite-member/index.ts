@@ -146,7 +146,6 @@ Deno.serve(async (req: Request) => {
         })
         .eq("id", memberId);
       if (updErr) {
-        if (createdNewUser) await adminClient.auth.admin.deleteUser(targetUserId);
         return new Response(JSON.stringify({ error: "Failed to update member profile: " + updErr.message }), {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -164,7 +163,6 @@ Deno.serve(async (req: Request) => {
         .select("id")
         .maybeSingle();
       if (insErr || !inserted) {
-        if (createdNewUser) await adminClient.auth.admin.deleteUser(targetUserId);
         return new Response(JSON.stringify({ error: "Failed to create member profile: " + (insErr?.message ?? "unknown") }), {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -179,7 +177,6 @@ Deno.serve(async (req: Request) => {
     });
 
     if (linkErr || !linkData?.properties?.action_link) {
-      if (createdNewUser) await adminClient.auth.admin.deleteUser(targetUserId);
       return new Response(JSON.stringify({ error: linkErr?.message ?? "Failed to generate invite link" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -209,7 +206,6 @@ Deno.serve(async (req: Request) => {
 
     if (!emailRes.ok) {
       const emailErr = await emailRes.text();
-      if (createdNewUser) await adminClient.auth.admin.deleteUser(targetUserId);
       return new Response(JSON.stringify({ error: "Failed to send invitation email: " + emailErr }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
