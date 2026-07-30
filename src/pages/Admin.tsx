@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRoles, usePermissions } from "@/hooks/useRoles";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { resolveAdminTab, type AdminTab } from "@/lib/admin-utils";
 import AppLayout from "@/components/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
@@ -215,7 +216,7 @@ export default function Admin() {
           </CollapsibleContent>
         </Collapsible>
 
-        <Tabs defaultValue={searchParams.get('tab') || (isDataSteward && !isGlobalAdmin ? "verification" : isDirectoryManager && !isGlobalAdmin ? "directory" : isEventManager && !isGlobalAdmin ? "events" : isFinanceAdmin && !isGlobalAdmin ? "finance" : isPublisher && !isGlobalAdmin ? "publisher" : isModerator && !isGlobalAdmin ? "reports" : "members")} onValueChange={(tab) => setSearchParams({ tab })}>
+        <Tabs value={searchParams.get('tab') || (isDataSteward && !isGlobalAdmin ? "verification" : isDirectoryManager && !isGlobalAdmin ? "directory" : isEventManager && !isGlobalAdmin ? "events" : isFinanceAdmin && !isGlobalAdmin ? "finance" : isPublisher && !isGlobalAdmin ? "publisher" : isModerator && !isGlobalAdmin ? "reports" : "members")} onValueChange={(tab) => setSearchParams({ tab })}>
           <div className="overflow-x-auto pb-1 -mb-1">
             <TabsList className="flex w-max min-w-full h-auto gap-1">
               {isDataSteward && <TabsTrigger value="verification" className="gap-1 text-xs sm:text-sm"><LayoutDashboard className="w-3.5 h-3.5" />Verification</TabsTrigger>}
@@ -242,7 +243,7 @@ export default function Admin() {
 
           {isDataSteward && (
             <TabsContent value="verification" className="mt-4">
-              <VerificationDashboard myChapterId={myChapterId} />
+              <VerificationDashboard myChapterId={myChapterId} isGlobalAdmin={isGlobalAdmin} />
             </TabsContent>
           )}
           {canVerifyMembers && (

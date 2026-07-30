@@ -221,7 +221,9 @@ export function useTotalBusinessCount() {
     queryFn: async () => {
       const { count, error } = await supabase
         .from("businesses")
-        .select("id", { count: "exact", head: true });
+        .select("id", { count: "exact", head: true })
+        .eq("verified", true)
+        .eq("suspended", false);
       if (error) throw error;
       return count ?? 0;
     },
@@ -229,16 +231,18 @@ export function useTotalBusinessCount() {
   });
 }
 
-/** Total country count */
+/** Total country count — distinct countries where chapters exist */
 export function useTotalCountryCount() {
   return useQuery({
     queryKey: ["total-country-count"],
     queryFn: async () => {
-      const { count, error } = await supabase
-        .from("countries")
-        .select("id", { count: "exact", head: true });
+      const { data, error } = await supabase
+        .from("chapters")
+        .select("country_id")
+        .not("country_id", "is", null);
       if (error) throw error;
-      return count ?? 0;
+      const distinct = new Set((data ?? []).map((c) => c.country_id).filter(Boolean));
+      return distinct.size;
     },
     staleTime: 60_000,
   });

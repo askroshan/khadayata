@@ -7,10 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Clock, User, MapPin, Globe, Eye, Star, Share2, Copy, BookOpen } from "lucide-react";
+import { ArrowLeft, Clock, User, MapPin, Globe, Eye, Star, Share2, Copy, BookOpen, Video } from "lucide-react";
 import { format } from "date-fns";
 import { ReportDialog } from "@/components/ReportDialog";
 import SEOMeta from "@/components/SEOMeta";
+import { VideoEmbed } from "@/components/VideoEmbed";
 
 function estimateReadTime(text: string): number {
   const words = text.trim().split(/\s+/).length;
@@ -116,6 +117,18 @@ export default function NewsDetail() {
               alt={article.image_alt ?? article.title}
               className="w-full h-full object-cover"
             />
+          </div>
+        )}
+
+        {article.video_url && (
+          <div className="space-y-2">
+            {article.video_title && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Video className="w-4 h-4" />
+                <span className="font-medium">{article.video_title}</span>
+              </div>
+            )}
+            <VideoEmbed url={article.video_url} title={article.video_title ?? article.title} className="shadow-lg" />
           </div>
         )}
 

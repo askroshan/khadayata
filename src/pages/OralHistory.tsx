@@ -134,10 +134,10 @@ export default function OralHistory() {
               <Input placeholder="Search stories..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
             </div>
             {allTags.length > 0 && (
-              <Select value={tagFilter} onValueChange={setTagFilter}>
+              <Select value={tagFilter || "__all__"} onValueChange={v => setTagFilter(v === "__all__" ? "" : v)}>
                 <SelectTrigger className="w-40"><SelectValue placeholder="Filter by tag" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All tags</SelectItem>
+                  <SelectItem value="__all__">All tags</SelectItem>
                   {allTags.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                 </SelectContent>
               </Select>

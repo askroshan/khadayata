@@ -81,46 +81,67 @@ Deno.serve(async (req: Request) => {
 
     console.log("[invite-member] Starting invite for:", normalizedEmail);
 
+    // Check if auth user already exists
     const { data: existingUsers, error: listErr } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
     if (listErr) {
-      console.error("[invite-member] listUsers error:", listErr);
+      console.error("[invite-member] listUsers error:", listErr.message);
+      return new Response(JSON.stringify({ error: "Failed to check existing users: " + listErr.message }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
-    const existingAuthUser = existingUsers?.users?.find(u => u.email?.toLowerCase() === normalizedEmail);
-    console.log("[invite-member] existingAuthUser:", existingAuthUser?.id ?? "none");
+    const existingAuthUser = existingUsers?.users?.find(
+      (u: { email?: string }) => u.email?.toLowerCase() === normalizedEmail
+    );
 
     let targetUserId: string;
+    let actionLink: string;
 
     if (existingAuthUser) {
+      console.log("[invite-member] Auth user already exists:", existingAuthUser.id);
+
+      // Check if there's a fully-onboarded member (not a trigger stub)
       const { data: existingMember } = await adminClient
         .from("members")
-        .select("id")
+        .select("id, first_name, last_name, onboarding_completed")
         .eq("user_id", existingAuthUser.id)
         .maybeSingle();
-      if (existingMember) {
+
+      const isStubMember = existingMember &&
+        existingMember.first_name === "Pending" &&
+        existingMember.last_name === "Verification";
+
+      // Only reject if the member has fully completed onboarding.
+      // A real-named member with onboarding_completed = false is a pending
+      // invite and must be re-invitable (fixes "Edge Function returned a
+      // non-2xx status code" on the Send Reminder flow).
+      if (existingMember && !isStubMember && existingMember.onboarding_completed === true) {
         return new Response(JSON.stringify({ error: "A member with this email already exists" }), {
           status: 409,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+
+      // User exists but is either a stub or has no member row — re-invite
       targetUserId = existingAuthUser.id;
+
+      // Generate a magiclink since user already exists
+      const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
+        type: "magiclink",
+        email: normalizedEmail,
+      });
+      if (linkErr || !linkData?.properties?.action_link) {
+        console.error("[invite-member] generateLink(magiclink) error:", linkErr?.message);
+        return new Response(JSON.stringify({ error: "Failed to generate invite link: " + (linkErr?.message ?? "unknown") }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      actionLink = linkData.properties.action_link;
+      console.log("[invite-member] Generated magiclink for existing user");
     } else {
-      targetUserId = "";
-    }
-
-    let chapterName = "";
-    if (chapter_id) {
-      const { data: ch } = await adminClient
-        .from("chapters")
-        .select("name")
-        .eq("id", chapter_id)
-        .maybeSingle();
-      chapterName = ch?.name ?? "";
-    }
-
-    let actionLink: string | null = null;
-
-    if (!existingAuthUser) {
-      console.log("[invite-member] Generating invite link (will create user)");
+      // New user: generateLink with type "invite" atomically creates user + link
+      console.log("[invite-member] Creating new user via generateLink(invite)");
       const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
         type: "invite",
         email: normalizedEmail,
@@ -132,7 +153,7 @@ Deno.serve(async (req: Request) => {
         },
       });
       if (linkErr || !linkData?.properties?.action_link || !linkData?.user) {
-        console.error("[invite-member] generateLink(invite) error:", linkErr);
+        console.error("[invite-member] generateLink(invite) error:", linkErr?.message);
         return new Response(JSON.stringify({ error: "Failed to generate invite link: " + (linkErr?.message ?? "unknown") }), {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -140,33 +161,21 @@ Deno.serve(async (req: Request) => {
       }
       targetUserId = linkData.user.id;
       actionLink = linkData.properties.action_link;
-      console.log("[invite-member] Created user via invite link:", targetUserId);
-    } else {
-      console.log("[invite-member] Reusing existing auth user, generating magiclink");
-      const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
-        type: "magiclink",
-        email: normalizedEmail,
-      });
-      if (linkErr || !linkData?.properties?.action_link) {
-        console.error("[invite-member] generateLink(magiclink) error:", linkErr);
-        return new Response(JSON.stringify({ error: "Failed to generate invite link: " + (linkErr?.message ?? "unknown") }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      actionLink = linkData.properties.action_link;
+      console.log("[invite-member] Created user:", targetUserId);
     }
 
-    const { data: existingMemberRow } = await adminClient
+    // The on_auth_user_created trigger may have auto-created a member row.
+    // Check for it and update with proper details, or create one if missing.
+    const { data: memberRow } = await adminClient
       .from("members")
       .select("id")
       .eq("user_id", targetUserId)
       .maybeSingle();
 
-    let memberId: string | null = existingMemberRow?.id ?? null;
-    console.log("[invite-member] existingMemberRow:", memberId ?? "none");
+    let memberId: string;
 
-    if (memberId) {
+    if (memberRow) {
+      console.log("[invite-member] Updating existing member row:", memberRow.id);
       const { error: updErr } = await adminClient
         .from("members")
         .update({
@@ -174,15 +183,17 @@ Deno.serve(async (req: Request) => {
           last_name: safeLastName,
           chapter_id: chapter_id || null,
         })
-        .eq("id", memberId);
+        .eq("id", memberRow.id);
       if (updErr) {
-        console.error("[invite-member] update member error:", updErr);
+        console.error("[invite-member] update member error:", updErr.message);
         return new Response(JSON.stringify({ error: "Failed to update member profile: " + updErr.message }), {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+      memberId = memberRow.id;
     } else {
+      console.log("[invite-member] Creating member row for user:", targetUserId);
       const { data: inserted, error: insErr } = await adminClient
         .from("members")
         .insert({
@@ -194,7 +205,7 @@ Deno.serve(async (req: Request) => {
         .select("id")
         .maybeSingle();
       if (insErr || !inserted) {
-        console.error("[invite-member] insert member error:", insErr);
+        console.error("[invite-member] insert member error:", insErr?.message);
         return new Response(JSON.stringify({ error: "Failed to create member profile: " + (insErr?.message ?? "unknown") }), {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -203,8 +214,20 @@ Deno.serve(async (req: Request) => {
       memberId = inserted.id;
     }
 
+    // Resolve chapter name for email
+    let chapterName = "";
+    if (chapter_id) {
+      const { data: ch } = await adminClient
+        .from("chapters")
+        .select("name")
+        .eq("id", chapter_id)
+        .maybeSingle();
+      chapterName = ch?.name ?? "";
+    }
+
     const inviterName = [callerMember.first_name, callerMember.last_name].filter(Boolean).join(" ") || "The Admin";
 
+    // Send invitation email
     console.log("[invite-member] Sending email via send-email function");
     const emailRes = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
       method: "POST",
@@ -227,7 +250,7 @@ Deno.serve(async (req: Request) => {
 
     if (!emailRes.ok) {
       const emailErr = await emailRes.text();
-      console.error("[invite-member] send-email error:", emailRes.status, emailErr);
+      console.error("[invite-member] send-email failed:", emailRes.status, emailErr);
       return new Response(JSON.stringify({ error: "Failed to send invitation email: " + emailErr }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -236,11 +259,11 @@ Deno.serve(async (req: Request) => {
 
     console.log("[invite-member] Success for", normalizedEmail);
     return new Response(
-      JSON.stringify({ success: true, user_id: targetUserId, member_id: memberId, reused_existing_user: !!existingAuthUser }),
+      JSON.stringify({ success: true, user_id: targetUserId, member_id: memberId }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
-    console.error("[invite-member] exception:", err);
+    console.error("[invite-member] Unhandled exception:", (err as Error).message, (err as Error).stack);
     return new Response(JSON.stringify({ error: (err as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

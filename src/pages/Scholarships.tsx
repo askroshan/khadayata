@@ -148,10 +148,10 @@ export default function Scholarships() {
                     </div>
                     <div><Label>Application Deadline</Label><Input type="date" value={newScholarship.deadline} onChange={e => setNewScholarship({...newScholarship, deadline: e.target.value})} /></div>
                     <div><Label>Chapter (optional)</Label>
-                      <Select value={newScholarship.chapter_id} onValueChange={v => setNewScholarship({...newScholarship, chapter_id: v})}>
+                      <Select value={newScholarship.chapter_id || "__global__"} onValueChange={v => setNewScholarship({...newScholarship, chapter_id: v === "__global__" ? "" : v})}>
                         <SelectTrigger><SelectValue placeholder="All chapters (global)" /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">All chapters (global)</SelectItem>
+                          <SelectItem value="__global__">All chapters (global)</SelectItem>
                           {chapters?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                         </SelectContent>
                       </Select>

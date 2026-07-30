@@ -96,10 +96,10 @@ export default function Index() {
   const { data: totalCountries } = useTotalCountryCount();
 
   const liveStats = [
-    { value: totalMembers ? `${totalMembers.toLocaleString()}+` : "50,000+", label: "Members Worldwide", color: "#F39C12" },
-    { value: totalChapters ? totalChapters.toString() : "67", label: "Chapters", color: "#E91E63" },
-    { value: totalCountries ? totalCountries.toString() : "28", label: "Countries", color: "#1E88E5" },
-    { value: totalBusinesses ? `${totalBusinesses.toLocaleString()}+` : "315+", label: "Businesses", color: "#43A047" },
+    { value: totalMembers != null ? `${totalMembers.toLocaleString()}+` : "…", label: "Members Worldwide", color: "#F39C12" },
+    { value: totalChapters != null ? totalChapters.toString() : "…", label: "Chapters", color: "#E91E63" },
+    { value: totalCountries != null ? totalCountries.toString() : "…", label: "Countries", color: "#1E88E5" },
+    { value: totalBusinesses != null ? totalBusinesses.toLocaleString() : "…", label: "Businesses", color: "#43A047" },
   ];
 
   return (
@@ -222,7 +222,7 @@ export default function Index() {
               </span>
             </h1>
             <p style={{ marginTop: 20, fontSize: 17, color: "rgba(255,255,255,0.75)", lineHeight: 1.7, maxWidth: 480 }}>
-              Connecting {totalMembers ? totalMembers.toLocaleString() : "50,000+"} Khadayata families across 28 countries — through verified membership, events, heritage, and business.
+              Connecting {totalMembers != null ? `${totalMembers.toLocaleString()}+` : ""} Khadayata families across {totalCountries != null ? totalCountries : ""} countries — through verified membership, events, heritage, and business.
             </p>
             <div style={{ display: "flex", gap: 14, marginTop: 36, flexWrap: "wrap" }}>
               <Link to="/auth" style={{
@@ -476,7 +476,7 @@ export default function Index() {
               background: "linear-gradient(135deg,#F39C12,#E91E63)", color: "#fff",
               boxShadow: "0 8px 24px rgba(243,156,18,0.45)",
             }}>
-              <p style={{ fontSize: "1.6rem", fontWeight: 800, margin: 0 }}>28</p>
+              <p style={{ fontSize: "1.6rem", fontWeight: 800, margin: 0 }}>{totalCountries != null ? totalCountries : "…"}</p>
               <p style={{ fontSize: 12, margin: "2px 0 0", opacity: 0.85 }}>Countries</p>
             </div>
           </div>
@@ -499,7 +499,7 @@ export default function Index() {
               background: "linear-gradient(135deg,#43A047,#1E88E5)", color: "#fff",
               boxShadow: "0 8px 24px rgba(67,160,71,0.45)",
             }}>
-              <p style={{ fontSize: "1.5rem", fontWeight: 800, margin: 0 }}>{totalBusinesses ? `${totalBusinesses}+` : "315+"}</p>
+              <p style={{ fontSize: "1.5rem", fontWeight: 800, margin: 0 }}>{totalBusinesses != null ? totalBusinesses.toLocaleString() : "…"}</p>
               <p style={{ fontSize: 12, margin: "2px 0 0", opacity: 0.85 }}>Businesses</p>
             </div>
           </div>
@@ -583,7 +583,7 @@ export default function Index() {
         <div style={{ maxWidth: 800, margin: "0 auto", textAlign: "center", position: "relative", zIndex: 1 }}>
           <Sparkles size={32} style={{ color: "#fff", opacity: 0.8, marginBottom: 16 }} />
           <h2 style={{ fontSize: "clamp(2rem,4vw,3.2rem)", fontWeight: 800, color: "#fff", margin: 0, lineHeight: 1.2 }}>
-            Join {totalMembers ? `${totalMembers.toLocaleString()}+` : "50,000+"} Khadayata Members Worldwide
+            Join {totalMembers != null ? `${totalMembers.toLocaleString()}+ ` : ""}Khadayata Members Worldwide
           </h2>
           <p style={{ marginTop: 16, fontSize: 17, color: "rgba(255,255,255,0.85)", maxWidth: 520, margin: "16px auto 0", lineHeight: 1.65 }}>
             Create your free account today and become part of the world's most connected Khadayata community platform.

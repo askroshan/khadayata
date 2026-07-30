@@ -13,9 +13,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { DollarSign, GraduationCap, Heart, Building, TrendingUp, CircleCheck as CheckCircle, Circle as XCircle, Clock, Plus, RefreshCw, Pencil, Trash2 } from "lucide-react";
+import { DollarSign, GraduationCap, Heart, Building, TrendingUp, CircleCheck as CheckCircle, Circle as XCircle, Clock, Plus, RefreshCw, Pencil, Trash2, Target, Landmark } from "lucide-react";
 import { format } from "date-fns";
 import { useChapters } from "@/hooks/useMember";
+import { CampaignsPanel } from "@/components/finance/CampaignsPanel";
+import { TrustCorpusPanel } from "@/components/finance/TrustCorpusPanel";
 
 interface FinanceTabProps {
   myChapterId: string | null;
@@ -372,6 +374,8 @@ export default function FinanceTab({ myChapterId }: FinanceTabProps) {
           <TabsTrigger value="medical-aid"><Heart className="w-3.5 h-3.5 mr-1" />Medical Aid {pendingAid > 0 && <Badge className="ml-1 bg-destructive text-destructive-foreground text-[10px] px-1 h-4">{pendingAid}</Badge>}</TabsTrigger>
           <TabsTrigger value="scholarships"><GraduationCap className="w-3.5 h-3.5 mr-1" />Scholarships {pendingApps > 0 && <Badge className="ml-1 bg-gold text-primary-foreground text-[10px] px-1 h-4">{pendingApps}</Badge>}</TabsTrigger>
           <TabsTrigger value="hall-bookings"><Building className="w-3.5 h-3.5 mr-1" />Hall Bookings {pendingBookings > 0 && <Badge className="ml-1 bg-primary text-primary-foreground text-[10px] px-1 h-4">{pendingBookings}</Badge>}</TabsTrigger>
+          <TabsTrigger value="campaigns"><Target className="w-3.5 h-3.5 mr-1" />Campaigns</TabsTrigger>
+          <TabsTrigger value="trust-corpus"><Landmark className="w-3.5 h-3.5 mr-1" />Trust Corpus</TabsTrigger>
           <TabsTrigger value="funds"><TrendingUp className="w-3.5 h-3.5 mr-1" />Fund Management</TabsTrigger>
         </TabsList>
 
@@ -572,6 +576,16 @@ export default function FinanceTab({ myChapterId }: FinanceTabProps) {
               );
             })}
           </div>
+        </TabsContent>
+
+        {/* Campaigns */}
+        <TabsContent value="campaigns" className="mt-4">
+          <CampaignsPanel myChapterId={myChapterId} />
+        </TabsContent>
+
+        {/* Trust Corpus */}
+        <TabsContent value="trust-corpus" className="mt-4">
+          <TrustCorpusPanel myChapterId={myChapterId} />
         </TabsContent>
 
         {/* Fund Management */}

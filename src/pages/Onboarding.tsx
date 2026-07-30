@@ -90,6 +90,10 @@ export default function Onboarding() {
       toast({ title: "First and last name are required", variant: "destructive" });
       return;
     }
+    if (step === 1 && !phone.trim()) {
+      toast({ title: "Phone number is required", variant: "destructive" });
+      return;
+    }
     if (step < STEPS.length - 1) setStep(step + 1);
   };
 
@@ -122,7 +126,7 @@ export default function Onboarding() {
         }
       }
 
-      // Save phone if provided
+      // Save phone
       if (phone.trim() && member?.id) {
         await supabase.from("member_contacts").insert({
           member_id: member.id,
@@ -303,7 +307,7 @@ export default function Onboarding() {
                   <Input id="ekda" value={ekda} onChange={(e) => setEkda(e.target.value)} placeholder="e.g., Kadva, Leuva" maxLength={100} />
                 </div>
                 <div className="space-y-2">
-                  <Label className="flex items-center gap-1"><Phone className="w-3.5 h-3.5" />Phone</Label>
+                  <Label className="flex items-center gap-1"><Phone className="w-3.5 h-3.5" />Phone *</Label>
                   <div className="flex gap-2">
                     <Select value={phoneCountryCode} onValueChange={setPhoneCountryCode}>
                       <SelectTrigger className="w-28 shrink-0"><SelectValue /></SelectTrigger>

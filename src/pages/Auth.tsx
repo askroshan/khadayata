@@ -11,6 +11,7 @@ import heroTemple from "@/assets/hero-temple.jpg";
 import diyaLamp from "@/assets/diya-lamp.png";
 import PublicLayout from "@/components/PublicLayout";
 import SEOMeta from "@/components/SEOMeta";
+import { useTotalMemberCount, useTotalChapterCount, useTotalCountryCount } from "@/hooks/useChapter";
 
 const LOGO = "/Screenshot_2026-03-16_at_9.18.14_AM.png";
 
@@ -28,6 +29,9 @@ export default function Auth() {
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
   const { signUp, signIn } = useAuth();
+  const { data: totalMembers } = useTotalMemberCount();
+  const { data: totalChapters } = useTotalChapterCount();
+  const { data: totalCountries } = useTotalCountryCount();
 
   if (loading) return (
     <div className="flex min-h-screen items-center justify-center bg-background">
@@ -105,7 +109,11 @@ export default function Auth() {
               Connecting the Khadayata community worldwide.<br />One identity, one platform, one family.
             </p>
             <div className="mt-10 grid grid-cols-3 gap-4 text-center">
-              {[{ val: "50K+", label: "Members" }, { val: "67", label: "Chapters" }, { val: "28", label: "Countries" }].map((s) => (
+              {[
+                { val: totalMembers != null ? `${totalMembers.toLocaleString()}+` : "…", label: "Members" },
+                { val: totalChapters != null ? totalChapters.toString() : "…", label: "Chapters" },
+                { val: totalCountries != null ? totalCountries.toString() : "…", label: "Countries" },
+              ].map((s) => (
                 <div key={s.label} className="p-3 rounded-xl bg-white/10 backdrop-blur-sm border border-white/15">
                   <p className="text-xl font-display font-bold text-white">{s.val}</p>
                   <p className="text-xs text-white/55">{s.label}</p>

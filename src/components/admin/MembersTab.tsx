@@ -12,9 +12,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronUp, ChevronDown, ExternalLink, Search, Download, X, Pencil, UserPlus, ShieldBan, Lock, Clock as Unlock, Trash2 } from "lucide-react";
+import { ChevronUp, ChevronDown, ExternalLink, Search, Download, X, Pencil, UserPlus, ShieldBan, Lock, Clock as Unlock, Trash2, Mail, MailCheck, Send } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
+import { LEVEL_LABELS as SHARED_LEVEL_LABELS, exportFilteredCsv, type AdminMember } from "@/lib/admin-utils";
 
 interface Member {
   id: string;
@@ -40,29 +41,8 @@ interface MembersTabProps {
   isGlobalAdmin?: boolean;
 }
 
-const LEVEL_LABELS: Record<number, string> = { 0: "Basic", 1: "Verified", 2: "Trusted", 3: "Senior", 4: "Elder", 5: "Patron" };
+const LEVEL_LABELS = SHARED_LEVEL_LABELS;
 const PAGE_SIZE = 25;
-
-function exportCSV(members: Member[]) {
-  const header = ["Name", "Chapter", "Verification Level", "Onboarding", "Joined"].join(",");
-  const rows = members.map((m) =>
-    [
-      `"${m.first_name} ${m.last_name}"`,
-      `"${(m.chapters as { name: string } | null)?.name ?? ""}"`,
-      `L${m.verification_level} — ${LEVEL_LABELS[m.verification_level] ?? "Unknown"}`,
-      m.onboarding_completed ? "Complete" : "Pending",
-      m.created_at ? format(new Date(m.created_at), "yyyy-MM-dd") : "",
-    ].join(",")
-  );
-  const csv = [header, ...rows].join("\n");
-  const blob = new Blob([csv], { type: "text/csv" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `members-${format(new Date(), "yyyy-MM-dd")}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
 
 export default function MembersTab({ members, myChapterId, canInvite = false, isGlobalAdmin = false }: MembersTabProps) {
   const { toast } = useToast();
@@ -73,7 +53,11 @@ export default function MembersTab({ members, myChapterId, canInvite = false, is
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(1);
-  const [editMember, setEditMember] = useState<{ id: string; first_name: string; last_name: string; chapter_id: string } | null>(null);
+  const [editMember, setEditMember] = useState<{
+    id: string; first_name: string; last_name: string; chapter_id: string;
+    middle_names: string; gender: string; dob: string; birth_place: string;
+    ekda: string; kuldevi: string;
+  } | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteForm, setInviteForm] = useState({ email: "", first_name: "", last_name: "", chapter_id: "" });
   const [memberCommitteeRoles, setMemberCommitteeRoles] = useState<Record<string, string>>({});
@@ -92,6 +76,34 @@ export default function MembersTab({ members, myChapterId, canInvite = false, is
       const { data } = await q;
       const map: Record<string, { suspended: boolean; blocked: boolean }> = {};
       data?.forEach((m) => { map[m.id] = { suspended: m.suspended, blocked: m.blocked }; });
+      return map;
+    },
+    enabled: isGlobalAdmin,
+  });
+
+  const { data: memberEmails } = useQuery({
+    queryKey: ["admin-member-emails"],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_member_emails");
+      if (error) throw error;
+      const map: Record<string, { email: string; email_confirmed_at: string | null }> = {};
+      (data ?? []).forEach((r: { member_id: string; email: string; email_confirmed_at: string | null }) => {
+        map[r.member_id] = { email: r.email, email_confirmed_at: r.email_confirmed_at };
+      });
+      return map;
+    },
+    enabled: isGlobalAdmin,
+  });
+
+  const { data: memberPhones } = useQuery({
+    queryKey: ["admin-member-phones"],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_member_phones");
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      (data ?? []).forEach((r: { member_id: string; phone: string }) => {
+        map[r.member_id] = r.phone;
+      });
       return map;
     },
     enabled: isGlobalAdmin,
@@ -132,11 +144,20 @@ export default function MembersTab({ members, myChapterId, canInvite = false, is
   const editMemberMutation = useMutation({
     mutationFn: async () => {
       if (!editMember) return;
-      const { error } = await supabase.from("members").update({
+      const updatePayload: Record<string, unknown> = {
         first_name: editMember.first_name.trim(),
         last_name: editMember.last_name.trim(),
         chapter_id: editMember.chapter_id || null,
-      }).eq("id", editMember.id);
+      };
+      if (isGlobalAdmin) {
+        updatePayload.middle_names = editMember.middle_names.trim() || null;
+        updatePayload.gender = editMember.gender || null;
+        updatePayload.dob = editMember.dob || null;
+        updatePayload.birth_place = editMember.birth_place.trim() || null;
+        updatePayload.ekda = editMember.ekda.trim() || null;
+        updatePayload.kuldevi = editMember.kuldevi.trim() || null;
+      }
+      const { error } = await supabase.from("members").update(updatePayload).eq("id", editMember.id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -151,32 +172,38 @@ export default function MembersTab({ members, myChapterId, canInvite = false, is
     mutationFn: async () => {
       if (!inviteForm.email.trim()) throw new Error("Email is required");
       if (!inviteForm.first_name.trim()) throw new Error("First name is required");
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invite-member`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${session?.access_token ?? ""}`,
-            "Apikey": import.meta.env.VITE_SUPABASE_ANON_KEY,
-          },
-          body: JSON.stringify({
-            email: inviteForm.email.trim(),
-            first_name: inviteForm.first_name.trim(),
-            last_name: inviteForm.last_name.trim(),
-            chapter_id: inviteForm.chapter_id || null,
-          }),
-        }
-      );
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error ?? "Failed to send invitation");
+      const { data, error } = await supabase.functions.invoke("invite-member", {
+        body: {
+          email: inviteForm.email.trim(),
+          first_name: inviteForm.first_name.trim(),
+          last_name: inviteForm.last_name.trim(),
+          chapter_id: inviteForm.chapter_id || null,
+        },
+      });
+      if (error) throw new Error(error.message ?? "Failed to send invitation");
+      if (data?.error) throw new Error(data.error);
     },
     onSuccess: () => {
       toast({ title: "Invitation sent", description: `An invite email has been sent to ${inviteForm.email}` });
       setInviteForm({ email: "", first_name: "", last_name: "", chapter_id: "" });
       setInviteOpen(false);
       queryClient.invalidateQueries({ queryKey: ["admin-members"] });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const resendVerificationEmail = useMutation({
+    mutationFn: async ({ memberId }: { memberId: string }) => {
+      const { data, error } = await supabase.functions.invoke("send-reminder", {
+        body: { member_ids: [memberId] },
+      });
+      if (error) throw new Error(error.message ?? "Failed to resend invitation");
+      if (data?.error) throw new Error(data.error);
+      if (data?.sent === 0) throw new Error(data.errors?.[0] ?? "Email sending failed");
+    },
+    onSuccess: (_, { memberId }) => {
+      const email = memberEmails?.[memberId]?.email ?? "member";
+      toast({ title: "Verification email resent", description: `Invitation re-sent to ${email}` });
     },
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
@@ -289,6 +316,26 @@ export default function MembersTab({ members, myChapterId, canInvite = false, is
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
+  const loadFullMemberForEdit = async (memberId: string, firstName: string, lastName: string, chapterId: string) => {
+    const { data } = await supabase
+      .from("members")
+      .select("middle_names, gender, dob, birth_place, ekda, kuldevi")
+      .eq("id", memberId)
+      .maybeSingle();
+    setEditMember({
+      id: memberId,
+      first_name: firstName,
+      last_name: lastName,
+      chapter_id: chapterId,
+      middle_names: (data?.middle_names as string) ?? "",
+      gender: (data?.gender as string) ?? "",
+      dob: (data?.dob as string) ?? "",
+      birth_place: (data?.birth_place as string) ?? "",
+      ekda: (data?.ekda as string) ?? "",
+      kuldevi: (data?.kuldevi as string) ?? "",
+    });
+  };
+
   const filtered = useMemo(() => {
     if (!members) return [];
     let list = [...members];
@@ -296,7 +343,8 @@ export default function MembersTab({ members, myChapterId, canInvite = false, is
       const q = search.toLowerCase();
       list = list.filter((m) =>
         `${m.first_name} ${m.last_name}`.toLowerCase().includes(q) ||
-        (m.chapters as { name: string } | null)?.name?.toLowerCase().includes(q)
+        (m.chapters as { name: string } | null)?.name?.toLowerCase().includes(q) ||
+        (isGlobalAdmin && memberEmails?.[m.id]?.email?.toLowerCase().includes(q))
       );
     }
     if (filterLevel !== "" && filterLevel !== "all") {
@@ -316,7 +364,7 @@ export default function MembersTab({ members, myChapterId, canInvite = false, is
       list = list.filter((m) => m.created_at && new Date(m.created_at) <= toDate);
     }
     return list;
-  }, [members, search, filterLevel, filterStatus, dateFrom, dateTo, memberStatuses]);
+  }, [members, search, filterLevel, filterStatus, dateFrom, dateTo, memberStatuses, isGlobalAdmin, memberEmails, memberPhones]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -365,17 +413,46 @@ export default function MembersTab({ members, myChapterId, canInvite = false, is
     </Dialog>
 
     <Dialog open={!!editMember} onOpenChange={(open) => { if (!open) setEditMember(null); }}>
-      <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto">
+      <DialogContent className={`${isGlobalAdmin ? "max-w-md" : "max-w-sm"} max-h-[90vh] overflow-y-auto`}>
         <DialogHeader>
           <DialogTitle>Edit Member</DialogTitle>
-          <DialogDescription>Update member name, chapter assignment, and committee roles.</DialogDescription>
+          <DialogDescription>{isGlobalAdmin ? "Update all member profile fields." : "Update member name, chapter assignment, and committee roles."}</DialogDescription>
         </DialogHeader>
         {editMember && (
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>First Name</Label><Input value={editMember.first_name} onChange={e => setEditMember({ ...editMember, first_name: e.target.value })} maxLength={100} /></div>
-              <div><Label>Last Name</Label><Input value={editMember.last_name} onChange={e => setEditMember({ ...editMember, last_name: e.target.value })} maxLength={100} /></div>
+              <div><Label>First Name *</Label><Input value={editMember.first_name} onChange={e => setEditMember({ ...editMember, first_name: e.target.value })} maxLength={100} /></div>
+              <div><Label>Last Name *</Label><Input value={editMember.last_name} onChange={e => setEditMember({ ...editMember, last_name: e.target.value })} maxLength={100} /></div>
             </div>
+            {isGlobalAdmin && (
+              <div><Label>Middle Names</Label><Input value={editMember.middle_names} onChange={e => setEditMember({ ...editMember, middle_names: e.target.value })} maxLength={200} placeholder="Middle name(s)" /></div>
+            )}
+            {isGlobalAdmin && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Gender</Label>
+                  <Select value={editMember.gender || "__none__"} onValueChange={v => setEditMember({ ...editMember, gender: v === "__none__" ? "" : v })}>
+                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Not set</SelectItem>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div><Label>Date of Birth</Label><Input type="date" value={editMember.dob} onChange={e => setEditMember({ ...editMember, dob: e.target.value })} /></div>
+              </div>
+            )}
+            {isGlobalAdmin && (
+              <div><Label>Birth Place</Label><Input value={editMember.birth_place} onChange={e => setEditMember({ ...editMember, birth_place: e.target.value })} maxLength={200} placeholder="City, State, Country" /></div>
+            )}
+            {isGlobalAdmin && (
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label>Ekda</Label><Input value={editMember.ekda} onChange={e => setEditMember({ ...editMember, ekda: e.target.value })} maxLength={200} placeholder="Ekda name" /></div>
+                <div><Label>Kuldevi</Label><Input value={editMember.kuldevi} onChange={e => setEditMember({ ...editMember, kuldevi: e.target.value })} maxLength={200} placeholder="Kuldevi name" /></div>
+              </div>
+            )}
             <div>
               <Label>Chapter</Label>
               <Select value={editMember.chapter_id || "__none__"} onValueChange={v => setEditMember({ ...editMember, chapter_id: v === "__none__" ? "" : v })}>
@@ -564,7 +641,7 @@ export default function MembersTab({ members, myChapterId, canInvite = false, is
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Search by name or chapter..."
+              placeholder={isGlobalAdmin ? "Search by name, chapter, or email..." : "Search by name or chapter..."}
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               className="pl-9 h-9 text-sm"
@@ -609,7 +686,7 @@ export default function MembersTab({ members, myChapterId, canInvite = false, is
             </Button>
           )}
           <div className="flex gap-2 ml-auto">
-            <Button variant="outline" size="sm" onClick={() => exportCSV(filtered)} className="h-9 text-xs">
+            <Button variant="outline" size="sm" onClick={() => exportFilteredCsv(filtered as AdminMember[])} className="h-9 text-xs">
               <Download className="w-3.5 h-3.5 mr-1" /> Export CSV
             </Button>
             {canInvite && (
@@ -632,6 +709,8 @@ export default function MembersTab({ members, myChapterId, canInvite = false, is
                 <thead className="border-b border-border bg-muted/50">
                   <tr>
                     <th className="p-3 text-left font-medium">Name</th>
+                    {isGlobalAdmin && <th className="p-3 text-left font-medium">Email</th>}
+                    {isGlobalAdmin && <th className="p-3 text-left font-medium">Phone</th>}
                     <th className="p-3 text-left font-medium">Chapter</th>
                     <th className="p-3 text-left font-medium">Level</th>
                     <th className="p-3 text-left font-medium">Joined</th>
@@ -651,6 +730,25 @@ export default function MembersTab({ members, myChapterId, canInvite = false, is
                             {getMemberStatusBadge(m.id)}
                           </div>
                         </td>
+                        {isGlobalAdmin && (
+                          <td className="p-3 text-muted-foreground text-xs">
+                            {memberEmails?.[m.id] ? (
+                              <div className="flex items-center gap-1">
+                                <span className="truncate max-w-[180px]">{memberEmails[m.id].email}</span>
+                                {memberEmails[m.id].email_confirmed_at ? (
+                                  <MailCheck className="w-3 h-3 text-emerald-600 shrink-0" aria-label="Email verified" />
+                                ) : (
+                                  <Mail className="w-3 h-3 text-amber-500 shrink-0" aria-label="Email not verified" />
+                                )}
+                              </div>
+                            ) : "—"}
+                          </td>
+                        )}
+                        {isGlobalAdmin && (
+                          <td className="p-3 text-muted-foreground text-xs">
+                            {memberPhones?.[m.id] ?? "—"}
+                          </td>
+                        )}
                         <td className="p-3 text-muted-foreground">{(m.chapters as { name: string } | null)?.name ?? "—"}</td>
                         <td className="p-3">
                           <Badge variant="outline">L{m.verification_level} — {LEVEL_LABELS[m.verification_level] ?? "Unknown"}</Badge>
@@ -710,7 +808,14 @@ export default function MembersTab({ members, myChapterId, canInvite = false, is
                                   size="icon" variant="ghost" className="h-7 w-7"
                                   disabled={!inScope}
                                   aria-label="Edit member"
-                                  onClick={() => inScope && setEditMember({ id: m.id, first_name: m.first_name, last_name: m.last_name, chapter_id: m.chapter_id ?? "" })}
+                                  onClick={() => {
+                                    if (!inScope) return;
+                                    if (isGlobalAdmin) {
+                                      loadFullMemberForEdit(m.id, m.first_name, m.last_name, m.chapter_id ?? "");
+                                    } else {
+                                      setEditMember({ id: m.id, first_name: m.first_name, last_name: m.last_name, chapter_id: m.chapter_id ?? "", middle_names: "", gender: "", dob: "", birth_place: "", ekda: "", kuldevi: "" });
+                                    }
+                                  }}
                                 >
                                   <Pencil className="w-3.5 h-3.5" />
                                 </Button>
@@ -722,6 +827,22 @@ export default function MembersTab({ members, myChapterId, canInvite = false, is
                                 <ExternalLink className="w-4 h-4" />
                               </Link>
                             </Button>
+                            {isGlobalAdmin && !m.onboarding_completed && memberEmails?.[m.id] && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="icon" variant="ghost"
+                                    className="h-7 w-7 text-primary hover:text-primary"
+                                    aria-label="Resend verification email"
+                                    disabled={resendVerificationEmail.isPending}
+                                    onClick={() => resendVerificationEmail.mutate({ memberId: m.id })}
+                                  >
+                                    <Send className="w-3.5 h-3.5" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Resend verification email</TooltipContent>
+                              </Tooltip>
+                            )}
                             {isGlobalAdmin && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -743,7 +864,7 @@ export default function MembersTab({ members, myChapterId, canInvite = false, is
                     );
                   })}
                   {!paginated.length && (
-                    <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">No members found</td></tr>
+                    <tr><td colSpan={isGlobalAdmin ? 8 : 6} className="p-6 text-center text-muted-foreground">No members found</td></tr>
                   )}
                 </tbody>
               </table>

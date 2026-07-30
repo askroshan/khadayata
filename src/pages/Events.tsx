@@ -275,10 +275,10 @@ export default function Events() {
                 <div><Label>Contact Phone</Label><Input value={evt.contact_phone} onChange={e => setEvt({...evt, contact_phone: e.target.value})} /></div>
                 <div className="sm:col-span-2"><Label>Tags (comma-separated)</Label><Input value={evt.tags} onChange={e => setEvt({...evt, tags: e.target.value})} placeholder="diwali, cultural, family" /></div>
                 <div className="sm:col-span-2"><Label>Chapter</Label>
-                  <Select value={evt.chapter_id} onValueChange={v => setEvt({...evt, chapter_id: v})}>
+                  <Select value={evt.chapter_id || "__default__"} onValueChange={v => setEvt({...evt, chapter_id: v === "__default__" ? "" : v})}>
                     <SelectTrigger><SelectValue placeholder="Use my chapter (default)" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">My chapter (default)</SelectItem>
+                      <SelectItem value="__default__">My chapter (default)</SelectItem>
                       {chapters?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                     </SelectContent>
                   </Select>

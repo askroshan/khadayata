@@ -81,6 +81,7 @@ export default function News() {
     country_id: "", state_id: "", city_id: "",
     article_type: "article", scope: "chapter",
     pinned: false, pinned_hours: "24",
+    video_url: "", video_title: "",
   });
 
   const { data: countries } = useCountries();
@@ -121,6 +122,8 @@ export default function News() {
         source_url: article.source_url.trim() || null,
         cover_image_url: article.cover_image_url.trim() || null,
         image_alt: article.image_alt.trim() || null,
+        video_url: article.video_url.trim() || null,
+        video_title: article.video_title.trim() || null,
         featured: article.featured,
         article_type: article.article_type,
         scope: article.scope,
@@ -141,9 +144,9 @@ export default function News() {
       toast({ title: "Article created!" });
       setArticle({
         title: "", summary: "", body: "", tags: "", category: "", author_name: "",
-        source_url: "", cover_image_url: "", image_alt: "", featured: false,
-        article_type: "article", scope: "chapter", pinned: false, pinned_hours: "24",
-        country_id: "", state_id: "", city_id: "",
+        source_url: "", cover_image_url: "", image_alt: "", video_url: "", video_title: "",
+        featured: false, article_type: "article", scope: "chapter", pinned: false,
+        pinned_hours: "24", country_id: "", state_id: "", city_id: "",
       });
       queryClient.invalidateQueries({ queryKey: ["news"] });
     },
@@ -282,6 +285,8 @@ export default function News() {
                   <div><Label>Cover Image URL</Label><Input value={article.cover_image_url} onChange={e => setArticle({...article, cover_image_url: e.target.value})} placeholder="https://..." /></div>
                   <div><Label>Image Alt Text (WCAG)</Label><Input value={article.image_alt} onChange={e => setArticle({...article, image_alt: e.target.value})} placeholder="Describe the image" /></div>
                   <div><Label>Source URL</Label><Input value={article.source_url} onChange={e => setArticle({...article, source_url: e.target.value})} placeholder="https://..." /></div>
+                  <div><Label>Video URL (YouTube/Vimeo)</Label><Input value={article.video_url} onChange={e => setArticle({...article, video_url: e.target.value})} placeholder="https://youtube.com/watch?v=..." /></div>
+                  <div><Label>Video Title</Label><Input value={article.video_title} onChange={e => setArticle({...article, video_title: e.target.value})} placeholder="Dharmik Pravachan title" /></div>
                   <div><Label>Country</Label>
                     <Select value={article.country_id || "__none__"} onValueChange={v => setArticle({...article, country_id: v === "__none__" ? "" : v, state_id: "", city_id: ""})}>
                       <SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger>

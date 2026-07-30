@@ -5,8 +5,9 @@ import { useMember } from "@/hooks/useMember";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
-import { UserCheck, Tag, Heart, Mic, ArrowRight, Clock, CircleCheck as CheckCircle, Circle as XCircle, CircleAlert as AlertCircle } from "lucide-react";
+import { UserCheck, Tag, Heart, Mic, ArrowRight, Clock, CircleCheck as CheckCircle, Circle as XCircle, CircleAlert as AlertCircle, Mail, Send, MailCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { useState } from "react";
@@ -14,14 +15,16 @@ import { useToast } from "@/hooks/use-toast";
 
 interface VerificationDashboardProps {
   myChapterId: string | null;
+  isGlobalAdmin?: boolean;
 }
 
-export default function VerificationDashboard({ myChapterId }: VerificationDashboardProps) {
+export default function VerificationDashboard({ myChapterId, isGlobalAdmin = false }: VerificationDashboardProps) {
   const { user } = useAuth();
   const { member } = useMember();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [notes, setNotes] = useState<Record<string, string>>({});
+  const [selectedPending, setSelectedPending] = useState<Set<string>>(new Set());
 
   const { data: pendingMembers } = useQuery({
     queryKey: ["vd-pending-members", myChapterId],
@@ -31,12 +34,26 @@ export default function VerificationDashboard({ myChapterId }: VerificationDashb
         .select("id, first_name, last_name, verification_level, chapter_id")
         .eq("onboarding_completed", false)
         .order("created_at", { ascending: false })
-        .limit(10);
+        .limit(50);
       if (myChapterId) q = q.eq("chapter_id", myChapterId);
       const { data } = await q;
       return data ?? [];
     },
     enabled: !!user,
+  });
+
+  const { data: pendingMemberEmails } = useQuery({
+    queryKey: ["vd-pending-member-emails"],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_member_emails");
+      if (error) throw error;
+      const map: Record<string, { email: string; email_confirmed_at: string | null }> = {};
+      (data ?? []).forEach((r: { member_id: string; email: string; email_confirmed_at: string | null }) => {
+        map[r.member_id] = { email: r.email, email_confirmed_at: r.email_confirmed_at };
+      });
+      return map;
+    },
+    enabled: isGlobalAdmin,
   });
 
   const { data: pendingVerifications } = useQuery({
@@ -127,12 +144,43 @@ export default function VerificationDashboard({ myChapterId }: VerificationDashb
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
+  const sendReminder = useMutation({
+    mutationFn: async (memberIds: string[]) => {
+      const { data, error } = await supabase.functions.invoke("send-reminder", {
+        body: { member_ids: memberIds },
+      });
+      if (error) throw new Error(error.message ?? "Failed to send reminders");
+      if (data?.error) throw new Error(data.error);
+      return data as { sent: number; failed: number; errors: string[] };
+    },
+    onSuccess: (result) => {
+      const { sent, failed, errors } = result;
+      if (sent > 0) {
+        toast({ title: "Reminders sent", description: `${sent} reminder email${sent !== 1 ? "s" : ""} sent successfully.${failed > 0 ? ` ${failed} failed.` : ""}` });
+      } else {
+        const firstErr = errors?.[0] ?? "Unknown error";
+        toast({ title: "No reminders sent", description: `All ${failed} failed. First error: ${firstErr}`, variant: "destructive" });
+      }
+      setSelectedPending(new Set());
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
   const totalPending =
     (pendingMembers?.length ?? 0) +
     (pendingVerifications?.length ?? 0) +
     (pendingTagRequests?.length ?? 0) +
     (pendingMatrimonial?.length ?? 0) +
     (pendingOralHistories?.length ?? 0);
+
+  const allSelected = !!pendingMembers?.length && pendingMembers.every(m => selectedPending.has(m.id));
+  const toggleAll = () => {
+    if (allSelected) {
+      setSelectedPending(new Set());
+    } else {
+      setSelectedPending(new Set(pendingMembers?.map(m => m.id) ?? []));
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -155,18 +203,87 @@ export default function VerificationDashboard({ myChapterId }: VerificationDashb
               <Badge className="bg-amber-100 text-amber-800 border-0 ml-auto">{pendingMembers!.length}</Badge>
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-4 pt-0 space-y-1">
-            {pendingMembers!.map((m) => (
-              <div key={m.id} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
-                <div>
-                  <span className="text-sm font-medium">{m.first_name} {m.last_name}</span>
-                  <span className="ml-2 text-xs text-muted-foreground">L{m.verification_level}</span>
+          <CardContent className="p-4 pt-0">
+            {isGlobalAdmin && (
+              <div className="flex items-center justify-between mb-3 pb-2 border-b border-border">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="select-all-pending"
+                    checked={allSelected}
+                    onCheckedChange={toggleAll}
+                  />
+                  <label htmlFor="select-all-pending" className="text-xs text-muted-foreground cursor-pointer select-none">
+                    Select all ({pendingMembers!.length})
+                  </label>
                 </div>
-                <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" asChild>
-                  <Link to={`/member/${m.id}?verify=1`}>Review <ArrowRight className="w-3 h-3" /></Link>
-                </Button>
+                {selectedPending.size > 0 && (
+                  <Button
+                    size="sm"
+                    className="h-7 text-xs gap-1 gradient-warm text-primary-foreground"
+                    disabled={sendReminder.isPending}
+                    onClick={() => sendReminder.mutate(Array.from(selectedPending))}
+                  >
+                    <Send className="w-3 h-3" />
+                    Send Reminder ({selectedPending.size})
+                  </Button>
+                )}
               </div>
-            ))}
+            )}
+            <div className="space-y-1">
+              {pendingMembers!.map((m) => {
+                const emailInfo = pendingMemberEmails?.[m.id];
+                const isSelected = selectedPending.has(m.id);
+                return (
+                  <div key={m.id} className={`flex items-center justify-between py-1.5 border-b border-border last:border-0 gap-2 ${isSelected ? "bg-amber-50/50 rounded" : ""}`}>
+                    <div className="flex items-center gap-2 min-w-0">
+                      {isGlobalAdmin && (
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={(checked) => {
+                            setSelectedPending(prev => {
+                              const next = new Set(prev);
+                              if (checked) next.add(m.id);
+                              else next.delete(m.id);
+                              return next;
+                            });
+                          }}
+                        />
+                      )}
+                      <div className="min-w-0">
+                        <span className="text-sm font-medium">{m.first_name} {m.last_name}</span>
+                        <span className="ml-2 text-xs text-muted-foreground">L{m.verification_level}</span>
+                        {isGlobalAdmin && emailInfo && (
+                          <div className="flex items-center gap-1 mt-0.5">
+                            {emailInfo.email_confirmed_at
+                              ? <MailCheck className="w-3 h-3 text-emerald-600 shrink-0" />
+                              : <Mail className="w-3 h-3 text-amber-500 shrink-0" />
+                            }
+                            <span className="text-xs text-muted-foreground truncate max-w-[200px]">{emailInfo.email}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {isGlobalAdmin && emailInfo && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 text-xs gap-1 text-primary"
+                          disabled={sendReminder.isPending}
+                          onClick={() => sendReminder.mutate([m.id])}
+                          title="Send reminder email"
+                        >
+                          <Send className="w-3 h-3" />
+                        </Button>
+                      )}
+                      <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs" asChild>
+                        <Link to={`/member/${m.id}?verify=1`}>Review <ArrowRight className="w-3 h-3" /></Link>
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </CardContent>
         </Card>
       )}

@@ -17,6 +17,7 @@ import { useState, useEffect } from "react";
 import heroTemple from "@/assets/hero-temple.jpg";
 import diyaLamp from "@/assets/diya-lamp.png";
 import { LiveAartiPlayer } from "@/components/temple/LiveAartiPlayer";
+import { RecurringPledgesPanel } from "@/components/finance/RecurringPledgesPanel";
 import { usePermissions } from "@/hooks/useRoles";
 
 const PAYMENT_METHODS = ["UPI", "Bank Transfer", "Cash", "Card", "Cheque", "Online"];
@@ -419,6 +420,9 @@ export default function Temple() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Recurring Pledges */}
+          <RecurringPledgesPanel />
 
           {/* My Donations / Chapter Ledger */}
           <Card className="shadow-card">
