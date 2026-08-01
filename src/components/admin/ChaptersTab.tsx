@@ -462,62 +462,96 @@ export default function ChaptersTab() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><UserPlus className="w-4 h-4" />Assign Chapter Admin — {inviteChapter?.name}</DialogTitle>
-            <DialogDescription>Select a member to become Chapter Admin. An invitation email will be sent if an email address is provided.</DialogDescription>
+            <DialogDescription>
+              {inviteChapter && (inviteChapter as Chapter & { admins: ChapterAdmin[] }).admins?.length > 0
+                ? "This chapter already has a Chapter Admin. Revoke their role first to assign a new one."
+                : "Select an existing member to become Chapter Admin. An invitation email will be sent if an email address is provided."}
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <Label>Search Member</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                <Input
-                  className="pl-8"
-                  placeholder="Type a name..."
-                  value={memberSearch}
-                  onChange={e => setMemberSearch(e.target.value)}
-                />
+          {inviteChapter && (inviteChapter as Chapter & { admins: ChapterAdmin[] }).admins?.length > 0 ? (
+            <div className="space-y-3">
+              <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 dark:border-amber-700 dark:bg-amber-950/40">
+                <div className="flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-amber-600 shrink-0" />
+                  <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
+                    {(inviteChapter as Chapter & { admins: ChapterAdmin[] }).admins[0].member_name} is the current Chapter Admin
+                  </p>
+                </div>
+                <p className="text-xs text-amber-700 dark:text-amber-300 mt-1.5 ml-6">
+                  Revoke their role first to assign a new admin. Use the × button next to their name on the chapter card.
+                </p>
               </div>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  setRevokeTarget({
+                    chapterId: inviteChapter.id,
+                    adminId: (inviteChapter as Chapter & { admins: ChapterAdmin[] }).admins[0].id,
+                    memberName: (inviteChapter as Chapter & { admins: ChapterAdmin[] }).admins[0].member_name,
+                  });
+                  setInviteChapter(null);
+                }}
+              >
+                <X className="w-4 h-4 mr-1" /> Revoke Current Admin
+              </Button>
             </div>
-            <div>
-              <Label>Select Member *</Label>
-              <Select value={inviteForm.memberId} onValueChange={(v) => {
-                setInviteForm({ ...inviteForm, memberId: v });
-                const m = allMembers?.find((x) => x.id === v);
-                if (m) setInviteForm(f => ({ ...f, memberId: v, name: `${m.first_name} ${m.last_name}` }));
-              }}>
-                <SelectTrigger><SelectValue placeholder="Select a member..." /></SelectTrigger>
-                <SelectContent className="max-h-56">
-                  {filteredMembers.map((m) => {
-                    const ch = m.chapters as { name: string } | null;
-                    return (
-                      <SelectItem key={m.id} value={m.id}>
-                        {m.first_name} {m.last_name}{ch?.name ? ` — ${ch.name}` : ""}
-                      </SelectItem>
-                    );
-                  })}
-                  {filteredMembers.length === 0 && <div className="p-2 text-xs text-muted-foreground text-center">No members found</div>}
-                </SelectContent>
-              </Select>
+          ) : (
+            <div className="space-y-3">
+              <div>
+                <Label>Search Member</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                  <Input
+                    className="pl-8"
+                    placeholder="Type a name..."
+                    value={memberSearch}
+                    onChange={e => setMemberSearch(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div>
+                <Label>Select Member *</Label>
+                <Select value={inviteForm.memberId} onValueChange={(v) => {
+                  setInviteForm({ ...inviteForm, memberId: v });
+                  const m = allMembers?.find((x) => x.id === v);
+                  if (m) setInviteForm(f => ({ ...f, memberId: v, name: `${m.first_name} ${m.last_name}` }));
+                }}>
+                  <SelectTrigger><SelectValue placeholder="Select a member..." /></SelectTrigger>
+                  <SelectContent className="max-h-56">
+                    {filteredMembers.map((m) => {
+                      const ch = m.chapters as { name: string } | null;
+                      return (
+                        <SelectItem key={m.id} value={m.id}>
+                          {m.first_name} {m.last_name}{ch?.name ? ` — ${ch.name}` : ""}
+                        </SelectItem>
+                      );
+                    })}
+                    {filteredMembers.length === 0 && <div className="p-2 text-xs text-muted-foreground text-center">No members found</div>}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="flex items-center gap-1"><Mail className="w-3.5 h-3.5" />Send Invite to Email <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                <Input
+                  type="email"
+                  value={inviteForm.email}
+                  onChange={e => setInviteForm({ ...inviteForm, email: e.target.value })}
+                  placeholder="admin@example.com"
+                  maxLength={100}
+                />
+                <p className="text-xs text-muted-foreground mt-1">If provided, an invitation email will be sent to this address.</p>
+              </div>
+              <Button
+                onClick={() => assignChapterAdmin.mutate()}
+                disabled={!inviteForm.memberId || assignChapterAdmin.isPending}
+                className="w-full gradient-hero text-primary-foreground"
+              >
+                <UserPlus className="w-4 h-4 mr-1" />
+                {inviteForm.email ? "Assign & Send Invite" : "Assign as Chapter Admin"}
+              </Button>
             </div>
-            <div>
-              <Label className="flex items-center gap-1"><Mail className="w-3.5 h-3.5" />Send Invite to Email <span className="text-muted-foreground font-normal">(optional)</span></Label>
-              <Input
-                type="email"
-                value={inviteForm.email}
-                onChange={e => setInviteForm({ ...inviteForm, email: e.target.value })}
-                placeholder="admin@example.com"
-                maxLength={100}
-              />
-              <p className="text-xs text-muted-foreground mt-1">If provided, an invitation email will be sent to this address.</p>
-            </div>
-            <Button
-              onClick={() => assignChapterAdmin.mutate()}
-              disabled={!inviteForm.memberId || assignChapterAdmin.isPending}
-              className="w-full gradient-hero text-primary-foreground"
-            >
-              <UserPlus className="w-4 h-4 mr-1" />
-              {inviteForm.email ? "Assign & Send Invite" : "Assign as Chapter Admin"}
-            </Button>
-          </div>
+          )}
         </DialogContent>
       </Dialog>
 
