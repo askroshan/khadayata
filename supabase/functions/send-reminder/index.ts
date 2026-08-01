@@ -10,7 +10,6 @@ const corsHeaders = {
 const ALLOWED_ROLES = ["Global Admin", "Chapter Admin"];
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const LOGIN_URL = "https://khadayataonline.com/auth";
 
 Deno.serve(async (req: Request) => {
@@ -36,7 +35,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: callerMember } = await adminClient
       .from("members")
-      .select("id")
+      .select("id, chapter_id")
       .eq("user_id", callerUser.id)
       .maybeSingle();
 
@@ -64,24 +63,69 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    const isGlobalAdmin = callerRoles.includes("Global Admin");
+    const callerChapterId = callerMember.chapter_id as string | null;
+
     // Parse request body
     const body = await req.json();
-    const { member_ids } = body as { member_ids: string[] };
+    const { member_ids, send_to_all, chapter_id } = body as {
+      member_ids?: string[];
+      send_to_all?: boolean;
+      chapter_id?: string | null;
+    };
 
-    if (!member_ids?.length) {
-      return new Response(JSON.stringify({ error: "member_ids array is required" }), {
-        status: 400,
+    // Determine the mode: "all" or "selected"
+    let targetMemberIds: string[];
+
+    if (send_to_all === true) {
+      // Mass mode: query all pending (non-onboarded) members
+      let q = adminClient
+        .from("members")
+        .select("id")
+        .eq("onboarding_completed", false)
+        .order("created_at", { ascending: false });
+
+      // Chapter Admin can only target their own chapter; Global Admin can
+      // optionally scope by chapter_id or target all
+      if (!isGlobalAdmin) {
+        if (!callerChapterId) {
+          return new Response(JSON.stringify({ error: "Chapter Admin must belong to a chapter" }), {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        q = q.eq("chapter_id", callerChapterId);
+      } else if (chapter_id) {
+        q = q.eq("chapter_id", chapter_id);
+      }
+
+      const { data: pendingRows, error: pendingErr } = await q.limit(500);
+      if (pendingErr) {
+        return new Response(JSON.stringify({ error: pendingErr.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      targetMemberIds = (pendingRows ?? []).map((r: { id: string }) => r.id);
+    } else {
+      // Selected mode: use provided member_ids
+      targetMemberIds = member_ids ?? [];
+    }
+
+    if (!targetMemberIds.length) {
+      return new Response(JSON.stringify({ success: true, sent: 0, failed: 0, errors: [], total_attempted: 0 }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    console.log("[send-reminder] Processing", member_ids.length, "members");
+    console.log("[send-reminder] Processing", targetMemberIds.length, "members");
 
     let sent = 0;
     let failed = 0;
     const errors: string[] = [];
 
-    for (const memberId of member_ids) {
+    for (const memberId of targetMemberIds) {
       try {
         // Get member + auth user info
         const { data: member } = await adminClient
@@ -102,6 +146,13 @@ Deno.serve(async (req: Request) => {
           continue;
         }
 
+        // Chapter Admin scope check for selected mode
+        if (!isGlobalAdmin && callerChapterId && member.chapter_id !== callerChapterId) {
+          errors.push(`${memberId}: outside your chapter scope`);
+          failed++;
+          continue;
+        }
+
         // Get email from auth.users
         const { data: { user: authUser }, error: userErr } = await adminClient.auth.admin.getUserById(member.user_id);
         if (userErr || !authUser?.email) {
@@ -117,18 +168,14 @@ Deno.serve(async (req: Request) => {
         let acceptUrl: string;
 
         if (authUser.email_confirmed_at) {
-          // User already confirmed their email (self-registered) - just link to login
           acceptUrl = LOGIN_URL;
         } else {
-          // User was invited but never confirmed - generate a fresh invite link
-          // Try "invite" type first (re-sends the original invite flow)
           const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
             type: "invite",
             email: authUser.email,
           });
 
           if (linkErr || !linkData?.properties?.action_link) {
-            // Fallback: try magiclink
             console.warn("[send-reminder] invite link failed, trying magiclink for", authUser.email, linkErr?.message);
             const { data: mlData, error: mlErr } = await adminClient.auth.admin.generateLink({
               type: "magiclink",
@@ -136,7 +183,6 @@ Deno.serve(async (req: Request) => {
             });
 
             if (mlErr || !mlData?.properties?.action_link) {
-              // Final fallback: just use login URL
               console.warn("[send-reminder] magiclink also failed for", authUser.email, mlErr?.message, "- using login URL");
               acceptUrl = LOGIN_URL;
             } else {
@@ -152,14 +198,15 @@ Deno.serve(async (req: Request) => {
           : member.first_name;
         const chapterName = (member.chapters as { name: string } | null)?.name ?? "";
 
-        // Send reminder email via send-email function
+        // Send reminder email via send-email function — both headers use the
+        // SAME key (SERVICE_ROLE_KEY) to avoid "Conflicting API Key" 401.
         console.log("[send-reminder] Sending email to:", authUser.email, "acceptUrl:", acceptUrl.slice(0, 50));
         const emailRes = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${SERVICE_ROLE_KEY}`,
-            "Apikey": ANON_KEY,
+            "Apikey": SERVICE_ROLE_KEY,
           },
           body: JSON.stringify({
             to: authUser.email,
@@ -193,7 +240,7 @@ Deno.serve(async (req: Request) => {
 
     console.log("[send-reminder] Done. sent:", sent, "failed:", failed, "errors:", errors.slice(0, 3));
     return new Response(
-      JSON.stringify({ success: true, sent, failed, errors: errors.slice(0, 10) }),
+      JSON.stringify({ success: true, sent, failed, errors: errors.slice(0, 10), total_attempted: targetMemberIds.length }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {

@@ -7,9 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
-import { UserCheck, Tag, Heart, Mic, ArrowRight, Clock, CircleCheck as CheckCircle, Circle as XCircle, CircleAlert as AlertCircle, Mail, Send, MailCheck } from "lucide-react";
+import { UserCheck, Tag, Heart, Mic, ArrowRight, Clock, CircleCheck as CheckCircle, Circle as XCircle, CircleAlert as AlertCircle, Mail, Send, MailCheck, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -25,6 +26,7 @@ export default function VerificationDashboard({ myChapterId, isGlobalAdmin = fal
   const queryClient = useQueryClient();
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [selectedPending, setSelectedPending] = useState<Set<string>>(new Set());
+  const [showMassReminderDialog, setShowMassReminderDialog] = useState(false);
 
   const { data: pendingMembers } = useQuery({
     queryKey: ["vd-pending-members", myChapterId],
@@ -166,6 +168,34 @@ export default function VerificationDashboard({ myChapterId, isGlobalAdmin = fal
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
+  const sendMassReminders = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke("send-reminder", {
+        body: { send_to_all: true, chapter_id: myChapterId },
+      });
+      if (error) throw new Error(error.message ?? "Failed to send mass reminders");
+      if (data?.error) throw new Error(data.error);
+      return data as { sent: number; failed: number; errors: string[]; total_attempted: number };
+    },
+    onSuccess: (result) => {
+      const { sent, failed } = result;
+      if (sent > 0) {
+        toast({
+          title: "Mass reminders sent",
+          description: `${sent} reminder email${sent !== 1 ? "s" : ""} sent to pending members.${failed > 0 ? ` ${failed} failed.` : ""}`,
+        });
+      } else {
+        toast({
+          title: "No reminders sent",
+          description: "No pending members could be reached. They may not have email addresses on file.",
+          variant: "destructive",
+        });
+      }
+      setSelectedPending(new Set());
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
   const totalPending =
     (pendingMembers?.length ?? 0) +
     (pendingVerifications?.length ?? 0) +
@@ -205,28 +235,42 @@ export default function VerificationDashboard({ myChapterId, isGlobalAdmin = fal
           </CardHeader>
           <CardContent className="p-4 pt-0">
             {isGlobalAdmin && (
-              <div className="flex items-center justify-between mb-3 pb-2 border-b border-border">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 pb-2 border-b border-border gap-2">
                 <div className="flex items-center gap-2">
                   <Checkbox
                     id="select-all-pending"
                     checked={allSelected}
                     onCheckedChange={toggleAll}
+                    aria-label="Select all pending members"
                   />
                   <label htmlFor="select-all-pending" className="text-xs text-muted-foreground cursor-pointer select-none">
                     Select all ({pendingMembers!.length})
                   </label>
                 </div>
-                {selectedPending.size > 0 && (
+                <div className="flex items-center gap-2">
                   <Button
                     size="sm"
-                    className="h-7 text-xs gap-1 gradient-warm text-primary-foreground"
-                    disabled={sendReminder.isPending}
-                    onClick={() => sendReminder.mutate(Array.from(selectedPending))}
+                    variant="outline"
+                    className="h-9 text-xs gap-1.5 min-h-[44px] px-3"
+                    disabled={sendMassReminders.isPending || sendReminder.isPending || pendingMembers!.length === 0}
+                    onClick={() => setShowMassReminderDialog(true)}
+                    aria-label={`Send reminder emails to all ${pendingMembers!.length} pending members`}
                   >
-                    <Send className="w-3 h-3" />
-                    Send Reminder ({selectedPending.size})
+                    <Users className="w-3.5 h-3.5" />
+                    Send to All Pending ({pendingMembers!.length})
                   </Button>
-                )}
+                  {selectedPending.size > 0 && (
+                    <Button
+                      size="sm"
+                      className="h-9 text-xs gap-1 gradient-warm text-primary-foreground min-h-[44px] px-3"
+                      disabled={sendReminder.isPending || sendMassReminders.isPending}
+                      onClick={() => sendReminder.mutate(Array.from(selectedPending))}
+                    >
+                      <Send className="w-3 h-3" />
+                      Send Reminder ({selectedPending.size})
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
             <div className="space-y-1">
@@ -463,6 +507,28 @@ export default function VerificationDashboard({ myChapterId, isGlobalAdmin = fal
           </CardContent>
         </Card>
       )}
+      <AlertDialog open={showMassReminderDialog} onOpenChange={setShowMassReminderDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Send Reminders to All Pending Members</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will send a reminder email to up to {pendingMembers?.length ?? 0} pending member{(pendingMembers?.length ?? 0) !== 1 ? "s" : ""} who have not completed onboarding. Each email includes a link to continue registration. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="min-h-[44px]">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="min-h-[44px]"
+              disabled={sendMassReminders.isPending}
+              onClick={() => {
+                sendMassReminders.mutate();
+              }}
+            >
+              {sendMassReminders.isPending ? "Sending..." : "Send to All"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -59,13 +59,12 @@ export default function RolesTab({ roleAssignments, myChapterId }: RolesTabProps
       if (!assignMemberId || !assignRoleName) throw new Error("Select member and role");
       const role = allRoles?.find((r) => r.name === assignRoleName);
       if (!role) throw new Error("Role not found");
-      const { error } = await supabase.from("role_assignments").insert({
-        member_id: assignMemberId,
-        role_id: role.id,
-        chapter_id: myChapterId ?? null,
-        start_date: new Date().toISOString().split("T")[0],
+      const { error } = await supabase.rpc("assign_role", {
+        p_member_id: assignMemberId,
+        p_role_id: role.id,
+        p_chapter_id: myChapterId ?? null,
       });
-      if (error) throw error;
+      if (error) throw new Error(error.message);
     },
     onSuccess: () => {
       toast({ title: "Role assigned!" });
@@ -79,8 +78,8 @@ export default function RolesTab({ roleAssignments, myChapterId }: RolesTabProps
 
   const revokeRole = useMutation({
     mutationFn: async (assignmentId: string) => {
-      const { error } = await supabase.from("role_assignments").delete().eq("id", assignmentId);
-      if (error) throw error;
+      const { error } = await supabase.rpc("revoke_role", { p_assignment_id: assignmentId });
+      if (error) throw new Error(error.message);
     },
     onSuccess: () => {
       toast({ title: "Role revoked." });

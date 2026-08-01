@@ -230,15 +230,15 @@ export default function MembersTab({ members, myChapterId, canInvite = false, is
         .eq("role_id", roleId)
         .maybeSingle();
       if (existingAssignment) {
-        const { error } = await supabase.from("role_assignments").delete().eq("id", existingAssignment.id);
-        if (error) throw error;
+        const { error: revokeError } = await supabase.rpc("revoke_role", { p_assignment_id: existingAssignment.id });
+        if (revokeError) throw new Error(revokeError.message);
       } else {
-        const { error } = await supabase.from("role_assignments").insert({
-          member_id: memberId,
-          role_id: roleId,
-          start_date: new Date().toISOString().split("T")[0],
+        const { error: assignError } = await supabase.rpc("assign_role", {
+          p_member_id: memberId,
+          p_role_id: roleId,
+          p_chapter_id: editMember.chapter_id,
         });
-        if (error) throw error;
+        if (assignError) throw new Error(assignError.message);
       }
     },
     onSuccess: () => {

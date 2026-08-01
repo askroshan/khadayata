@@ -90,7 +90,7 @@ Deno.serve(async (req: Request) => {
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${SERVICE_ROLE_KEY}`,
-        "Apikey": ANON_KEY,
+        "Apikey": SERVICE_ROLE_KEY,
       },
       body: JSON.stringify({
         to: normalizedEmail,

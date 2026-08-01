@@ -227,13 +227,12 @@ export default function ChaptersTab() {
   const assignChapterAdmin = useMutation({
     mutationFn: async () => {
       if (!inviteChapter || !inviteForm.memberId || !chapterAdminRoleId) throw new Error("Missing required fields");
-      const { error } = await supabase.from("role_assignments").insert({
-        member_id: inviteForm.memberId,
-        role_id: chapterAdminRoleId,
-        chapter_id: inviteChapter.id,
-        start_date: new Date().toISOString().split("T")[0],
+      const { error } = await supabase.rpc("assign_role", {
+        p_member_id: inviteForm.memberId,
+        p_role_id: chapterAdminRoleId,
+        p_chapter_id: inviteChapter.id,
       });
-      if (error) throw error;
+      if (error) throw new Error(error.message);
 
       if (inviteForm.email.trim()) {
         const member = allMembers?.find((m) => m.id === inviteForm.memberId);
@@ -266,8 +265,8 @@ export default function ChaptersTab() {
 
   const revokeAdmin = useMutation({
     mutationFn: async (assignmentId: string) => {
-      const { error } = await supabase.from("role_assignments").delete().eq("id", assignmentId);
-      if (error) throw error;
+      const { error } = await supabase.rpc("revoke_role", { p_assignment_id: assignmentId });
+      if (error) throw new Error(error.message);
     },
     onSuccess: () => {
       toast({ title: "Role revoked." });
@@ -623,12 +622,12 @@ function CommitteeManagementDialog({ chapter, onClose }: CommitteeManagementDial
       if (!selectedMember || !selectedRole || !chapter?.id) throw new Error("Select member and role");
       const role = committeeRoles?.find(r => r.id === selectedRole);
       if (!role) throw new Error("Role not found");
-      const { error } = await supabase.from("role_assignments").insert({
-        member_id: selectedMember,
-        role_id: selectedRole,
-        start_date: new Date().toISOString().split("T")[0],
+      const { error } = await supabase.rpc("assign_role", {
+        p_member_id: selectedMember,
+        p_role_id: selectedRole,
+        p_chapter_id: chapter.id,
       });
-      if (error) throw error;
+      if (error) throw new Error(error.message);
     },
     onSuccess: () => {
       toast({ title: "Committee member assigned!" });
@@ -642,8 +641,8 @@ function CommitteeManagementDialog({ chapter, onClose }: CommitteeManagementDial
 
   const removeCommitteeRole = useMutation({
     mutationFn: async (assignmentId: string) => {
-      const { error } = await supabase.from("role_assignments").delete().eq("id", assignmentId);
-      if (error) throw error;
+      const { error } = await supabase.rpc("revoke_role", { p_assignment_id: assignmentId });
+      if (error) throw new Error(error.message);
     },
     onSuccess: () => {
       toast({ title: "Committee member removed." });
