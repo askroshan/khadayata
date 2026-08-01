@@ -12,10 +12,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronUp, ChevronDown, ExternalLink, Search, Download, X, Pencil, UserPlus, ShieldBan, Lock, Clock as Unlock, Trash2, Mail, MailCheck, Send } from "lucide-react";
+import { ChevronUp, ChevronDown, ExternalLink, Search, Download, X, Pencil, UserPlus, ShieldBan, Lock, Clock as Unlock, Trash2, Mail, MailCheck, Send, Upload, FileText, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { LEVEL_LABELS as SHARED_LEVEL_LABELS, exportFilteredCsv, type AdminMember } from "@/lib/admin-utils";
+import { parseEmailsFromText } from "@/lib/bulk-invite-utils";
 
 interface Member {
   id: string;
@@ -67,6 +68,13 @@ export default function MembersTab({ members, myChapterId, canInvite = false, is
   const [blockTarget, setBlockTarget] = useState<{ id: string; name: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [actionOpen, setActionOpen] = useState<string | null>(null);
+  const [bulkInviteOpen, setBulkInviteOpen] = useState(false);
+  const [bulkEmails, setBulkEmails] = useState<string[]>([]);
+  const [bulkInvalid, setBulkInvalid] = useState<string[]>([]);
+  const [bulkDuplicates, setBulkDuplicates] = useState(0);
+  const [bulkFileName, setBulkFileName] = useState("");
+  const [bulkChapterId, setBulkChapterId] = useState(myChapterId ?? "");
+  const [bulkFirstName, setBulkFirstName] = useState("");
 
   const { data: memberStatuses } = useQuery({
     queryKey: ["admin-member-statuses", myChapterId],
@@ -115,7 +123,7 @@ export default function MembersTab({ members, myChapterId, canInvite = false, is
       const { data } = await supabase.from("chapters").select("id, name").order("name");
       return data ?? [];
     },
-    enabled: !!editMember || inviteOpen,
+    enabled: !!editMember || inviteOpen || bulkInviteOpen,
   });
 
   const { data: committeeRoles } = useQuery({
@@ -140,6 +148,59 @@ export default function MembersTab({ members, myChapterId, canInvite = false, is
     },
     enabled: !!editMember?.id,
   });
+
+  const bulkInviteMutation = useMutation({
+    mutationFn: async () => {
+      if (bulkEmails.length === 0) throw new Error("No valid emails to send");
+      const { data, error } = await supabase.functions.invoke("bulk-invite", {
+        body: {
+          emails: bulkEmails,
+          chapter_id: bulkChapterId || null,
+          first_name: bulkFirstName.trim() || undefined,
+        },
+      });
+      if (error) throw new Error(error.message ?? "Failed to send bulk invitations");
+      if (data?.error) throw new Error(data.error);
+      return data as { sent: number; failed: number; skipped: number; errors: string[]; total: number };
+    },
+    onSuccess: (result) => {
+      if (result.sent > 0) {
+        const parts: string[] = [`${result.sent} invitation${result.sent !== 1 ? "s" : ""} sent`];
+        if (result.failed > 0) parts.push(`${result.failed} failed`);
+        if (result.skipped > 0) parts.push(`${result.skipped} already registered`);
+        toast({ title: "Bulk invitations sent", description: parts.join(", ") + "." });
+      } else {
+        toast({
+          title: "No invitations sent",
+          description: `All ${result.failed + result.skipped} email${(result.failed + result.skipped) !== 1 ? "s" : ""} were already registered or failed.`,
+          variant: "destructive",
+        });
+      }
+      setBulkInviteOpen(false);
+      setBulkEmails([]);
+      setBulkInvalid([]);
+      setBulkDuplicates(0);
+      setBulkFileName("");
+      setBulkFirstName("");
+      queryClient.invalidateQueries({ queryKey: ["admin-members"] });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const handleBulkFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBulkFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = (ev.target?.result as string) ?? "";
+      const result = parseEmailsFromText(text);
+      setBulkEmails(result.valid);
+      setBulkInvalid(result.invalid);
+      setBulkDuplicates(result.duplicates);
+    };
+    reader.readAsText(file);
+  };
 
   const editMemberMutation = useMutation({
     mutationFn: async () => {
@@ -690,12 +751,25 @@ export default function MembersTab({ members, myChapterId, canInvite = false, is
               <Download className="w-3.5 h-3.5 mr-1" /> Export CSV
             </Button>
             {canInvite && (
-              <Button size="sm" onClick={() => {
-                setInviteForm({ email: "", first_name: "", last_name: "", chapter_id: myChapterId ?? "" });
-                setInviteOpen(true);
-              }} className="h-9 text-xs gradient-warm text-primary-foreground">
-                <UserPlus className="w-3.5 h-3.5 mr-1" /> Invite Member
-              </Button>
+              <>
+                <Button size="sm" variant="outline" onClick={() => {
+                  setBulkEmails([]);
+                  setBulkInvalid([]);
+                  setBulkDuplicates(0);
+                  setBulkFileName("");
+                  setBulkFirstName("");
+                  setBulkChapterId(myChapterId ?? "");
+                  setBulkInviteOpen(true);
+                }} className="h-9 text-xs">
+                  <Users className="w-3.5 h-3.5 mr-1" /> Bulk Invite
+                </Button>
+                <Button size="sm" onClick={() => {
+                  setInviteForm({ email: "", first_name: "", last_name: "", chapter_id: myChapterId ?? "" });
+                  setInviteOpen(true);
+                }} className="h-9 text-xs gradient-warm text-primary-foreground">
+                  <UserPlus className="w-3.5 h-3.5 mr-1" /> Invite Member
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -883,6 +957,105 @@ export default function MembersTab({ members, myChapterId, canInvite = false, is
         )}
       </div>
     </TooltipProvider>
+
+    {/* Bulk Invite Dialog */}
+    <Dialog open={bulkInviteOpen} onOpenChange={(open) => { if (!open) { setBulkInviteOpen(false); setBulkEmails([]); setBulkInvalid([]); setBulkDuplicates(0); setBulkFileName(""); } }}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2"><Users className="w-4 h-4" /> Bulk Invite Members</DialogTitle>
+          <DialogDescription>
+            Upload a text file or CSV with one email per line. Each person will receive an invitation email to join the community.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="bulk-file-upload">Email File (.txt or .csv)</Label>
+            <div className="mt-1">
+              <label htmlFor="bulk-file-upload" className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border p-6 cursor-pointer hover:border-primary hover:bg-muted/50 transition-colors min-h-[120px]">
+                {bulkFileName ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <FileText className="w-5 h-5 text-primary" />
+                    <span className="font-medium">{bulkFileName}</span>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-1.5 text-sm text-muted-foreground">
+                    <Upload className="w-6 h-6" />
+                    <span>Click to choose a file</span>
+                    <span className="text-xs">.txt or .csv, one email per line</span>
+                  </div>
+                )}
+                <input
+                  id="bulk-file-upload"
+                  type="file"
+                  accept=".txt,.csv,text/plain,text/csv"
+                  className="sr-only"
+                  onChange={handleBulkFileUpload}
+                />
+              </label>
+            </div>
+          </div>
+
+          {bulkEmails.length > 0 && (
+            <div className="rounded-lg border border-border p-3 space-y-1.5">
+              <div className="flex items-center gap-2 text-sm">
+                <MailCheck className="w-4 h-4 text-emerald-600" />
+                <span className="font-medium">{bulkEmails.length} valid email{bulkEmails.length !== 1 ? "s" : ""}</span>
+              </div>
+              {bulkDuplicates > 0 && (
+                <p className="text-xs text-muted-foreground ml-6">{bulkDuplicates} duplicate{bulkDuplicates !== 1 ? "s" : ""} removed</p>
+              )}
+              {bulkInvalid.length > 0 && (
+                <p className="text-xs text-amber-600 ml-6">{bulkInvalid.length} invalid line{bulkInvalid.length !== 1 ? "s" : ""} skipped</p>
+              )}
+            </div>
+          )}
+
+          {bulkInvalid.length > 0 && bulkInvalid.length <= 10 && (
+            <details className="text-xs text-muted-foreground">
+              <summary className="cursor-pointer hover:text-foreground">View invalid lines</summary>
+              <ul className="mt-1 ml-4 list-disc space-y-0.5">
+                {bulkInvalid.map((line, i) => <li key={i} className="text-amber-600">{line}</li>)}
+              </ul>
+            </details>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="bulk-first-name">Default First Name <span className="text-muted-foreground font-normal">(optional)</span></Label>
+              <Input
+                id="bulk-first-name"
+                value={bulkFirstName}
+                onChange={(e) => setBulkFirstName(e.target.value)}
+                placeholder="Member"
+                maxLength={50}
+              />
+              <p className="text-xs text-muted-foreground mt-0.5">Used in the invitation email greeting.</p>
+            </div>
+            <div>
+              <Label>Assign to Chapter</Label>
+              <Select value={bulkChapterId} onValueChange={setBulkChapterId}>
+                <SelectTrigger><SelectValue placeholder="Auto / None" /></SelectTrigger>
+                <SelectContent className="max-h-56">
+                  {chapters?.map((ch) => (
+                    <SelectItem key={ch.id} value={ch.id}>{ch.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <Button
+            onClick={() => bulkInviteMutation.mutate()}
+            disabled={bulkEmails.length === 0 || bulkInviteMutation.isPending}
+            className="w-full gradient-warm text-primary-foreground"
+          >
+            {bulkInviteMutation.isPending
+              ? "Sending invitations..."
+              : `Send ${bulkEmails.length} Invitation${bulkEmails.length !== 1 ? "s" : ""}`}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
     </>
   );
 }
