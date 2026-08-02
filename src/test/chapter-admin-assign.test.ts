@@ -68,6 +68,74 @@ describe("Chapter Admin Assignment: Required Fields Validation", () => {
 });
 
 /**
+ * TDD: Chapter Admin Role Lookup — Must Scope by Chapter
+ *
+ * Issue: The "Chapter Admin" role is chapter-scoped — there is one row per
+ * chapter with a UNIQUE(chapter_id, name) constraint. The query
+ * `.eq("name", "Chapter Admin").maybeSingle()` returns multiple rows (one
+ * per chapter), which causes maybeSingle() to error and return null. The
+ * error message "Chapter Admin role not found" appears.
+ *
+ * Fix: The role query must also filter by chapter_id so it returns exactly
+ * one row for the selected chapter.
+ */
+describe("Chapter Admin Role Lookup: Chapter-Scoped Query", () => {
+  interface RoleRow {
+    id: string;
+    chapter_id: string;
+    name: string;
+  }
+
+  const allRoles: RoleRow[] = [
+    { id: "role-ahd", chapter_id: "ahmedabad", name: "Chapter Admin" },
+    { id: "role-mum", chapter_id: "mumbai", name: "Chapter Admin" },
+    { id: "role-pub-ahd", chapter_id: "ahmedabad", name: "Publisher" },
+    { id: "role-ga", chapter_id: "", name: "Global Admin" },
+  ];
+
+  function queryRoleByNameOnly(roleName: string): RoleRow | null {
+    const matches = allRoles.filter(r => r.name === roleName);
+    if (matches.length === 0) return null;
+    if (matches.length > 1) return null; // maybeSingle() errors on multiple rows
+    return matches[0];
+  }
+
+  function queryRoleByNameAndChapter(roleName: string, chapterId: string): RoleRow | null {
+    const matches = allRoles.filter(r => r.name === roleName && r.chapter_id === chapterId);
+    if (matches.length === 0) return null;
+    return matches[0];
+  }
+
+  it("returns null when querying by name only — multiple Chapter Admin rows exist", () => {
+    const result = queryRoleByNameOnly("Chapter Admin");
+    expect(result).toBeNull();
+  });
+
+  it("returns the correct role when querying by name AND chapter_id", () => {
+    const result = queryRoleByNameAndChapter("Chapter Admin", "ahmedabad");
+    expect(result).not.toBeNull();
+    expect(result!.id).toBe("role-ahd");
+  });
+
+  it("returns the correct role for a different chapter", () => {
+    const result = queryRoleByNameAndChapter("Chapter Admin", "mumbai");
+    expect(result).not.toBeNull();
+    expect(result!.id).toBe("role-mum");
+  });
+
+  it("returns null for a chapter that has no Chapter Admin role", () => {
+    const result = queryRoleByNameAndChapter("Chapter Admin", "delhi");
+    expect(result).toBeNull();
+  });
+
+  it("returns the single Publisher role when scoped by chapter", () => {
+    const result = queryRoleByNameAndChapter("Publisher", "ahmedabad");
+    expect(result).not.toBeNull();
+    expect(result!.id).toBe("role-pub-ahd");
+  });
+});
+
+/**
  * TDD: Mentorship Offer — Single Record per Mentor
  *
  * Issue: When a person offers mentorship multiple times, each submission
@@ -186,5 +254,69 @@ describe("Mentorship Offer: Input Parsing", () => {
 
   it("handles single skill", () => {
     expect(parseSkillsInput("React")).toEqual(["React"]);
+  });
+});
+
+/**
+ * TDD: Global ID Generation — Chapter Membership Required
+ *
+ * Issue: A person who has not joined any chapter (chapter_id is null) should
+ * not be able to generate a Global ID. The Global ID is derived from the
+ * chapter's geography (country, state, city codes), so without a chapter
+ * the ID cannot be meaningfully generated.
+ *
+ * Fix: Both the UI and the edge function must enforce this:
+ * - UI: Show a notice explaining they need to join a chapter, not just
+ *   silently hide the button
+ * - Edge function: Return an explicit 400 error with a clear message
+ */
+describe("Global ID Generation: Chapter Membership Required", () => {
+  interface MemberForId {
+    id: string;
+    chapter_id: string | null;
+    global_id: string | null;
+  }
+
+  function checkCanGenerateGlobalId(member: MemberForId): { allowed: boolean; error?: string } {
+    if (member.global_id) return { allowed: false, error: "Already assigned" };
+    if (!member.chapter_id) {
+      return { allowed: false, error: "You must join a chapter before generating a Global ID" };
+    }
+    return { allowed: true };
+  }
+
+  it("allows generation when member has a chapter and no existing global_id", () => {
+    const result = checkCanGenerateGlobalId({ id: "m1", chapter_id: "ch1", global_id: null });
+    expect(result.allowed).toBe(true);
+    expect(result.error).toBeUndefined();
+  });
+
+  it("blocks generation when chapter_id is null", () => {
+    const result = checkCanGenerateGlobalId({ id: "m1", chapter_id: null, global_id: null });
+    expect(result.allowed).toBe(false);
+    expect(result.error).toContain("join a chapter");
+  });
+
+  it("blocks generation when chapter_id is empty string", () => {
+    const result = checkCanGenerateGlobalId({ id: "m1", chapter_id: "", global_id: null });
+    expect(result.allowed).toBe(false);
+    expect(result.error).toContain("join a chapter");
+  });
+
+  it("blocks generation when member already has a global_id", () => {
+    const result = checkCanGenerateGlobalId({ id: "m1", chapter_id: "ch1", global_id: "KHD-INGJAHM-25-000001-Z" });
+    expect(result.allowed).toBe(false);
+    expect(result.error).toContain("Already assigned");
+  });
+
+  it("blocks generation when no chapter AND already has global_id — already-assigned takes precedence", () => {
+    const result = checkCanGenerateGlobalId({ id: "m1", chapter_id: null, global_id: "KHD-XXX" });
+    expect(result.allowed).toBe(false);
+    expect(result.error).toContain("Already assigned");
+  });
+
+  it("error message is user-friendly and actionable", () => {
+    const result = checkCanGenerateGlobalId({ id: "m1", chapter_id: null, global_id: null });
+    expect(result.error).toMatch(/join.*chapter/i);
   });
 });

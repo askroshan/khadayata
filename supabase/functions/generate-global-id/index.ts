@@ -83,6 +83,13 @@ Deno.serve(async (req) => {
       );
     }
 
+    if (!member.chapter_id) {
+      return new Response(
+        JSON.stringify({ error: "You must join a chapter before generating a Global ID" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Get chapter's city code info
     const { data: chapter } = await adminClient
       .from("chapters")

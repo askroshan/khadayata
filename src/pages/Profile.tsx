@@ -405,7 +405,13 @@ export default function Profile() {
                   >
                     <Shield className="w-3.5 h-3.5 mr-1" />{generatingId ? "Generating…" : "Generate Global ID"}
                   </Button>
-                ) : null}
+                ) : (
+                  <div className="mt-2 inline-flex items-center gap-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 px-3 py-1.5 border border-amber-200 dark:border-amber-900">
+                    <Shield className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                    <span className="text-sm text-amber-700 dark:text-amber-300">Join a chapter to get your Global ID</span>
+                    <Link to="/chapters" className="text-sm font-semibold text-amber-700 dark:text-amber-300 underline hover:no-underline">Browse chapters</Link>
+                  </div>
+                )}
                 <div className="flex flex-wrap gap-2 mt-2 justify-center sm:justify-start">
                   <Badge variant="outline"><Shield className="w-3 h-3 mr-1" />Level {member?.verification_level}</Badge>
                 </div>

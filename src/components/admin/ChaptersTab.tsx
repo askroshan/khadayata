@@ -106,9 +106,15 @@ export default function ChaptersTab() {
   });
 
   const { data: chapterAdminRoleId } = useQuery({
-    queryKey: ["chapter-admin-role-id"],
+    queryKey: ["chapter-admin-role-id", inviteChapter?.id],
     queryFn: async () => {
-      const { data } = await supabase.from("roles").select("id").eq("name", "Chapter Admin").maybeSingle();
+      if (!inviteChapter) return null;
+      const { data } = await supabase
+        .from("roles")
+        .select("id")
+        .eq("name", "Chapter Admin")
+        .eq("chapter_id", inviteChapter.id)
+        .maybeSingle();
       return data?.id ?? null;
     },
     enabled: !!inviteChapter,
@@ -229,8 +235,13 @@ export default function ChaptersTab() {
       if (!inviteChapter || !inviteForm.memberId) throw new Error("Select a member to assign");
       let roleId = chapterAdminRoleId;
       if (!roleId) {
-        const { data, error: roleErr } = await supabase.from("roles").select("id").eq("name", "Chapter Admin").maybeSingle();
-        if (roleErr || !data) throw new Error("Chapter Admin role not found");
+        const { data, error: roleErr } = await supabase
+          .from("roles")
+          .select("id")
+          .eq("name", "Chapter Admin")
+          .eq("chapter_id", inviteChapter.id)
+          .maybeSingle();
+        if (roleErr || !data) throw new Error("Chapter Admin role not found for this chapter");
         roleId = data.id;
       }
       const { error } = await supabase.rpc("assign_role", {
@@ -618,6 +629,7 @@ interface CommitteeManagementDialogProps {
 
 function CommitteeManagementDialog({ chapter, onClose }: CommitteeManagementDialogProps) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [selectedRole, setSelectedRole] = useState("");
   const [selectedMember, setSelectedMember] = useState("");
 
@@ -673,7 +685,6 @@ function CommitteeManagementDialog({ chapter, onClose }: CommitteeManagementDial
       toast({ title: "Committee member assigned!" });
       setSelectedMember("");
       setSelectedRole("");
-      const queryClient = useQueryClient();
       queryClient.invalidateQueries({ queryKey: ["committee-assignments", chapter?.id] });
     },
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
@@ -686,7 +697,6 @@ function CommitteeManagementDialog({ chapter, onClose }: CommitteeManagementDial
     },
     onSuccess: () => {
       toast({ title: "Committee member removed." });
-      const queryClient = useQueryClient();
       queryClient.invalidateQueries({ queryKey: ["committee-assignments", chapter?.id] });
     },
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),

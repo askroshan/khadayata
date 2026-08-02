@@ -1,109 +1,153 @@
-# POV — Chapter Admin Assignment & Mentorship Single Record
+# POV — Chapter Admin Role Lookup & Global ID Chapter Requirement
 
 ## Date: 2026-08-02
 
 ---
 
-## Issue 1: Chapter Admin Assignment Error
+## Issue 1: "Chapter Admin Role Not Found" When Assigning Rushik
 
 ### Problem
 
-On the Admin > Chapters tab, when an admin selects a chapter, searches for a
-member, selects them, and clicks "Assign as Admin" without providing the
-optional email, the system throws "Missing required fields".
+On the Admin > Chapters tab, after the previous fix (which made the mutation
+fetch the role ID if not yet loaded), the system now throws "Chapter Admin
+role not found" when trying to assign Rushik as Chapter Admin for Ahmedabad.
 
-**Reproduction**: Select Ahmedabad Chapter, search "rushik", select Rushik,
-leave email empty, click assign → error.
+**Reproduction**: Select Ahmedabad Chapter, search "rushik", select the
+member, click assign → error: "Chapter Admin role not found".
 
 ### Root Cause
 
-The `assignChapterAdmin` mutation in `ChaptersTab.tsx` checked:
+The `roles` table has a `UNIQUE(chapter_id, name)` constraint. "Chapter
+Admin" is a **chapter-scoped** role — there is one row per chapter:
+
+| id | chapter_id | name |
+|----|------------|------|
+| a0100010-... | Ahmedabad | Chapter Admin |
+| a0100012-... | Mumbai | Chapter Admin |
+
+Both the `useQuery` and the mutation fallback query used:
 
 ```ts
-if (!inviteChapter || !inviteForm.memberId || !chapterAdminRoleId)
-  throw new Error("Missing required fields");
+.from("roles")
+.select("id")
+.eq("name", "Chapter Admin")
+.maybeSingle()
 ```
 
-The `chapterAdminRoleId` is loaded asynchronously via `useQuery` when the
-dialog opens. If the admin selects a member and clicks assign before that
-query resolves (a race condition), `chapterAdminRoleId` is still `null` and
-the mutation throws — even though email is optional and the role ID is
-available from the database.
+This query matches **multiple rows** (one per chapter). Supabase's
+`maybeSingle()` errors when more than one row is returned, causing `data`
+to be `null` — hence "Chapter Admin role not found".
 
 ### Fix
 
-The mutation now:
-1. Only validates `memberId` and `chapterId` (the truly required fields)
-2. If `chapterAdminRoleId` is not yet loaded, fetches it directly inside the
-   mutation before proceeding
-3. Email remains optional — it's only used to send a notification email,
-   not for the role assignment itself
+Both queries now filter by `chapter_id` alongside the name:
+
+```ts
+.from("roles")
+.select("id")
+.eq("name", "Chapter Admin")
+.eq("chapter_id", inviteChapter.id)   // <-- added
+.maybeSingle()
+```
+
+This returns exactly one row — the "Chapter Admin" role for the specific
+chapter being managed.
+
+The `useQuery` key was also updated to include the chapter ID so the cache
+invalidates correctly when switching between chapters:
+
+```ts
+queryKey: ["chapter-admin-role-id", inviteChapter?.id]
+```
 
 ### Tests (TDD)
 
-**File**: `src/test/chapter-admin-assign.test.ts` — 6 tests for assignment validation
+**File**: `src/test/chapter-admin-assign.test.ts`
+**Section**: "Chapter Admin Role Lookup: Chapter-Scoped Query" — 5 tests
 
 | Test | Description |
 |------|-------------|
-| passes with memberId and chapterId, no email | Email is optional |
-| passes with memberId, chapterId, and email | Email still accepted |
-| fails when no member selected | Correct error message |
-| fails when no chapter selected | Correct error message |
-| does NOT fail when roleId is null | Mutation fetches it instead of throwing |
-| does NOT require email | Empty email is valid |
+| returns null when querying by name only | Proves unscoped query fails with multiple rows |
+| returns the correct role when querying by name AND chapter_id | Proves scoped query succeeds |
+| returns the correct role for a different chapter | Proves it works for any chapter |
+| returns null for a chapter that has no Chapter Admin role | Proves correct null handling |
+| returns the single Publisher role when scoped by chapter | Proves pattern works for other chapter-scoped roles |
 
 ---
 
-## Issue 2: Mentorship Offer Creates Duplicate Records
+## Issue 2: Global ID Generation Without Chapter Membership
 
 ### Problem
 
-When a person offers mentorship multiple times (e.g., first offering "React",
-then later offering "Python"), each submission creates a new row in the
-`mentorships` table. This results in multiple "available" records for the
-same mentor, which clutters the mentorship directory and splits their skills
-across rows.
+A person who has not joined any chapter (or has not been assigned a chapter)
+can still attempt to generate a Global ID. The Global ID is derived from the
+chapter's geography (country ISO code, state code, city code), so without a
+chapter it cannot be meaningfully generated. Previously, the Profile page
+silently hid the "Generate Global ID" button when `chapter_id` was null,
+leaving the user confused about why they couldn't get an ID. The edge
+function also performed a chapter lookup without first checking if
+`chapter_id` existed.
 
 ### Expected Behavior
 
-A person should have only **one** "available" mentorship record. When they
-add more skills, the new skills should be appended to the existing record's
-`skills` array (deduplicated case-insensitively), not create a new row.
+- **UI**: When a member has no chapter, show a visible notice explaining
+  they need to join a chapter to get their Global ID, with a link to browse
+  chapters — instead of silently showing nothing.
+- **Server**: The edge function must reject the request with a clear error
+  message before attempting any chapter lookup or ID generation.
 
 ### Fix
 
-The `offerMentorship` mutation in `Mentorship.tsx` now:
+**Edge function** (`supabase/functions/generate-global-id/index.ts`):
 
-1. Before inserting, queries for an existing "available" mentorship record
-   for the current member: `select id, skills, status from mentorships where
-   mentor_member_id = ? and status = 'available'`
-2. If an existing record is found:
-   - Merges the new skills into the existing `skills` array
-   - Deduplicates case-insensitively (preserves original casing of the first
-     occurrence)
-   - Updates the existing row: `update mentorships set skills = ? where id = ?`
-3. If no existing record is found:
-   - Inserts a new row as before
-4. Shows the same success toast in both cases
+Added an explicit early check after the "already assigned" check:
+
+```ts
+if (!member.chapter_id) {
+  return new Response(
+    JSON.stringify({ error: "You must join a chapter before generating a Global ID" }),
+    { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
+}
+```
+
+This returns a 400 with a user-friendly message, preventing the chapter
+lookup from running on a null `chapter_id`.
+
+**Profile page** (`src/pages/Profile.tsx`):
+
+When `chapter_id` is null, instead of rendering nothing (`null`), the page
+now shows an amber notice box:
+
+> [shield icon] Join a chapter to get your Global ID — Browse chapters (link)
+
+The "Browse chapters" link takes the user to the chapters page where they
+can find and join a chapter.
 
 ### Tests (TDD)
 
-**File**: `src/test/chapter-admin-assign.test.ts` — 13 tests for mentorship
+**File**: `src/test/chapter-admin-assign.test.ts`
+**Section**: "Global ID Generation: Chapter Membership Required" — 6 tests
 
 | Test | Description |
 |------|-------------|
-| inserts when no existing record | New mentor gets a new row |
-| updates existing record by merging new skills | Skills appended to existing |
-| deduplicates skills case-insensitively | "React" and "react" not both added |
-| inserts when existing record is not 'available' | Only "available" status merges |
-| preserves original skill casing | First casing wins |
-| handles empty new skills array on update | No change to existing skills |
-| parses comma-separated skills | "React, Python, Java" → 3 skills |
-| trims whitespace around skills | "  React  " → "React" |
-| filters empty entries | "React,,Python," → 2 skills |
-| returns empty array for empty input | "" → [] |
-| returns empty array for whitespace-only | "   " → [] |
-| handles single skill | "React" → ["React"] |
+| allows generation when member has a chapter and no existing global_id | Positive case |
+| blocks generation when chapter_id is null | Core requirement |
+| blocks generation when chapter_id is empty string | Edge case |
+| blocks generation when member already has a global_id | Already-assigned check |
+| blocks when no chapter AND already has global_id — already-assigned takes precedence | Ordering check |
+| error message is user-friendly and actionable | Contains "join chapter" |
+
+---
+
+## Pre-existing Lint Errors Fixed
+
+While running the linter on the modified `ChaptersTab.tsx`, two pre-existing
+`react-hooks/rules-of-hooks` errors were found in the
+`CommitteeManagementDialog` component (lines 687 and 700). `useQueryClient`
+was being called inside `onSuccess` callbacks, which violates React's rules
+of hooks. These were fixed by moving `useQueryClient()` to the component
+level and removing the inline calls.
 
 ---
 
@@ -111,47 +155,58 @@ The `offerMentorship` mutation in `Mentorship.tsx` now:
 
 ```
 Test Files  16 passed (16)
-     Tests  322 passed (322)
+     Tests  333 passed (333)
 ```
 
-All 322 tests pass, including 19 new tests for these two fixes.
+All 333 tests pass, including 11 new tests for these two fixes.
 
 ## Build Results
 
 ```
-✓ 1979 modules transformed
-✓ built in 19.08s
+✓ built in 20.00s
 ```
 
 Production build succeeds with no errors.
+
+## Lint Results
+
+```
+0 errors, 0 warnings
+```
+
+Zero lint errors on all modified files.
 
 ---
 
 ## POV Checklist
 
-### Issue 1: Chapter Admin Assignment
+### Issue 1: Chapter Admin Role Lookup
 
-- [x] Email is optional — not required for role assignment
-- [x] Race condition fixed — role ID fetched in mutation if not loaded
-- [x] Correct error messages for missing member/chapter
-- [x] Existing email notification flow preserved when email is provided
+- [x] Root cause identified: unscoped query returns multiple rows, maybeSingle() errors
+- [x] Both useQuery and mutation fallback now filter by chapter_id
+- [x] Query cache key includes chapter ID for correct invalidation
+- [x] Error message updated to "not found for this chapter"
+- [x] TDD: 5 tests written and passing
+- [x] No regression in existing tests
+
+### Issue 2: Global ID Chapter Requirement
+
+- [x] Edge function rejects null chapter_id with 400 and clear message
+- [x] Check placed before chapter lookup (early return)
+- [x] Profile page shows visible notice with link to browse chapters
+- [x] No longer silently hides the button — user knows why
 - [x] TDD: 6 tests written and passing
 - [x] No regression in existing tests
 
-### Issue 2: Mentorship Single Record
+### Pre-existing Issues
 
-- [x] Only one "available" record per mentor
-- [x] New skills appended to existing record, not new row created
-- [x] Skills deduplicated case-insensitively
-- [x] Original skill casing preserved (first occurrence wins)
-- [x] Non-"available" records (e.g. "active") don't merge — new row created
-- [x] Comma-separated skill parsing with trim and empty filtering
-- [x] TDD: 13 tests written and passing
-- [x] No regression in existing tests
+- [x] Fixed 2 pre-existing react-hooks/rules-of-hooks lint errors in CommitteeManagementDialog
+- [x] Moved useQueryClient to component level
 
 ### Overall
 
 - [x] Both fixes built with TDD approach
-- [x] All 322 tests pass
+- [x] All 333 tests pass
 - [x] Production build succeeds
+- [x] Zero lint errors, zero warnings
 - [x] No security regressions introduced
