@@ -22,6 +22,7 @@ import eventsHero from "@/assets/events-hero.jpg";
 import { EventGallery } from "@/components/events/EventGallery";
 import { ReportDialog } from "@/components/ReportDialog";
 import { usePermissions, useRoles } from "@/hooks/useRoles";
+import { notifyEventCreated, notifyEventCancelled, notifyEventUpdated, notifyRSVPConfirmation } from "@/lib/event-notifications";
 
 const EVENT_CATEGORIES = ["Cultural", "Religious", "Social", "Sports", "Educational", "Business", "Charity", "Youth", "Senior", "Samooha Bhojan", "Satsang", "Mahotsav", "Other"];
 const EVENT_TYPES = [
@@ -95,10 +96,20 @@ export default function Events() {
       });
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({ title: "Event created!" });
+      const createdEvent = { id: "", name: evt.name.trim(), chapter_id: evt.chapter_id || (member?.chapter_id ?? null) };
       setEvt({ name: "", description: "", venue: "", virtual_url: "", starts_at: "", ends_at: "", consent_required: false, category: "", event_type: "in_person", max_capacity: "", fee_amount: "", fee_currency: "INR", contact_email: "", contact_phone: "", organizer_name: "", address_line1: "", registration_deadline: "", tags: "", country_id: "", state_id: "", city_id: "", cover_image_url: "", chapter_id: "" });
       queryClient.invalidateQueries({ queryKey: ["events"] });
+      // Fire-and-forget notifications — non-blocking
+      try {
+        const { data: newEvent } = await supabase.from("events").select("id, name, chapter_id").eq("name", createdEvent.name).order("created_at", { ascending: false }).limit(1).single();
+        if (newEvent) {
+          notifyEventCreated({ id: newEvent.id, name: newEvent.name, chapter_id: newEvent.chapter_id }).catch(() => {});
+        }
+      } catch {
+        // Notification failure is non-blocking
+      }
     },
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
@@ -109,9 +120,15 @@ export default function Events() {
       const { error } = await supabase.from("event_rsvps").upsert({ event_id: eventId, member_id: member.id, status }, { onConflict: "event_id,member_id" });
       if (error) throw error;
     },
-    onSuccess: (_, vars) => {
+    onSuccess: async (_, vars) => {
       toast({ title: vars.status === "going" ? "You're attending this event!" : "RSVP cancelled." });
       queryClient.invalidateQueries({ queryKey: ["events"] });
+      if (vars.status === "going" && member) {
+        const rsvpedEvent = events?.find((e) => e.id === vars.eventId);
+        if (rsvpedEvent) {
+          notifyRSVPConfirmation({ id: rsvpedEvent.id, name: rsvpedEvent.name, chapter_id: rsvpedEvent.chapter_id }, member.id, vars.status).catch(() => {});
+        }
+      }
     },
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
@@ -130,7 +147,14 @@ export default function Events() {
       const { error } = await supabase.from("events").update({ status: "cancelled" }).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { toast({ title: "Event cancelled" }); queryClient.invalidateQueries({ queryKey: ["events"] }); },
+    onSuccess: async () => {
+      toast({ title: "Event cancelled" });
+      queryClient.invalidateQueries({ queryKey: ["events"] });
+      const cancelledEvent = events?.find((e) => e.id === editEventId);
+      if (cancelledEvent) {
+        notifyEventCancelled({ id: cancelledEvent.id, name: cancelledEvent.name, chapter_id: cancelledEvent.chapter_id }).catch(() => {});
+      }
+    },
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
@@ -147,10 +171,14 @@ export default function Events() {
       }).eq("id", editEventId);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({ title: "Event updated" });
       setEditEventOpen(false);
       queryClient.invalidateQueries({ queryKey: ["events"] });
+      const updatedEvent = events?.find((e) => e.id === editEventId);
+      if (updatedEvent) {
+        notifyEventUpdated({ id: updatedEvent.id, name: editEventForm.name, chapter_id: updatedEvent.chapter_id }).catch(() => {});
+      }
     },
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });

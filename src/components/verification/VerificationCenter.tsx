@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useMember } from "@/hooks/useMember";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -8,7 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, CircleCheck as CheckCircle, Clock, TriangleAlert as AlertTriangle, ArrowUp } from "lucide-react";
+import {
+  Shield, CircleCheck as CheckCircle, Clock, TriangleAlert as AlertTriangle,
+  ArrowUp, Upload, FileText, X,
+} from "lucide-react";
+import {
+  validateFileBatch, formatFileSize, MAX_FILES,
+} from "@/lib/file-validation";
 
 const LEVELS = [
   { level: 0, label: "L0 — Basic", desc: "Email verified only", color: "bg-muted text-muted-foreground" },
@@ -25,12 +32,28 @@ const DOCUMENT_TYPES = [
   { value: "pan_card", label: "PAN Card" },
 ];
 
+interface UploadedFile {
+  name: string;
+  type: string;
+  size: number;
+}
+
+interface StoredFile extends UploadedFile {
+  path: string;
+  uploaded_at: string;
+}
+
 export function VerificationCenter() {
   const { member } = useMember();
+  const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [docType, setDocType] = useState("");
   const [notes, setNotes] = useState("");
+  const [selectedFiles, setSelectedFiles] = useState<UploadedFile[]>([]);
+  const [fileErrors, setFileErrors] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const currentLevel = member?.verification_level ?? 0;
 
@@ -61,27 +84,98 @@ export function VerificationCenter() {
     enabled: !!member,
   });
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+
+    const fileMeta: UploadedFile[] = files.map((f) => ({ name: f.name, type: f.type, size: f.size }));
+    const combined = [...selectedFiles, ...fileMeta].slice(0, MAX_FILES);
+    const result = validateFileBatch(combined);
+
+    setSelectedFiles(result.valid);
+    setFileErrors(result.errors);
+
+    // Store actual File objects for upload
+    pendingFilesRef.current = files.filter((f) =>
+      result.valid.some((v) => v.name === f.name),
+    );
+
+    e.target.value = "";
+  };
+
+  const pendingFilesRef = useRef<File[]>([]);
+
+  const removeFile = (name: string) => {
+    setSelectedFiles((prev) => prev.filter((f) => f.name !== name));
+    pendingFilesRef.current = pendingFilesRef.current.filter((f) => f.name !== name);
+    setFileErrors([]);
+  };
+
   const requestVerification = useMutation({
     mutationFn: async () => {
-      if (!member) throw new Error("Not a member");
+      if (!member || !user) throw new Error("Not a member");
       const nextLevel = currentLevel + 1;
       if (nextLevel > 2) throw new Error("Level 3+ is granted by admins only");
+
+      setUploading(true);
+
+      const storedFiles: StoredFile[] = [];
+
+      // Upload files to storage if any are selected
+      if (pendingFilesRef.current.length > 0) {
+        for (const file of pendingFilesRef.current) {
+          const ext = file.name.split(".").pop();
+          const filePath = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from("verification-docs")
+            .upload(filePath, file, { upsert: false });
+
+          if (uploadError) throw uploadError;
+
+          storedFiles.push({
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            path: filePath,
+            uploaded_at: new Date().toISOString(),
+          });
+        }
+      }
 
       const { error } = await supabase.from("verification_requests").insert({
         member_id: member.id,
         requested_level: nextLevel,
         document_type: docType || null,
         notes: notes.trim() || null,
+        document_files: storedFiles.length > 0 ? JSON.parse(JSON.stringify(storedFiles)) : null,
       });
       if (error) throw error;
+
+      // Create a notification for the member
+      await supabase.rpc("create_notification", {
+        p_member_id: member.id,
+        p_type: "verification",
+        p_title: "Verification Request Submitted",
+        p_description: `Your request for Level ${nextLevel} verification has been submitted.`,
+      });
+
+      // Clean up
+      pendingFilesRef.current = [];
     },
     onSuccess: () => {
       toast({ title: "Verification request submitted!" });
       setDocType("");
       setNotes("");
+      setSelectedFiles([]);
+      setFileErrors([]);
+      setUploading(false);
       queryClient.invalidateQueries({ queryKey: ["verification-requests"] });
     },
-    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+    onError: (err: Error) => {
+      setUploading(false);
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
   });
 
   const hasPendingRequest = verificationRequests?.some((r) => r.status === "pending");
@@ -178,6 +272,69 @@ export function VerificationCenter() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* File upload */}
+                <div>
+                  <label className="text-sm font-medium mb-1.5 block">Upload Documents (PDF, JPG, PNG — max 10MB each, up to {MAX_FILES} files)</label>
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-primary/40 hover:bg-muted/30 transition-colors"
+                  >
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                      multiple
+                      className="hidden"
+                      onChange={handleFileSelect}
+                      disabled={uploading || selectedFiles.length >= MAX_FILES}
+                    />
+                    <Upload className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">
+                      {selectedFiles.length >= MAX_FILES
+                        ? `Maximum ${MAX_FILES} files reached`
+                        : "Click to upload or drag files here"}
+                    </p>
+                    <p className="text-xs text-muted-foreground/60 mt-1">PDF, JPG, or PNG up to 10MB each</p>
+                  </div>
+
+                  {/* Selected files list */}
+                  {selectedFiles.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      {selectedFiles.map((file) => (
+                        <div key={file.name} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50 border border-border">
+                          <FileText className="w-4 h-4 text-primary shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{file.name}</p>
+                            <p className="text-xs text-muted-foreground">{formatFileSize(file.size)}</p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0"
+                            onClick={(e) => { e.stopPropagation(); removeFile(file.name); }}
+                            disabled={uploading}
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* File validation errors */}
+                  {fileErrors.length > 0 && (
+                    <div className="mt-3 space-y-1">
+                      {fileErrors.map((err, i) => (
+                        <p key={i} className="text-xs text-destructive flex items-start gap-1">
+                          <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
+                          {err}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <div>
                   <label className="text-sm font-medium mb-1.5 block">Notes (optional)</label>
                   <Textarea
@@ -196,7 +353,7 @@ export function VerificationCenter() {
                   }
                   className="gradient-warm text-primary-foreground"
                 >
-                  Submit Verification Request
+                  {uploading ? "Uploading..." : "Submit Verification Request"}
                 </Button>
               </>
             )}
@@ -272,18 +429,33 @@ export function VerificationCenter() {
             <CardTitle className="font-display text-base">Request History</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              {verificationRequests.map((r) => (
-                <div key={r.id} className="flex items-center justify-between text-sm py-2 border-b border-border last:border-0">
-                  <div>
-                    <span className="font-medium">Level {r.requested_level}</span>
-                    <span className="text-muted-foreground ml-2">{new Date(r.created_at).toLocaleDateString()}</span>
+            <div className="space-y-3">
+              {verificationRequests.map((r) => {
+                const docFiles = (r as Record<string, unknown>)?.document_files as StoredFile[] | null;
+                return (
+                  <div key={r.id} className="py-2 border-b border-border last:border-0">
+                    <div className="flex items-center justify-between text-sm">
+                      <div>
+                        <span className="font-medium">Level {r.requested_level}</span>
+                        <span className="text-muted-foreground ml-2">{new Date(r.created_at).toLocaleDateString()}</span>
+                      </div>
+                      <Badge variant={r.status === "approved" ? "default" : r.status === "rejected" ? "destructive" : "secondary"} className="capitalize">
+                        {r.status}
+                      </Badge>
+                    </div>
+                    {docFiles && docFiles.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {docFiles.map((f, i) => (
+                          <span key={i} className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded-md">
+                            <FileText className="w-3 h-3" />
+                            {f.name} ({formatFileSize(f.size)})
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <Badge variant={r.status === "approved" ? "default" : r.status === "rejected" ? "destructive" : "secondary"} className="capitalize">
-                    {r.status}
-                  </Badge>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>

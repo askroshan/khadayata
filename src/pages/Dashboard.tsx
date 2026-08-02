@@ -16,6 +16,7 @@ import {
 import communityGathering from "@/assets/community-gathering.jpg";
 import diyaLamp from "@/assets/diya-lamp.png";
 import { L1UpgradeBanner } from "@/components/verification/L1UpgradeBanner";
+import { ChapterContact } from "@/components/profile/ChapterContact";
 
 function getPanchangDates() {
   const now = new Date();
@@ -205,6 +206,9 @@ export default function Dashboard() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
+          {/* Chapter Contact */}
+          <ChapterContact />
+
           {/* Announcements */}
           <Card className="shadow-card lg:col-span-2">
             <CardHeader className="pb-3">

@@ -36,7 +36,7 @@ export default function Settings() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
-  const [notifLocal, setNotifLocal] = useState<{ email_enabled: boolean; whatsapp_enabled: boolean; push_enabled: boolean } | null>(null);
+  const [notifLocal, setNotifLocal] = useState<{ email_enabled: boolean; whatsapp_enabled: boolean; push_enabled: boolean; chapter_notifications_enabled: boolean } | null>(null);
 
   const { data: notifPrefs } = useQuery({
     queryKey: ["notif-prefs"],
@@ -60,6 +60,7 @@ export default function Settings() {
         email_enabled: notifPrefs?.email_enabled ?? true,
         whatsapp_enabled: notifPrefs?.whatsapp_enabled ?? false,
         push_enabled: notifPrefs?.push_enabled ?? false,
+        chapter_notifications_enabled: notifPrefs?.chapter_notifications_enabled ?? true,
       });
     }
   }, [notifPrefs?.email_enabled, notifPrefs?.whatsapp_enabled, notifPrefs?.push_enabled]);
@@ -85,7 +86,7 @@ export default function Settings() {
   });
 
   const saveNotifPrefs = useMutation({
-    mutationFn: async (prefs: { email_enabled: boolean; whatsapp_enabled: boolean; push_enabled: boolean }) => {
+    mutationFn: async (prefs: { email_enabled: boolean; whatsapp_enabled: boolean; push_enabled: boolean; chapter_notifications_enabled: boolean }) => {
       if (!member) throw new Error("Not a member");
       const { error } = await supabase.from("notification_preferences").upsert({
         member_id: member.id,
@@ -181,15 +182,20 @@ export default function Settings() {
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between">
                     <Label>Email notifications</Label>
-                    <Switch checked={notifLocal?.email_enabled ?? notifPrefs?.email_enabled ?? true} onCheckedChange={(v) => setNotifLocal(p => ({ ...p ?? { email_enabled: true, whatsapp_enabled: false, push_enabled: false }, email_enabled: v }))} />
+                    <Switch checked={notifLocal?.email_enabled ?? notifPrefs?.email_enabled ?? true} onCheckedChange={(v) => setNotifLocal(p => ({ ...p ?? { email_enabled: true, whatsapp_enabled: false, push_enabled: false, chapter_notifications_enabled: true }, email_enabled: v }))} />
                   </div>
                   <div className="flex items-center justify-between">
+                    <Label>Chapter event notifications</Label>
+                    <Switch checked={notifLocal?.chapter_notifications_enabled ?? notifPrefs?.chapter_notifications_enabled ?? true} onCheckedChange={(v) => setNotifLocal(p => ({ ...p ?? { email_enabled: true, whatsapp_enabled: false, push_enabled: false, chapter_notifications_enabled: true }, chapter_notifications_enabled: v }))} />
+                  </div>
+                  <p className="text-xs text-muted-foreground -mt-2">Get emailed when your chapter posts or updates events. Turn off to silence chapter event emails only.</p>
+                  <div className="flex items-center justify-between">
                     <Label>WhatsApp notifications</Label>
-                    <Switch checked={notifLocal?.whatsapp_enabled ?? notifPrefs?.whatsapp_enabled ?? false} onCheckedChange={(v) => setNotifLocal(p => ({ ...p ?? { email_enabled: true, whatsapp_enabled: false, push_enabled: false }, whatsapp_enabled: v }))} />
+                    <Switch checked={notifLocal?.whatsapp_enabled ?? notifPrefs?.whatsapp_enabled ?? false} onCheckedChange={(v) => setNotifLocal(p => ({ ...p ?? { email_enabled: true, whatsapp_enabled: false, push_enabled: false, chapter_notifications_enabled: true }, whatsapp_enabled: v }))} />
                   </div>
                   <div className="flex items-center justify-between">
                     <Label>Push notifications</Label>
-                    <Switch checked={notifLocal?.push_enabled ?? notifPrefs?.push_enabled ?? false} onCheckedChange={(v) => setNotifLocal(p => ({ ...p ?? { email_enabled: true, whatsapp_enabled: false, push_enabled: false }, push_enabled: v }))} />
+                    <Switch checked={notifLocal?.push_enabled ?? notifPrefs?.push_enabled ?? false} onCheckedChange={(v) => setNotifLocal(p => ({ ...p ?? { email_enabled: true, whatsapp_enabled: false, push_enabled: false, chapter_notifications_enabled: true }, push_enabled: v }))} />
                   </div>
                   <Button
                     onClick={() => notifLocal && saveNotifPrefs.mutate(notifLocal)}

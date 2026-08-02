@@ -3,30 +3,59 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMember } from "@/hooks/useMember";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Bell, Heart, Calendar, Briefcase, Shield, Handshake } from "lucide-react";
+import {
+  Bell, Heart, Calendar, Briefcase, Shield, Handshake,
+  CalendarX, CalendarClock, MessageSquare, CheckCheck,
+} from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import type { NotificationType } from "@/lib/notification-utils";
 
 interface NotificationItem {
   id: string;
-  type: "vouch" | "rsvp" | "mentorship" | "verification" | "announcement";
+  type: NotificationType;
   title: string;
   description: string;
   created_at: string;
   read: boolean;
-  href?: string;
+  entity_id?: string | null;
+  entity_type?: string | null;
 }
 
-function notifIcon(type: NotificationItem["type"]) {
+function notifIcon(type: NotificationType) {
   switch (type) {
     case "vouch": return <Heart className="w-3.5 h-3.5 text-rose-500" />;
     case "rsvp": return <Calendar className="w-3.5 h-3.5 text-blue-500" />;
     case "mentorship": return <Handshake className="w-3.5 h-3.5 text-emerald-500" />;
     case "verification": return <Shield className="w-3.5 h-3.5 text-primary" />;
     case "announcement": return <Briefcase className="w-3.5 h-3.5 text-amber-500" />;
+    case "event_created": return <Calendar className="w-3.5 h-3.5 text-secondary" />;
+    case "event_cancelled": return <CalendarX className="w-3.5 h-3.5 text-destructive" />;
+    case "event_updated": return <CalendarClock className="w-3.5 h-3.5 text-amber-500" />;
+    case "event_reminder": return <CalendarClock className="w-3.5 h-3.5 text-blue-500" />;
+    case "chapter_message": return <MessageSquare className="w-3.5 h-3.5 text-primary" />;
+    default: return <Bell className="w-3.5 h-3.5 text-muted-foreground" />;
+  }
+}
+
+function notifHref(n: NotificationItem): string | undefined {
+  switch (n.type) {
+    case "vouch": return "/profile";
+    case "rsvp":
+    case "event_created":
+    case "event_cancelled":
+    case "event_updated":
+    case "event_reminder":
+      return "/events";
+    case "mentorship":
+      return n.entity_id ? `/member/${n.entity_id}` : "/mentorship";
+    case "verification": return "/settings?tab=verification";
+    case "chapter_message": return "/dashboard";
+    case "announcement": return "/dashboard";
+    default: return undefined;
   }
 }
 
@@ -34,115 +63,70 @@ export function NotificationsPanel() {
   const { user } = useAuth();
   const { member } = useMember();
   const [open, setOpen] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data: unreadCount } = useQuery({
     queryKey: ["notifications-count", member?.id],
     queryFn: async (): Promise<number> => {
       if (!member) return 0;
-      const [vouches, rsvps, verReqs] = await Promise.all([
-        supabase.from("vouches").select("id", { count: "exact", head: true }).eq("member_id", member.id),
-        supabase.from("event_rsvps").select("id", { count: "exact", head: true }).eq("member_id", member.id),
-        supabase.from("verification_requests").select("id", { count: "exact", head: true }).eq("member_id", member.id).eq("status", "pending"),
-      ]);
-      return Math.min((vouches.count ?? 0) + (rsvps.count ?? 0) + (verReqs.count ?? 0), 99);
+      const { count, error } = await supabase
+        .from("notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("member_id", member.id)
+        .eq("read", false);
+      if (error) throw error;
+      return Math.min(count ?? 0, 99);
     },
     enabled: !!member && !!user,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
   });
 
   const { data: notifications } = useQuery({
     queryKey: ["notifications-panel", member?.id],
     queryFn: async (): Promise<NotificationItem[]> => {
       if (!member) return [];
-      const items: NotificationItem[] = [];
-
-      const { data: vouches } = await supabase
-        .from("vouches")
-        .select("id, created_at, voucher:members!vouches_voucher_member_id_fkey(first_name, last_name)")
+      const { data, error } = await supabase
+        .from("notifications")
+        .select("id, type, title, description, created_at, read, entity_id, entity_type")
         .eq("member_id", member.id)
         .order("created_at", { ascending: false })
-        .limit(5);
-      if (vouches) {
-        for (const v of vouches) {
-          const voucher = v.voucher as { first_name: string; last_name: string } | null;
-          items.push({
-            id: `vouch-${v.id}`,
-            type: "vouch",
-            title: "New Vouch Received",
-            description: `${voucher?.first_name ?? "Someone"} ${voucher?.last_name ?? ""} vouched for you`,
-            created_at: v.created_at,
-            read: false,
-            href: "/profile",
-          });
-        }
-      }
-
-      const { data: rsvps } = await supabase
-        .from("event_rsvps")
-        .select("id, created_at, status, event_id, events(name)")
-        .eq("member_id", member.id)
-        .order("created_at", { ascending: false })
-        .limit(5);
-      if (rsvps) {
-        for (const r of rsvps) {
-          const event = r.events as { name: string } | null;
-          items.push({
-            id: `rsvp-${r.id}`,
-            type: "rsvp",
-            title: "Event RSVP Confirmed",
-            description: `Your RSVP for "${event?.name ?? "an event"}" is confirmed as ${r.status}`,
-            created_at: r.created_at,
-            read: false,
-            href: "/events",
-          });
-        }
-      }
-
-      const { data: mentorships } = await supabase
-        .from("mentorships")
-        .select("id, created_at, status, mentor:members!mentorships_mentor_member_id_fkey(id, first_name, last_name)")
-        .eq("mentee_member_id", member.id)
-        .order("created_at", { ascending: false })
-        .limit(3);
-      if (mentorships) {
-        for (const m of mentorships) {
-          const mentor = m.mentor as { id: string; first_name: string; last_name: string } | null;
-          items.push({
-            id: `mentorship-${m.id}`,
-            type: "mentorship",
-            title: `Mentorship ${m.status === "active" ? "Accepted" : "Request"}`,
-            description: `${mentor?.first_name ?? "A mentor"} ${mentor?.last_name ?? ""} ${m.status === "active" ? "accepted your request" : "connected with you"}`,
-            created_at: m.created_at,
-            read: false,
-            href: mentor?.id ? `/member/${mentor.id}` : "/mentorship",
-          });
-        }
-      }
-
-      const { data: verReqs } = await supabase
-        .from("verification_requests")
-        .select("id, created_at, status")
-        .eq("member_id", member.id)
-        .order("created_at", { ascending: false })
-        .limit(3);
-      if (verReqs) {
-        for (const vr of verReqs) {
-          items.push({
-            id: `ver-${vr.id}`,
-            type: "verification",
-            title: "Verification Update",
-            description: `Your verification request status: ${vr.status}`,
-            created_at: vr.created_at,
-            read: false,
-            href: "/settings?tab=verification",
-          });
-        }
-      }
-
-      return items
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        .slice(0, 10);
+        .limit(15);
+      if (error) throw error;
+      return (data ?? []) as NotificationItem[];
     },
     enabled: !!member && !!user && open,
+    staleTime: 60_000,
+  });
+
+  const markAllRead = useMutation({
+    mutationFn: async () => {
+      if (!member) return;
+      const { error } = await supabase
+        .from("notifications")
+        .update({ read: true })
+        .eq("member_id", member.id)
+        .eq("read", false);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications-count"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications-panel"] });
+    },
+  });
+
+  const markOneRead = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("notifications")
+        .update({ read: true })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications-count"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications-panel"] });
+    },
   });
 
   const displayCount = unreadCount ?? 0;
@@ -158,7 +142,7 @@ export function NotificationsPanel() {
         >
           <Bell className="w-3.5 h-3.5" />
           {displayCount > 0 && (
-            <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center">
+            <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center animate-in fade-in zoom-in duration-300">
               {displayCount > 9 ? "9+" : displayCount}
             </span>
           )}
@@ -167,9 +151,22 @@ export function NotificationsPanel() {
       <PopoverContent align="end" className="w-80 p-0 shadow-elevated">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <h3 className="font-display font-semibold text-sm">Notifications</h3>
-          {displayCount > 0 && (
-            <Badge variant="secondary" className="text-xs">{displayCount} recent</Badge>
-          )}
+          <div className="flex items-center gap-2">
+            {displayCount > 0 && (
+              <Badge variant="secondary" className="text-xs">{displayCount} unread</Badge>
+            )}
+            {displayCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 text-xs px-2"
+                onClick={() => markAllRead.mutate()}
+                disabled={markAllRead.isPending}
+              >
+                <CheckCheck className="w-3 h-3 mr-1" /> Mark all read
+              </Button>
+            )}
+          </div>
         </div>
         <div className="max-h-80 overflow-y-auto">
           {!notifications || notifications.length === 0 ? (
@@ -180,31 +177,45 @@ export function NotificationsPanel() {
           ) : (
             <div className="divide-y divide-border">
               {notifications.map((n) => {
+                const href = notifHref(n);
                 const inner = (
                   <>
-                    <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0 mt-0.5">
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${n.read ? "bg-muted/50" : "bg-muted"}`}>
                       {notifIcon(n.type)}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold text-foreground leading-snug">{n.title}</p>
+                      <p className={`text-xs leading-snug ${n.read ? "text-muted-foreground" : "font-semibold text-foreground"}`}>
+                        {n.title}
+                      </p>
                       <p className="text-xs text-muted-foreground mt-0.5 leading-snug line-clamp-2">{n.description}</p>
                       <p className="text-[10px] text-muted-foreground/60 mt-1">
                         {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
                       </p>
                     </div>
+                    {!n.read && (
+                      <div className="w-2 h-2 rounded-full bg-primary shrink-0 mt-2" aria-label="Unread" />
+                    )}
                   </>
                 );
-                return n.href ? (
+                const handleClick = () => {
+                  if (!n.read) markOneRead.mutate(n.id);
+                  setOpen(false);
+                };
+                return href ? (
                   <Link
                     key={n.id}
-                    to={n.href}
-                    onClick={() => setOpen(false)}
-                    className="flex items-start gap-3 px-4 py-3 hover:bg-muted/30 transition-colors"
+                    to={href}
+                    onClick={handleClick}
+                    className={`flex items-start gap-3 px-4 py-3 hover:bg-muted/30 transition-colors ${!n.read ? "bg-primary/5" : ""}`}
                   >
                     {inner}
                   </Link>
                 ) : (
-                  <div key={n.id} className="flex items-start gap-3 px-4 py-3">
+                  <div
+                    key={n.id}
+                    onClick={handleClick}
+                    className={`flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-muted/30 transition-colors ${!n.read ? "bg-primary/5" : ""}`}
+                  >
                     {inner}
                   </div>
                 );
