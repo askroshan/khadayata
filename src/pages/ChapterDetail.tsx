@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Users, Newspaper, Calendar, Briefcase, Camera, MapPin, Building2,
-  ArrowLeft, Shield, Clock, ExternalLink, ChevronRight, Mail, Phone, Globe
+  ArrowLeft, Shield, Clock, ExternalLink, ChevronRight, Mail, Phone, Globe, Lock
 } from "lucide-react";
 import {
   useChapterBySlug, useChapterMemberCount, useChapterMembers,
@@ -15,8 +15,11 @@ import {
   useChapterNews, useChapterBusinesses, useChapterJobs, useChapterGallery,
 } from "@/hooks/useChapter";
 import SEOMeta from "@/components/SEOMeta";
+import PublicLayout from "@/components/PublicLayout";
 import patternOrnament from "@/assets/pattern-ornament.png";
 import { format } from "date-fns";
+import { useAuth } from "@/contexts/AuthContext";
+import { useMember } from "@/hooks/useMember";
 
 const BASE_URL = "https://khadayataonline.com";
 
@@ -96,6 +99,9 @@ function buildChapterSchema(
 
 export default function ChapterDetail() {
   const { slug } = useParams<{ slug: string }>();
+  const { user } = useAuth();
+  const { member } = useMember();
+  const isL1OrAbove = !!user && (member?.verification_level ?? 0) >= 1;
   const { data: chapter, isLoading } = useChapterBySlug(slug);
   const { data: memberCount } = useChapterMemberCount(chapter?.id);
   const { data: members } = useChapterMembers(chapter?.id);
@@ -110,22 +116,26 @@ export default function ChapterDetail() {
 
   if (isLoading) {
     return (
-      <div className="container max-w-6xl py-8 space-y-6">
-        <Skeleton className="h-48 w-full rounded-2xl" />
-        <div className="grid grid-cols-4 gap-4">
-          {[1,2,3,4].map(i => <Skeleton key={i} className="h-24 rounded-xl" />)}
+      <PublicLayout>
+        <div className="container max-w-6xl py-8 space-y-6">
+          <Skeleton className="h-48 w-full rounded-2xl" />
+          <div className="grid grid-cols-4 gap-4">
+            {[1,2,3,4].map(i => <Skeleton key={i} className="h-24 rounded-xl" />)}
+          </div>
         </div>
-      </div>
+      </PublicLayout>
     );
   }
 
   if (!chapter) {
     return (
-      <div className="container max-w-6xl py-20 text-center">
-        <h2 className="text-2xl font-display font-bold">Chapter Not Found</h2>
-        <p className="text-muted-foreground mt-2">The chapter you're looking for doesn't exist.</p>
-        <Button asChild className="mt-6"><Link to="/directory">← Back to Directory</Link></Button>
-      </div>
+      <PublicLayout title="Chapter Not Found">
+        <div className="container max-w-6xl py-20 text-center">
+          <h2 className="text-2xl font-display font-bold">Chapter Not Found</h2>
+          <p className="text-muted-foreground mt-2">The chapter you're looking for doesn't exist.</p>
+          <Button asChild className="mt-6"><Link to="/chapters">← All Chapters</Link></Button>
+        </div>
+      </PublicLayout>
     );
   }
 
@@ -160,7 +170,13 @@ export default function ChapterDetail() {
     { label: "Open Jobs", value: jobs?.length ?? 0, icon: Briefcase },
   ];
 
+  const canSeeContacts = isL1OrAbove;
+  const visibleContactPhone = canSeeContacts ? contactPhone : null;
+  const visibleContactEmail = canSeeContacts ? contactEmail : null;
+  const hasHiddenContacts = !canSeeContacts && (!!contactPhone || !!contactEmail);
+
   return (
+    <PublicLayout>
     <div className="min-h-screen bg-background">
       <SEOMeta
         title={seoTitle}
@@ -174,7 +190,7 @@ export default function ChapterDetail() {
       <div className="relative gradient-hero py-10 sm:py-16">
         <img src={patternOrnament} alt="" className="absolute right-4 top-1/2 -translate-y-1/2 w-40 h-40 opacity-10" />
         <div className="container max-w-6xl relative z-10">
-          <Link to="/directory" className="inline-flex items-center gap-1 text-primary-foreground/70 text-sm hover:text-primary-foreground mb-4">
+          <Link to="/chapters" className="inline-flex items-center gap-1 text-primary-foreground/70 text-sm hover:text-primary-foreground mb-4">
             <ArrowLeft className="w-4 h-4" /> All Chapters
           </Link>
           <h1 className="text-3xl sm:text-5xl font-display font-extrabold text-primary-foreground">
@@ -186,24 +202,24 @@ export default function ChapterDetail() {
               {locationStr}
             </p>
           )}
-          {(contactEmail || contactPhone || contactUrl) && (
+          {(visibleContactEmail || visibleContactPhone || contactUrl) && (
             <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-3">
-              {contactPhone && (
+              {visibleContactPhone && (
                 <a
-                  href={`tel:${contactPhone}`}
+                  href={`tel:${visibleContactPhone}`}
                   className="inline-flex items-center gap-1.5 text-primary-foreground/90 hover:text-primary-foreground text-sm transition-colors"
                 >
                   <Phone className="w-4 h-4 shrink-0" />
-                  {contactPhone}
+                  {visibleContactPhone}
                 </a>
               )}
-              {contactEmail && (
+              {visibleContactEmail && (
                 <a
-                  href={`mailto:${contactEmail}`}
+                  href={`mailto:${visibleContactEmail}`}
                   className="inline-flex items-center gap-1.5 text-primary-foreground/90 hover:text-primary-foreground text-sm transition-colors"
                 >
                   <Mail className="w-4 h-4 shrink-0" />
-                  {contactEmail}
+                  {visibleContactEmail}
                 </a>
               )}
               {contactUrl && (
@@ -216,6 +232,19 @@ export default function ChapterDetail() {
                   <Globe className="w-4 h-4 shrink-0" />
                   {contactUrl.replace(/^https?:\/\//, "")}
                 </a>
+              )}
+            </div>
+          )}
+          {hasHiddenContacts && (
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-3">
+              <span className="inline-flex items-center gap-1.5 text-primary-foreground/50 text-sm">
+                <Lock className="w-4 h-4 shrink-0" />
+                Contact details available after verification
+              </span>
+              {!user && (
+                <Link to="/auth" className="inline-flex items-center gap-1.5 text-primary-foreground/90 hover:text-primary-foreground text-sm transition-colors underline">
+                  Sign in to view
+                </Link>
               )}
             </div>
           )}
@@ -530,5 +559,6 @@ export default function ChapterDetail() {
         </Tabs>
       </div>
     </div>
+    </PublicLayout>
   );
 }
