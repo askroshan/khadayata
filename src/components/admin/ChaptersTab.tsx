@@ -226,10 +226,16 @@ export default function ChaptersTab() {
 
   const assignChapterAdmin = useMutation({
     mutationFn: async () => {
-      if (!inviteChapter || !inviteForm.memberId || !chapterAdminRoleId) throw new Error("Missing required fields");
+      if (!inviteChapter || !inviteForm.memberId) throw new Error("Select a member to assign");
+      let roleId = chapterAdminRoleId;
+      if (!roleId) {
+        const { data, error: roleErr } = await supabase.from("roles").select("id").eq("name", "Chapter Admin").maybeSingle();
+        if (roleErr || !data) throw new Error("Chapter Admin role not found");
+        roleId = data.id;
+      }
       const { error } = await supabase.rpc("assign_role", {
         p_member_id: inviteForm.memberId,
-        p_role_id: chapterAdminRoleId,
+        p_role_id: roleId,
         p_chapter_id: inviteChapter.id,
       });
       if (error) throw new Error(error.message);

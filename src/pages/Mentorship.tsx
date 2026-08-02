@@ -67,12 +67,37 @@ export default function Mentorship() {
       if (!member) throw new Error("Not a member");
       const skillList = skills.split(",").map(s => s.trim()).filter(Boolean);
       if (skillList.length === 0) throw new Error("Add at least one skill");
-      const { error } = await supabase.from("mentorships").insert({
-        mentor_member_id: member.id,
-        skills: skillList,
-        status: "available",
-      });
-      if (error) throw error;
+
+      const { data: existing } = await supabase
+        .from("mentorships")
+        .select("id, skills, status")
+        .eq("mentor_member_id", member.id)
+        .eq("status", "available")
+        .maybeSingle();
+
+      const existingMentorship = existing as { id: string; skills: string[]; status: string } | null;
+
+      if (existingMentorship) {
+        const existingSkills = (existingMentorship.skills as string[]) ?? [];
+        const merged = [...existingSkills];
+        for (const s of skillList) {
+          if (!merged.some(e => e.toLowerCase() === s.toLowerCase())) {
+            merged.push(s);
+          }
+        }
+        const { error } = await supabase
+          .from("mentorships")
+          .update({ skills: merged })
+          .eq("id", existingMentorship.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("mentorships").insert({
+          mentor_member_id: member.id,
+          skills: skillList,
+          status: "available",
+        });
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       toast({ title: "Mentorship offer created!" });
