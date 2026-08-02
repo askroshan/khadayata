@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronUp, ChevronDown, ExternalLink, Search, Download, X, Pencil, UserPlus, ShieldBan, Lock, Clock as Unlock, Trash2, Mail, MailCheck, Send, Upload, FileText, Users } from "lucide-react";
+import { ChevronUp, ChevronDown, ExternalLink, Search, Download, X, Pencil, UserPlus, ShieldBan, Lock, Clock as Unlock, Trash2, Mail, MailCheck, Send, Upload, FileText, Users, Phone } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { LEVEL_LABELS as SHARED_LEVEL_LABELS, exportFilteredCsv, type AdminMember } from "@/lib/admin-utils";
@@ -100,7 +100,7 @@ export default function MembersTab({ members, myChapterId, canInvite = false, is
       });
       return map;
     },
-    enabled: isGlobalAdmin,
+    enabled: isGlobalAdmin || !!editMember,
   });
 
   const { data: memberPhones } = useQuery({
@@ -114,7 +114,7 @@ export default function MembersTab({ members, myChapterId, canInvite = false, is
       });
       return map;
     },
-    enabled: isGlobalAdmin,
+    enabled: isGlobalAdmin || !!editMember,
   });
 
   const { data: chapters } = useQuery({
@@ -485,6 +485,27 @@ export default function MembersTab({ members, myChapterId, canInvite = false, is
               <div><Label>First Name *</Label><Input value={editMember.first_name} onChange={e => setEditMember({ ...editMember, first_name: e.target.value })} maxLength={100} /></div>
               <div><Label>Last Name *</Label><Input value={editMember.last_name} onChange={e => setEditMember({ ...editMember, last_name: e.target.value })} maxLength={100} /></div>
             </div>
+            {(() => {
+              const email = memberEmails?.[editMember.id]?.email;
+              const phone = memberPhones?.[editMember.id];
+              if (!email && !phone) return null;
+              return (
+                <div className="grid grid-cols-2 gap-3">
+                  {email && (
+                    <div>
+                      <Label className="flex items-center gap-1"><Mail className="w-3 h-3" /> Email</Label>
+                      <Input value={email} readOnly className="bg-muted/50 text-muted-foreground" />
+                    </div>
+                  )}
+                  {phone && (
+                    <div>
+                      <Label className="flex items-center gap-1"><Phone className="w-3 h-3" /> Phone</Label>
+                      <Input value={phone} readOnly className="bg-muted/50 text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
             {isGlobalAdmin && (
               <div><Label>Middle Names</Label><Input value={editMember.middle_names} onChange={e => setEditMember({ ...editMember, middle_names: e.target.value })} maxLength={200} placeholder="Middle name(s)" /></div>
             )}
