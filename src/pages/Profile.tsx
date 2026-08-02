@@ -21,6 +21,7 @@ import { PhoneField } from "@/components/profile/PhoneField";
 import { FamilyInviteDialog, PendingInvitationsList } from "@/components/profile/FamilyInviteDialog";
 import { User, Briefcase, GraduationCap, Users, Shield, QrCode, CreditCard as Edit, Check, X, Plus, Trash2, MapPin, Award, Heart, ArrowRight } from "lucide-react";
 import { format } from "date-fns";
+import { resolveChapterSlug } from "@/lib/chapter-nav-utils";
 
 const GENDERS = ["Male", "Female", "Other", "Prefer not to say"];
 
@@ -163,6 +164,12 @@ export default function Profile() {
     },
     enabled: !!member,
   });
+
+  const myChapterSlug = resolveChapterSlug(
+    chapters?.map((c) => ({ id: c.id, slug: c.slug })),
+    member?.chapter_id ?? null
+  );
+  const chapterPath = myChapterSlug ? `/chapters/${myChapterSlug}` : null;
 
   const handleAvatarUpload = async (url: string) => {
     await updateMember.mutateAsync({ photo_url: url });
@@ -374,7 +381,11 @@ export default function Profile() {
                 <h1 className="text-xl sm:text-2xl font-display font-bold truncate">{member?.first_name} {member?.middle_names} {member?.last_name}</h1>
                 <p className="text-sm text-muted-foreground flex items-center gap-1 justify-center sm:justify-start">
                   <MapPin className="w-3.5 h-3.5" />
-                  {(member?.chapters as { name: string } | null)?.name ?? "No chapter"}
+                  {chapterPath ? (
+                    <Link to={chapterPath} className="hover:text-primary hover:underline transition-all">{(member?.chapters as { name: string } | null)?.name ?? "View chapter"}</Link>
+                  ) : (
+                    <Link to="/chapters" className="hover:text-primary hover:underline transition-all">{(member?.chapters as { name: string } | null)?.name ?? "Find your chapter"}</Link>
+                  )}
                 </p>
                 {member?.global_id ? (
                   <div className="mt-2 inline-flex items-center gap-2 rounded-lg bg-primary/10 px-3 py-1.5">
@@ -466,7 +477,11 @@ export default function Profile() {
                     {/* Chapter */}
                     <p className="text-sm text-primary-foreground/80 flex items-center gap-1.5 justify-center sm:justify-start">
                       <MapPin className="w-3.5 h-3.5" />
-                      {(member?.chapters as { name: string } | null)?.name ?? "No chapter"}
+                      {chapterPath ? (
+                        <Link to={chapterPath} className="hover:text-primary-foreground hover:underline transition-all">{(member?.chapters as { name: string } | null)?.name ?? "View chapter"}</Link>
+                      ) : (
+                        <span>{(member?.chapters as { name: string } | null)?.name ?? "No chapter"}</span>
+                      )}
                     </p>
 
                     {/* Ekda */}

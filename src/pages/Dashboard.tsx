@@ -1,4 +1,4 @@
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMember } from "@/hooks/useMember";
 import { usePermissions } from "@/hooks/useRoles";
@@ -11,12 +11,13 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
   User, MapPin, Briefcase, Shield, Users, Calendar,
-  BookOpen, Heart, Building2, Newspaper, ArrowRight, Bell, TrendingUp, Star, Plus
+  BookOpen, Heart, Building2, Newspaper, ArrowRight, Bell, TrendingUp, Star, Plus, ChevronRight
 } from "lucide-react";
 import communityGathering from "@/assets/community-gathering.jpg";
 import diyaLamp from "@/assets/diya-lamp.png";
 import { L1UpgradeBanner } from "@/components/verification/L1UpgradeBanner";
 import { ChapterContact } from "@/components/profile/ChapterContact";
+import { mergeChapterFirst, resolveChapterSlug } from "@/lib/chapter-nav-utils";
 
 function getPanchangDates() {
   const now = new Date();
@@ -87,26 +88,46 @@ export default function Dashboard() {
         .eq("status", "published")
         .gte("starts_at", new Date().toISOString())
         .order("starts_at")
-        .limit(3);
+        .limit(20);
       const { data } = await q;
-      return data ?? [];
+      const all = data ?? [];
+      if (!member?.chapter_id) return all.slice(0, 3);
+      const chapterItems = all.filter((e) => e.chapter_id === member.chapter_id);
+      const globalItems = all.filter((e) => e.chapter_id !== member.chapter_id);
+      return mergeChapterFirst(chapterItems, globalItems, 3);
     },
     enabled: !!user,
   });
 
   const { data: recentNews } = useQuery({
-    queryKey: ["recent-news-dash"],
+    queryKey: ["recent-news-dash", member?.chapter_id],
     queryFn: async () => {
       const { data } = await supabase
         .from("content_news")
-        .select("id, title, published_at, summary")
+        .select("id, title, published_at, summary, chapter_id")
         .eq("status", "published")
         .order("published_at", { ascending: false })
-        .limit(3);
-      return data ?? [];
+        .limit(20);
+      const all = data ?? [];
+      if (!member?.chapter_id) return all.slice(0, 3);
+      const chapterItems = all.filter((n) => n.chapter_id === member.chapter_id);
+      const globalItems = all.filter((n) => n.chapter_id !== member.chapter_id);
+      return mergeChapterFirst(chapterItems, globalItems, 3);
     },
     enabled: !!user,
   });
+
+  const { data: myChapterSlug } = useQuery({
+    queryKey: ["dashboard-chapter-slug", member?.chapter_id],
+    queryFn: async () => {
+      if (!member?.chapter_id) return null;
+      const { data } = await supabase.from("chapters").select("id, slug").eq("id", member.chapter_id).maybeSingle();
+      return data?.slug ?? null;
+    },
+    enabled: !!member?.chapter_id,
+  });
+
+  const chapterPath = myChapterSlug ? `/chapters/${myChapterSlug}` : null;
 
   if (authLoading || isLoading) {
     return (
@@ -148,7 +169,15 @@ export default function Dashboard() {
               </h2>
               <p className="text-primary-foreground/70 mt-1 flex items-center gap-1.5">
                 <MapPin className="w-3.5 h-3.5" />
-                {(member?.chapters as { name: string } | null)?.name ?? "No chapter selected"}
+                {chapterPath ? (
+                  <Link to={chapterPath} className="hover:underline transition-all">
+                    {(member?.chapters as { name: string } | null)?.name ?? "View chapter"}
+                  </Link>
+                ) : (
+                  <Link to="/chapters" className="hover:underline transition-all">
+                    {(member?.chapters as { name: string } | null)?.name ?? "Find your chapter"}
+                  </Link>
+                )}
               </p>
             </div>
             <div className="flex flex-col sm:items-end gap-1.5 sm:gap-2">
@@ -165,6 +194,50 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+
+        {/* My Chapter hub card */}
+        {chapterPath && member?.chapter_id && (
+          <Link to={chapterPath} className="block">
+            <Card className="shadow-card hover:shadow-elevated transition-all group hover:-translate-y-0.5 overflow-hidden">
+              <CardContent className="p-0">
+                <div className="flex items-center gap-4 p-4 sm:p-5">
+                  <div className="w-12 h-12 rounded-xl gradient-hero flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                    <MapPin className="w-6 h-6 text-primary-foreground" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-display font-semibold text-sm">My Chapter</h3>
+                    <p className="text-xs text-muted-foreground truncate">{(member?.chapters as { name: string } | null)?.name ?? "View chapter"}</p>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    {(upcomingEvents ?? []).filter((e) => e.chapter_id === member.chapter_id).length > 0 && (
+                      <Badge variant="secondary" className="text-xs gap-1">
+                        <Calendar className="w-3 h-3" />
+                        {(upcomingEvents ?? []).filter((e) => e.chapter_id === member.chapter_id).length} upcoming
+                      </Badge>
+                    )}
+                    <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        )}
+        {!member?.chapter_id && (
+          <Card className="shadow-card border-dashed border-primary/40">
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                <MapPin className="w-6 h-6 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-display font-semibold text-sm">Find your chapter</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Join a local chapter to connect with members near you</p>
+              </div>
+              <Button asChild size="sm" variant="outline">
+                <Link to="/chapters">Browse <ArrowRight className="w-3.5 h-3.5 ml-1" /></Link>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {/* L1/L2 upgrade banner — shown only when level < 2 */}
         <L1UpgradeBanner />

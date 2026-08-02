@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Navigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMember } from "@/hooks/useMember";
+import { useRoles } from "@/hooks/useRoles";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import AppLayout from "@/components/AppLayout";
@@ -10,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, MapPin, Shield, Users, Heart } from "lucide-react";
+import { defaultChapterFilter } from "@/lib/chapter-nav-utils";
 
 const VERIFICATION_LABELS: Record<number, string> = { 0: "L0", 1: "L1", 2: "L2" };
 const VERIFICATION_COLORS: Record<number, string> = { 0: "bg-muted text-muted-foreground", 1: "bg-gold/20 text-gold-foreground", 2: "bg-success/20 text-success" };
@@ -17,8 +19,16 @@ const VERIFICATION_COLORS: Record<number, string> = { 0: "bg-muted text-muted-fo
 export default function Directory() {
   const { user, loading } = useAuth();
   const { member: currentMember } = useMember();
+  const { isGlobalAdmin } = useRoles();
   const [search, setSearch] = useState("");
   const [chapterFilter, setChapterFilter] = useState("all");
+
+  // Default the filter to the member's own chapter once member data loads
+  useEffect(() => {
+    if (currentMember !== undefined) {
+      setChapterFilter(defaultChapterFilter(currentMember?.chapter_id ?? null, isGlobalAdmin));
+    }
+  }, [currentMember, isGlobalAdmin]);
 
   const { data: members, isLoading } = useQuery({
     queryKey: ["directory", search, chapterFilter],

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMember, useCountries, useStates, useCities, useHasStates, useCitiesByCountry, useChapters } from "@/hooks/useMember";
@@ -16,13 +16,14 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, MapPin, Users, Plus, Check, Sparkles, Globe, DollarSign, CreditCard as Edit, Trash2, Circle as XCircle, Mail as MailIcon } from "lucide-react";
+import { Calendar, MapPin, Users, Plus, Check, Sparkles, Globe, DollarSign, CreditCard as Edit, Trash2, Circle as XCircle, Mail as MailIcon, Camera, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import eventsHero from "@/assets/events-hero.jpg";
 import { EventGallery } from "@/components/events/EventGallery";
 import { ReportDialog } from "@/components/ReportDialog";
 import { usePermissions, useRoles } from "@/hooks/useRoles";
 import { notifyEventCreated, notifyEventCancelled, notifyEventUpdated, notifyRSVPConfirmation } from "@/lib/event-notifications";
+import { defaultChapterFilter, filterByChapter } from "@/lib/chapter-nav-utils";
 
 const EVENT_CATEGORIES = ["Cultural", "Religious", "Social", "Sports", "Educational", "Business", "Charity", "Youth", "Senior", "Samooha Bhojan", "Satsang", "Mahotsav", "Other"];
 const EVENT_TYPES = [
@@ -53,6 +54,15 @@ export default function Events() {
 
   const { data: countries } = useCountries();
   const { data: chapters } = useChapters();
+  const { isGlobalAdmin } = useRoles();
+  const [chapterFilter, setChapterFilter] = useState("all");
+
+  // Default the filter to the member's own chapter once member data loads
+  useEffect(() => {
+    if (member !== undefined) {
+      setChapterFilter(defaultChapterFilter(member?.chapter_id ?? null, isGlobalAdmin));
+    }
+  }, [member, isGlobalAdmin]);
   const { data: evtHasStates } = useHasStates(evt.country_id || undefined);
   const { data: evtStates } = useStates(evt.country_id && evtHasStates ? evt.country_id : undefined);
   const { data: evtCitiesByState } = useCities(evt.state_id || undefined);
@@ -186,8 +196,23 @@ export default function Events() {
   if (loading) return <div className="flex min-h-screen items-center justify-center"><div className="animate-pulse text-muted-foreground">Loading...</div></div>;
   if (!user) return <Navigate to="/auth" replace />;
 
-  const upcoming = events?.filter((e) => new Date(e.starts_at) >= new Date()) ?? [];
-  const past = events?.filter((e) => new Date(e.starts_at) < new Date()) ?? [];
+  const { data: eventPhotoCounts } = useQuery({
+    queryKey: ["event-photo-counts", events?.map((e) => e.id).join(",")],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("event_photos")
+        .select("event_id");
+      const counts: Record<string, number> = {};
+      for (const p of data ?? []) {
+        counts[p.event_id] = (counts[p.event_id] ?? 0) + 1;
+      }
+      return counts;
+    },
+    enabled: !!events && events.length > 0,
+  });
+
+  const upcoming = filterByChapter(events?.filter((e) => new Date(e.starts_at) >= new Date()) ?? [], chapterFilter);
+  const past = filterByChapter(events?.filter((e) => new Date(e.starts_at) < new Date()) ?? [], chapterFilter);
 
   const locationStr = (item: Record<string, unknown>) => [
     (item.cities as { name: string } | null)?.name,
@@ -321,6 +346,22 @@ export default function Events() {
         </div>
 
         <div className="px-3 sm:px-6 pb-4 sm:pb-6 space-y-4 sm:space-y-6">
+          {/* Chapter filter */}
+          <div className="flex items-center gap-2">
+            <MapPin className="w-4 h-4 text-muted-foreground shrink-0" />
+            <Select value={chapterFilter} onValueChange={setChapterFilter}>
+              <SelectTrigger className="w-full sm:w-64" aria-label="Filter events by chapter">
+                <SelectValue placeholder="All chapters" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Chapters</SelectItem>
+                {chapters?.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <Tabs defaultValue="upcoming">
             <TabsList>
               <TabsTrigger value="upcoming">Upcoming ({upcoming.length})</TabsTrigger>
@@ -436,17 +477,30 @@ export default function Events() {
             </TabsContent>
             <TabsContent value="past" className="space-y-4 mt-4">
               {past.length === 0 && <p className="text-muted-foreground text-center py-8">No past events</p>}
-              {past.map((event) => (
+              {past.map((event) => {
+                const photoCount = eventPhotoCounts?.[event.id] ?? 0;
+                return (
                 <Card key={event.id} className="shadow-card">
                   <CardContent className="p-5">
-                    <h3 className="font-display font-semibold">{event.name}</h3>
-                    <p className="text-xs text-muted-foreground mt-1">{format(new Date(event.starts_at), "PPp")} • {event.venue}</p>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <h3 className="font-display font-semibold">{event.name}</h3>
+                        <p className="text-xs text-muted-foreground mt-1">{format(new Date(event.starts_at), "PPp")} • {event.venue}</p>
+                      </div>
+                      {photoCount > 0 && (
+                        <Badge variant="secondary" className="gap-1 shrink-0">
+                          <Camera className="w-3 h-3" />
+                          {photoCount} {photoCount === 1 ? "photo" : "photos"}
+                        </Badge>
+                      )}
+                    </div>
                     <div className="mt-3 pt-3 border-t border-border">
                       <EventGallery eventId={event.id} eventName={event.name} />
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+                );
+              })}
             </TabsContent>
           </Tabs>
         </div>

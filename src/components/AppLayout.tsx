@@ -2,19 +2,24 @@ import { ReactNode, useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRoles } from "@/hooks/useRoles";
+import { useMember } from "@/hooks/useMember";
 import { COMMUNITY_FULL_NAME } from "@/lib/community";
+import { resolveChapterSlug } from "@/lib/chapter-nav-utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { LogOut, Chrome as Home, Users, Calendar, Briefcase, Heart, BookOpen, Building2, Shield, Bell, Search, Menu, Newspaper, User, Handshake, GraduationCap, TriangleAlert as AlertTriangle, MapPin, BookMarked, IndianRupee, Library, Mic, HeartPulse, Settings, Flag } from "lucide-react";
 const LOGO = "/Screenshot_2026-03-16_at_9.18.14_AM.png";
 import { NotificationsPanel } from "@/components/NotificationsPanel";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 type NavItem = {
   icon: typeof Home;
   label: string;
   path: string;
   adminOnly?: boolean;
+  memberChapterOnly?: boolean;
 };
 
 type NavGroup = {
@@ -33,6 +38,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "Community",
     items: [
+      { icon: MapPin, label: "My Chapter", path: "__my_chapter__", memberChapterOnly: true },
       { icon: Users, label: "Members", path: "/directory" },
       { icon: Heart, label: "Matrimonial", path: "/matrimonial/manage" },
     ],
@@ -91,12 +97,29 @@ const NAV_GROUPS: NavGroup[] = [
 function NavLinks({ onClick }: { onClick?: () => void }) {
   const location = useLocation();
   const { isAnyAdmin, isLoading: rolesLoading } = useRoles();
+  const { member } = useMember();
   const currentPath = location.pathname + location.hash;
+
+  const { data: chapters } = useQuery({
+    queryKey: ["chapters-id-slug"],
+    queryFn: async () => {
+      const { data } = await supabase.from("chapters").select("id, slug");
+      return data ?? [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const myChapterSlug = resolveChapterSlug(chapters, member?.chapter_id ?? null);
+  const myChapterPath = myChapterSlug ? `/chapters/${myChapterSlug}` : null;
 
   return (
     <nav className="p-2 space-y-1">
       {NAV_GROUPS.map((group) => {
-        const visibleItems = group.items.filter(item => !item.adminOnly || (!rolesLoading && isAnyAdmin));
+        const visibleItems = group.items.filter((item) => {
+          if (item.adminOnly && (rolesLoading || !isAnyAdmin)) return false;
+          if (item.memberChapterOnly && !myChapterPath) return false;
+          return true;
+        });
         if (!visibleItems.length) return null;
         return (
           <div key={group.label}>
@@ -105,11 +128,12 @@ function NavLinks({ onClick }: { onClick?: () => void }) {
             </p>
             {visibleItems.map((item) => {
               const Icon = item.icon;
-              const active = item.path.includes("#") ? currentPath === item.path : location.pathname === item.path;
+              const resolvedPath = item.path === "__my_chapter__" ? myChapterPath! : item.path;
+              const active = resolvedPath.includes("#") ? currentPath === resolvedPath : location.pathname === resolvedPath;
               return (
                 <Link
                   key={item.path + item.label}
-                  to={item.path}
+                  to={resolvedPath}
                   onClick={onClick}
                   aria-current={active ? "page" : undefined}
                   className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all ${
