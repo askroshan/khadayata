@@ -672,7 +672,7 @@ export default function MembersTab({ members, myChapterId, canInvite = false, is
                 {getMemberStatusBadge(m.id)}
               </div>
               <div className="space-y-2 pt-2 border-t">
-                {isSuspended ? (
+                {isGlobalAdmin && (isSuspended ? (
                   <Button
                     variant="outline" className="w-full justify-start gap-2 text-emerald-700"
                     onClick={() => { suspendMember.mutate({ memberId: m.id, suspend: false }); setActionOpen(null); }}
@@ -687,8 +687,8 @@ export default function MembersTab({ members, myChapterId, canInvite = false, is
                   >
                     <Lock className="w-4 h-4" /> Suspend Member
                   </Button>
-                )}
-                {isBlocked ? (
+                ))}
+                {isGlobalAdmin && (isBlocked ? (
                   <Button
                     variant="outline" className="w-full justify-start gap-2 text-emerald-700"
                     onClick={() => { blockMember.mutate({ memberId: m.id, block: false }); setActionOpen(null); }}
@@ -703,13 +703,15 @@ export default function MembersTab({ members, myChapterId, canInvite = false, is
                   >
                     <ShieldBan className="w-4 h-4" /> Block Member
                   </Button>
-                )}
+                ))}
+                {isGlobalAdmin && (
                 <Button
                   variant="outline" className="w-full justify-start gap-2 text-destructive"
                   onClick={() => { setDeleteTarget({ id: m.id, name: `${m.first_name} ${m.last_name}` }); setActionOpen(null); }}
                 >
                   <Trash2 className="w-4 h-4" /> Delete Permanently
                 </Button>
+                )}
               </div>
             </div>
           );

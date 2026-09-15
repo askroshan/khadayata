@@ -273,10 +273,10 @@ export default function ChapterDetail() {
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="committee" className="space-y-6">
+        <Tabs defaultValue="members" className="space-y-6">
           <TabsList className="flex flex-wrap gap-1 h-auto bg-muted/50 p-1 rounded-xl">
-            <TabsTrigger value="committee" className="gap-1.5"><Shield className="w-3.5 h-3.5" /> Committee</TabsTrigger>
             <TabsTrigger value="members" className="gap-1.5"><Users className="w-3.5 h-3.5" /> Members</TabsTrigger>
+            <TabsTrigger value="committee" className="gap-1.5"><Shield className="w-3.5 h-3.5" /> Committee</TabsTrigger>
             <TabsTrigger value="news" className="gap-1.5"><Newspaper className="w-3.5 h-3.5" /> News</TabsTrigger>
             <TabsTrigger value="events" className="gap-1.5"><Calendar className="w-3.5 h-3.5" /> Events</TabsTrigger>
             <TabsTrigger value="businesses" className="gap-1.5"><Building2 className="w-3.5 h-3.5" /> Businesses</TabsTrigger>
@@ -284,40 +284,6 @@ export default function ChapterDetail() {
             <TabsTrigger value="gallery" className="gap-1.5"><Camera className="w-3.5 h-3.5" /> Gallery</TabsTrigger>
             <TabsTrigger value="history" className="gap-1.5"><Clock className="w-3.5 h-3.5" /> History</TabsTrigger>
           </TabsList>
-
-          {/* Committee */}
-          <TabsContent value="committee" className="space-y-6">
-            <h2 className="text-xl font-display font-bold">Current Committee</h2>
-            {committee && committee.length > 0 ? (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {committee.map((c) => {
-                   const m = c.members as { id: string; first_name: string; last_name: string; photo_url: string | null; global_id: string | null } | null;
-                  return (
-                    <Card key={c.id} className="shadow-card hover:shadow-elevated transition-all">
-                      <CardContent className="p-5 flex items-center gap-4">
-                        <Avatar className="w-12 h-12">
-                          <AvatarImage src={m?.photo_url ?? undefined} />
-                          <AvatarFallback className="gradient-warm text-primary-foreground text-sm font-bold">
-                            {initials(m?.first_name, m?.last_name)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0">
-                          <Link to={`/member/${m?.id}`} className="font-semibold text-sm hover:text-primary truncate block">
-                            {m?.first_name} {m?.last_name}
-                          </Link>
-                          <Badge variant="secondary" className="mt-1 text-xs">
-                            {(c.roles as { name: string } | null)?.name}
-                          </Badge>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-muted-foreground text-sm">No committee members assigned yet.</p>
-            )}
-          </TabsContent>
 
           {/* Members */}
           <TabsContent value="members" className="space-y-4">
@@ -351,6 +317,40 @@ export default function ChapterDetail() {
               </div>
             ) : (
               <p className="text-muted-foreground text-sm">No members in this chapter yet.</p>
+            )}
+          </TabsContent>
+
+          {/* Committee */}
+          <TabsContent value="committee" className="space-y-6">
+            <h2 className="text-xl font-display font-bold">Current Committee</h2>
+            {committee && committee.length > 0 ? (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {committee.map((c) => {
+                   const m = c.members as { id: string; first_name: string; last_name: string; photo_url: string | null; global_id: string | null } | null;
+                  return (
+                    <Card key={c.id} className="shadow-card hover:shadow-elevated transition-all">
+                      <CardContent className="p-5 flex items-center gap-4">
+                        <Avatar className="w-12 h-12">
+                          <AvatarImage src={m?.photo_url ?? undefined} />
+                          <AvatarFallback className="gradient-warm text-primary-foreground text-sm font-bold">
+                            {initials(m?.first_name, m?.last_name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0">
+                          <Link to={`/member/${m?.id}`} className="font-semibold text-sm hover:text-primary truncate block">
+                            {m?.first_name} {m?.last_name}
+                          </Link>
+                          <Badge variant="secondary" className="mt-1 text-xs">
+                            {(c.roles as { name: string } | null)?.name}
+                          </Badge>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-sm">No committee members assigned yet.</p>
             )}
           </TabsContent>
 

@@ -104,12 +104,21 @@ Deno.serve(async (req) => {
       });
     }
 
-    const countryCode = (chapter.countries as { iso2: string } | null)?.iso2 || "XX";
-    const stateCode = (chapter.states as { code: string } | null)?.code || "XX";
+    const countryCode = (chapter.countries as { iso2: string } | null)?.iso2;
+    const stateCode = (chapter.states as { code: string } | null)?.code;
+
+    if (!countryCode || !stateCode || !chapter.cities) {
+      return new Response(
+        JSON.stringify({
+          error: "CHGEO: This chapter's location data is incomplete, so a Global ID cannot be issued. Please contact a Global Admin to link the chapter's country, state, and city.",
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Look up city code from controlled list
-    let cityCode = "XXX";
-    if (chapter.cities) {
+    let cityCode: string;
+    {
       const rawCityCode = (chapter.cities as { code: string }).code;
       const { data: cityCodeRecord } = await adminClient
         .from("city_codes")
