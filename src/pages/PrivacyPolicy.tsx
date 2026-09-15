@@ -109,7 +109,7 @@ export default function PrivacyPolicy() {
         </Section>
 
         <Section title="7. Cookies and Tracking">
-          <p>We use cookies and similar technologies to operate the Platform. See our <Link to="/cookie-policy" className="text-primary hover:underline">Cookie Policy</Link> for full details. You can manage cookie preferences through your browser settings or our cookie consent center.</p>
+          <p>We use cookies and similar technologies to operate the Platform. See the <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link> for details. You can manage cookie preferences through your browser settings or our cookie consent center.</p>
         </Section>
 
         <Section title="8. Your Rights">

@@ -142,7 +142,7 @@ function DrillDownDialog({ drillKey, myChapterId, onClose }: { drillKey: DrillKe
           id: b.id,
           label: b.name,
           sub: `${b.verified ? "Verified" : "Unverified"} · ${(b.chapters as { name: string } | null)?.name ?? "—"}`,
-          link: `/businesses/${b.id}`,
+          link: `/business?id=${b.id}`,
         }));
       }
 
@@ -201,12 +201,12 @@ function DrillDownDialog({ drillKey, myChapterId, onClose }: { drillKey: DrillKe
       }
 
       if (drillKey === "chapters-all") {
-        const { data } = await supabase.from("chapters").select("id, name, settings").order("name");
+        const { data } = await supabase.from("chapters").select("id, slug, name, settings").order("name");
         return (data ?? []).map(c => ({
           id: c.id,
           label: c.name,
           sub: (c.settings as { is_active?: boolean } | null)?.is_active !== false ? "Active" : "Inactive",
-          link: `/chapters/${c.id}`,
+          link: `/chapters/${c.slug}`,
         }));
       }
 

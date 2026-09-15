@@ -166,8 +166,7 @@ export default function Accessibility() {
         <div className="container text-center text-xs text-muted-foreground">
           <p>&copy; {new Date().getFullYear()} KhadayataOnline. &bull;{" "}
             <Link to="/terms" className="hover:text-primary transition-colors">Terms of Use</Link> &bull;{" "}
-            <Link to="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link> &bull;{" "}
-            <Link to="/cookie-policy" className="hover:text-primary transition-colors">Cookie Policy</Link>
+            <Link to="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link>
           </p>
         </div>
       </div>
