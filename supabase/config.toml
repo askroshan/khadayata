@@ -1,1 +1,37 @@
 project_id = "zwiewldqgfqapwuqtsqb"
+
+[functions.bulk-invite]
+verify_jwt = true
+
+[functions.delete-user]
+verify_jwt = true
+
+[functions.generate-global-id]
+verify_jwt = true
+
+[functions.invite-member]
+verify_jwt = true
+
+[functions.send-email]
+verify_jwt = true
+
+[functions.send-reminder]
+verify_jwt = true
+
+[functions.send-reset-email]
+verify_jwt = false
+
+[functions.send-sms]
+verify_jwt = true
+
+[functions.send-sms-campaign]
+verify_jwt = true
+
+[functions.send-whatsapp]
+verify_jwt = true
+
+[functions.sitemap]
+verify_jwt = false
+
+[functions.weekly-digest]
+verify_jwt = true
