@@ -71,6 +71,29 @@ regular member (plus unverified members).
 - Functions holding service-role power (send-email, delete-user, invite-*)
   must validate the caller's JWT/role server-side before acting.
 
+### Email templates (supabase/functions/send-email/templates.ts)
+
+- All email HTML is built in `templates.ts`, which is intentionally Deno-free
+  so the Vitest suite (`src/test/email-templates.test.ts`) can import it
+  directly. Never add `Deno.*`, `fetch`, or env reads to that file.
+- Escaping model: paragraph/alert helpers escape every string they receive;
+  trusted template markup (`<strong>`, `<br/>`, our own links) may only enter
+  through `{ raw: ... }` segments, and raw segments must never contain
+  interpolated variables. Build dynamic values as
+  `["text ", vars.x, " more"]` — never by concatenating a variable into a raw
+  segment.
+- Adding/renaming a template: update the `EmailTemplate` union, add the slug
+  to `ALL_TEMPLATES` in `src/test/email-templates.test.ts`, and give the
+  template a recipient greeting (`Hi <name>`) unless genuinely inapplicable
+  (e.g. obituary notices use "Dear <name>").
+- Recipient greeting names must go through `pickInviteeName` (member row
+  first, auth `user_metadata` fallback, stub names never shown). Do not
+  hand-roll "Pending Verification" checks — that is how the
+  emails-greeted-everyone-"Member" bug happened.
+- Regression suite `src/test/email-templates.test.ts` must stay green: it
+  asserts no escaped-own-markup, no double-escaped entities, hostile
+  variables stay escaped, and every template greets the recipient.
+
 ## 5. Testing (TDD)
 
 - Tests live in `src/test/` (Vitest). Run: `npx vitest run`.

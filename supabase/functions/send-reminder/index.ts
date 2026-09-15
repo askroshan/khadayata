@@ -12,6 +12,22 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const LOGIN_URL = "https://khadayataonline.com/auth";
 
+// Mirrors pickInviteeName in send-email/templates.ts (kept inline because the
+// deploy tool bundles each function directory in isolation; the canonical
+// implementation and its tests live in that module).
+const STUB_FIRST_NAMES = new Set(["Pending", "Member", "Verification"]);
+
+function pickInviteeName(
+  member: { first_name?: string | null; last_name?: string | null } | null,
+  authMeta?: { first_name?: string | null; last_name?: string | null } | null
+): string {
+  const first = member?.first_name?.trim() ?? "";
+  if (first && !STUB_FIRST_NAMES.has(first)) return first;
+  const metaFirst = authMeta?.first_name?.trim() ?? "";
+  if (metaFirst && !STUB_FIRST_NAMES.has(metaFirst)) return metaFirst;
+  return first || metaFirst || "Member";
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
@@ -193,9 +209,13 @@ Deno.serve(async (req: Request) => {
           }
         }
 
-        const memberName = member.first_name === "Pending" && member.last_name === "Verification"
-          ? "Member"
-          : member.first_name;
+        // Prefer the member row's real name; fall back to the auth account
+        // metadata (bulk invites store the recipient's name there, not on the
+        // member row, which may still carry a "Pending Verification" stub).
+        const memberName = pickInviteeName(
+          { first_name: member.first_name, last_name: member.last_name },
+          { first_name: authUser.user_metadata?.first_name, last_name: authUser.user_metadata?.last_name }
+        );
         const chapterName = (member.chapters as { name: string } | null)?.name ?? "";
 
         // Send reminder email via send-email function — both headers use the
