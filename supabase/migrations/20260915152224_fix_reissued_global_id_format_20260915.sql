@@ -72,7 +72,7 @@ RETURN v_raw || v_checksum;
 END;
 $function$;
 
--- 2. Reformat the 34 well-formed raw IDs by inserting dashes.
+-- 2. Reformat well-formed raw IDs by inserting dashes.
 UPDATE members
 SET global_id = 'KHD-'
     || substring(global_id FROM 4 FOR 7) || '-'
