@@ -57,15 +57,13 @@ export default function SEOMeta({
         description: BASE_DESCRIPTION,
         address: {
           "@type": "PostalAddress",
-          streetAddress: "1320 Pepperhill Ln",
           addressLocality: "Fort Worth",
           addressRegion: "TX",
-          postalCode: "76131",
           addressCountry: "US",
         },
         contactPoint: {
           "@type": "ContactPoint",
-          telephone: "+1-682-432-9400",
+          telephone: "+1-972-371-0001",
           contactType: "customer support",
           email: "support@khadayataonline.com",
           availableLanguage: ["English", "Gujarati", "Hindi"],

@@ -44,7 +44,7 @@ export default function PrivacyPolicy() {
         </div>
 
         <Section title="1. Who We Are">
-          <p>KhadayataOnline ("we," "our," "us") is a community platform serving the global Khadayata community, operated by KhadayataOnline Inc., located at 1320 Pepperhill Ln, Fort Worth, TX 76131. For privacy-related inquiries, <Link to="/contact" className="text-primary hover:underline">contact us here</Link>.</p>
+          <p>KhadayataOnline ("we," "our," "us") is a community platform serving the global Khadayata community, operated by KhadayataOnline Inc., located in Fort Worth, TX. For privacy-related inquiries, <Link to="/contact" className="text-primary hover:underline">contact us here</Link>.</p>
         </Section>
 
         <Section title="2. Information We Collect">
@@ -159,8 +159,8 @@ export default function PrivacyPolicy() {
           <p>For privacy-related questions, please <Link to="/contact" className="text-primary hover:underline font-medium">contact us here</Link>.</p>
           <div className="bg-muted/50 rounded-xl p-4 mt-2">
             <p className="font-medium text-foreground">KhadayataOnline — Privacy Team</p>
-            <p>1320 Pepperhill Ln, Fort Worth, TX 76131</p>
-            <p>Phone: +1 (682) 432-9400</p>
+            <p>Fort Worth, TX</p>
+            <p>Phone: +1 972 371 0001</p>
           </div>
         </Section>
       </div>

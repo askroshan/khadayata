@@ -12,9 +12,9 @@ const FROM_EMAIL = "noreply@khadayataonline.com";
 const REPLY_TO = "support@khadayataonline.com";
 
 const COMMUNITY_NAME = "KhadayataOnline";
-const ADDR_LINE1 = "1320 Pepperhill Ln";
-const ADDR_LINE2 = "Fort Worth, TX 76131";
-const PHONE = "+1 (682) 432-9400";
+const ADDR_LINE1 = "Fort Worth";
+const ADDR_LINE2 = "TX";
+const PHONE = "+1 972 371 0001";
 const WEBSITE = "https://khadayataonline.com";
 const LOGO_URL = "https://khadayataonline.com/Screenshot_2026-03-16_at_9.18.14_AM.png";
 

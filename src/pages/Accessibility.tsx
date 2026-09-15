@@ -129,8 +129,8 @@ export default function Accessibility() {
           <p>We welcome your feedback on the accessibility of KhadayataOnline. If you encounter an accessibility barrier, please tell us:</p>
           <div className="bg-muted/50 rounded-xl p-4 mt-2">
             <p className="font-medium text-foreground">Accessibility Team — KhadayataOnline</p>
-            <p>1320 Pepperhill Ln, Fort Worth, TX 76131</p>
-            <p>Phone: +1 (682) 432-9400</p>
+            <p>Fort Worth, TX</p>
+            <p>Phone: +1 972 371 0001</p>
             <p>Contact: <Link to="/contact" className="text-primary hover:underline">Contact Us form</Link></p>
           </div>
           <p className="mt-3">Please include:</p>

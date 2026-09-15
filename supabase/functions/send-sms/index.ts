@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 const EASIFY_BASE = "https://backend.easify.app/api/v2";
-const EASIFY_FROM = "6824329400";
+const EASIFY_FROM = "19723710001";
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {

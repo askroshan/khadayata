@@ -133,7 +133,7 @@ export default function SMSTab() {
         <MessageSquare className="w-5 h-5 text-blue-600" />
         <div>
           <h2 className="text-base font-display font-semibold">SMS Alerts</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">Send SMS alerts and blasts via Easify from +1 (682) 432-9400.</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Send SMS alerts and blasts via Easify from +1 972 371 0001.</p>
         </div>
       </div>
 
@@ -142,7 +142,7 @@ export default function SMSTab() {
           <Info className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
           <p className="text-sm text-blue-700">
             Requires <strong>EASIFY_API_TOKEN</strong> configured in Supabase secrets (Settings &rarr; API Settings in your Easify dashboard).
-            Messages are sent from <strong>+1 (682) 432-9400</strong>.
+            Messages are sent from <strong>+1 972 371 0001</strong>.
           </p>
         </CardContent>
       </Card>

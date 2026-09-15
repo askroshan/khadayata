@@ -8,14 +8,14 @@ const CONTACT_INFO = [
   {
     icon: MapPin,
     label: "Address",
-    value: "1320 Pepperhill Ln\nFort Worth, TX 76131",
-    href: "https://maps.google.com/?q=1320+Pepperhill+Ln+Fort+Worth+TX+76131",
+    value: "Fort Worth, TX",
+    href: "https://maps.google.com/?q=Fort+Worth+TX",
   },
   {
     icon: Phone,
     label: "Phone",
-    value: "+1 (682) 432-9400",
-    href: "tel:+16824329400",
+    value: "+1 972 371 0001",
+    href: "tel:+19723710001",
   },
   {
     icon: Clock,

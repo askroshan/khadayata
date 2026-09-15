@@ -145,11 +145,11 @@ export default function PublicLayout({ children, title, description }: {
               connecting families across 28 countries through a verified global identity, events, business, and heritage.
             </p>
             <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", lineHeight: 1.9, display: "flex", flexWrap: "wrap", gap: "0 32px" }} itemProp="address" itemScope itemType="https://schema.org/PostalAddress">
-              <span itemProp="streetAddress">1320 Pepperhill Ln, <span itemProp="addressLocality">Fort Worth</span>, <span itemProp="addressRegion">TX</span> <span itemProp="postalCode">76131</span></span>
-              <a href="tel:+16824329400" style={{ color: "rgba(255,255,255,0.35)", textDecoration: "none" }} itemProp="telephone"
+              <span itemProp="streetAddress">Fort Worth, <span itemProp="addressLocality">TX</span></span>
+              <a href="tel:+19723710001" style={{ color: "rgba(255,255,255,0.35)", textDecoration: "none" }} itemProp="telephone"
                 onMouseEnter={e => (e.currentTarget.style.color = "#F4B400")}
                 onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.35)")}
-              >+1 (682) 432-9400</a>
+              >+1 972 371 0001</a>
               <Link to="/contact" style={{ color: "rgba(255,255,255,0.35)", textDecoration: "none" }}
                 onMouseEnter={e => (e.currentTarget.style.color = "#F4B400")}
                 onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.35)")}

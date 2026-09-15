@@ -612,8 +612,8 @@ export default function Index() {
                 Preserving heritage. Empowering community. Connecting generations.
               </p>
               <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", lineHeight: 1.8 }}>
-                <p style={{ margin: 0 }}>1320 Pepperhill Ln, Fort Worth, TX 76131</p>
-                <a href="tel:+16824329400" style={{ color: "rgba(255,255,255,0.4)", textDecoration: "none", display: "block" }}>+1 (682) 432-9400</a>
+                <p style={{ margin: 0 }}>Fort Worth, TX</p>
+                <a href="tel:+19723710001" style={{ color: "rgba(255,255,255,0.4)", textDecoration: "none", display: "block" }}>+1 972 371 0001</a>
                 <Link to="/contact" style={{ color: "rgba(255,255,255,0.4)", textDecoration: "none", display: "block" }}>Contact Us</Link>
               </div>
             </div>
