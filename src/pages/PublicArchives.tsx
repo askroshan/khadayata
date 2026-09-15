@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { fetchArchiveStats } from "@/lib/archive-stats";
 import PublicLayout from "@/components/PublicLayout";
 import SEOMeta from "@/components/SEOMeta";
 import { Library, BookOpen, Mic, Lock, ArrowRight, FileText, Calendar } from "lucide-react";
@@ -27,6 +28,12 @@ function LoginGate({ message }: { message: string }) {
 
 export default function PublicArchives() {
   const { user } = useAuth();
+
+  const { data: stats } = useQuery({
+    queryKey: ["public-archive-stats"],
+    queryFn: () => fetchArchiveStats(supabase),
+    staleTime: 300_000,
+  });
 
   const { data: magazines } = useQuery({
     queryKey: ["public-magazines-teaser"],
@@ -93,14 +100,16 @@ export default function PublicArchives() {
         <div style={{ background: "#fff", borderBottom: "1px solid rgba(232,163,23,0.2)", padding: "20px 24px" }}>
           <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", gap: 40, flexWrap: "wrap" }}>
             {[
-              { icon: BookOpen, label: "Magazine Issues", value: "50+" },
-              { icon: FileText, label: "Digitized Pages", value: "2,000+" },
+              { icon: BookOpen, label: "Magazine Issues", value: stats ? `${stats.magazineIssues}` : null },
+              { icon: FileText, label: "Digitized Pages", value: stats ? stats.digitizedPages.toLocaleString("en-US") : null },
               { icon: Mic, label: "Oral History Recordings", value: "Growing" },
             ].map(({ icon: Icon, label, value }) => (
               <div key={label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <Icon size={20} style={{ color: "#F39C12" }} />
                 <div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: "#2E2E2E" }}>{value}</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: "#2E2E2E" }}>
+                    {value ?? <span style={{ color: "#2E2E2E50" }}>&ndash;</span>}
+                  </div>
                   <div style={{ fontSize: 12, color: "#2E2E2E70" }}>{label}</div>
                 </div>
               </div>
