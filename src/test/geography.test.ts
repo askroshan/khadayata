@@ -45,7 +45,7 @@ describe("Geography: stateless country logic", () => {
   });
 
   it("state dropdown should be shown when hasStates is true", () => {
-    const hasStates = true;
+    const hasStates = true as boolean | undefined;
     const showStateDropdown = hasStates !== false;
     expect(showStateDropdown).toBe(true);
   });
@@ -64,7 +64,7 @@ describe("Geography: stateless country logic", () => {
   });
 
   it("useCitiesByCountry should not be called for countries with states", () => {
-    const hasStates = true;
+    const hasStates = true as boolean | undefined;
     const countryId = "some-country-id";
     const queryShouldRun = countryId && hasStates === false;
     expect(queryShouldRun).toBeFalsy();

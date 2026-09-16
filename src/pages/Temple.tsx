@@ -81,7 +81,7 @@ export default function Temple() {
         donor_email: prev.donor_email || (((member as Record<string, unknown>).email as string) ?? ""),
       }));
     }
-  }, [member?.id]);
+  }, [member]);
 
   const { data: funds } = useQuery({
     queryKey: ["funds"],

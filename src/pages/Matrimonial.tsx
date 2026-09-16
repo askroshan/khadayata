@@ -732,7 +732,7 @@ export default function Matrimonial() {
           ) : !showForm && (
             /* No profile: browse-only view */
             <div className="space-y-4">
-              {canManageMatrimonial && <MatrimonialModerationPanel allProfiles={allProfiles} />}
+              {canManageMatrimonial && <MatrimonialModerationPanel />}
               <SearchFilters filters={filters} onChange={setFilters} />
               {filteredProfiles.length === 0 ? (
                 <Card className="shadow-card">

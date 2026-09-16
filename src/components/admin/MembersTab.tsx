@@ -218,7 +218,7 @@ export default function MembersTab({ members, myChapterId, canInvite = false, is
         updatePayload.ekda = editMember.ekda.trim() || null;
         updatePayload.kuldevi = editMember.kuldevi.trim() || null;
       }
-      const { error } = await supabase.from("members").update(updatePayload).eq("id", editMember.id);
+      const { error } = await supabase.from("members").update(updatePayload as never).eq("id", editMember.id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -425,7 +425,7 @@ export default function MembersTab({ members, myChapterId, canInvite = false, is
       list = list.filter((m) => m.created_at && new Date(m.created_at) <= toDate);
     }
     return list;
-  }, [members, search, filterLevel, filterStatus, dateFrom, dateTo, memberStatuses, isGlobalAdmin, memberEmails, memberPhones]);
+  }, [members, search, filterLevel, filterStatus, dateFrom, dateTo, memberStatuses, isGlobalAdmin, memberEmails]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);

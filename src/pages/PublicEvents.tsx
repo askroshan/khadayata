@@ -59,7 +59,7 @@ export default function PublicEvents() {
     e.name?.toLowerCase().includes(search.toLowerCase()) ||
     e.category?.toLowerCase().includes(search.toLowerCase()) ||
     e.organizer_name?.toLowerCase().includes(search.toLowerCase()) ||
-    (e.cities as any)?.name?.toLowerCase().includes(search.toLowerCase())
+    (e.cities as { name: string } | null)?.name?.toLowerCase().includes(search.toLowerCase())
   );
 
   const categoryColors: Record<string, string> = {
@@ -166,9 +166,9 @@ export default function PublicEvents() {
               {filtered.map(event => {
                 const catColor = categoryColors[event.category ?? "other"] ?? "#7F8C8D";
                 const locationParts = [
-                  (event.cities as any)?.name,
-                  (event.states as any)?.name,
-                  (event.countries as any)?.name,
+                  (event.cities as { name: string } | null)?.name,
+                  (event.states as { name: string } | null)?.name,
+                  (event.countries as { name: string } | null)?.name,
                 ].filter(Boolean);
                 const rsvpCount = Array.isArray(event.event_rsvps) ? event.event_rsvps.length : 0;
                 const isFree = !event.fee_amount || event.fee_amount === 0;
@@ -240,7 +240,7 @@ export default function PublicEvents() {
                       {event.description && (
                         <p style={{ fontSize: 13, color: "#555", margin: "0 0 10px", lineHeight: 1.55,
                           overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2,
-                          WebkitBoxOrient: "vertical" as any,
+                          WebkitBoxOrient: "vertical",
                         }}>
                           {event.description}
                         </p>
@@ -270,9 +270,9 @@ export default function PublicEvents() {
                             {event.max_capacity ? ` · ${event.max_capacity} capacity` : ""}
                           </span>
                         )}
-                        {(event.chapters as any)?.name && (
+                        {(event.chapters as { name: string } | null)?.name && (
                           <span style={{ fontSize: 11, color: "#aaa" }}>
-                            {(event.chapters as any).name}
+                            {(event.chapters as { name: string } | null)?.name ?? ""}
                           </span>
                         )}
                       </div>

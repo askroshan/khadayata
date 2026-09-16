@@ -23,7 +23,7 @@ export function LanguageToggle({ content, onChange, className = "" }: LanguageTo
 
   useEffect(() => {
     onChange(current);
-  }, [current]);
+  }, [current, onChange]);
 
   if (available.length <= 1) return null;
 

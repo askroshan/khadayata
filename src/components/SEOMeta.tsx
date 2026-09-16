@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 
 interface SEOMetaProps {
   title?: string;
@@ -40,7 +40,7 @@ export default function SEOMeta({
   const canonicalUrl = url ? `${BASE_URL}${url}` : BASE_URL;
   const imageUrl = image.startsWith("http") ? image : `${BASE_URL}${image}`;
 
-  const defaultSchema = {
+  const defaultSchema = useMemo(() => ({
     "@context": "https://schema.org",
     "@graph": [
       {
@@ -153,7 +153,7 @@ export default function SEOMeta({
           }]
         : []),
     ],
-  };
+  }), [fullTitle, description, imageUrl, canonicalUrl, schema, breadcrumbs, faq, type, publishedAt, modifiedAt, authorName]);
 
   useEffect(() => {
     document.title = fullTitle;
@@ -224,7 +224,7 @@ export default function SEOMeta({
     setLink("canonical", canonicalUrl);
 
     setScript("schema-ld-json", defaultSchema);
-  }, [fullTitle, description, keywords, imageUrl, canonicalUrl, type, noIndex, breadcrumbs, faq, publishedAt, modifiedAt, authorName]);
+  }, [fullTitle, description, keywords, imageUrl, canonicalUrl, type, noIndex, breadcrumbs, faq, publishedAt, modifiedAt, authorName, defaultSchema]);
 
   return null;
 }

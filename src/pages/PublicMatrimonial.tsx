@@ -68,7 +68,7 @@ export default function PublicMatrimonial() {
   });
 
   const filtered = profiles.filter(p => {
-    const member = p.member as any;
+    const member = p.member as { first_name: string | null; last_name: string | null; dob: string | null; gender: string | null; photo_url: string | null; chapters: { name: string } | null } | null;
     const name = `${member?.first_name ?? ""} ${member?.last_name ?? ""}`.toLowerCase();
     const matchesSearch = !search ||
       name.includes(search.toLowerCase()) ||
@@ -88,7 +88,7 @@ export default function PublicMatrimonial() {
     return Math.floor(diff / (1000 * 60 * 60 * 24 * 365.25));
   };
 
-  const getInitials = (member: any) =>
+  const getInitials = (member: { first_name: string | null; last_name: string | null } | null) =>
     `${member?.first_name?.[0] ?? ""}${member?.last_name?.[0] ?? ""}`.toUpperCase();
 
   return (
@@ -220,7 +220,7 @@ export default function PublicMatrimonial() {
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 20 }}>
               {filtered.map(p => {
-                const member = p.member as any;
+                const member = p.member as { first_name: string | null; last_name: string | null; dob: string | null; gender: string | null; photo_url: string | null; chapters: { name: string } | null } | null;
                 const age = getAge(member?.dob);
                 const gender = member?.gender;
                 const initials = getInitials(member);
@@ -268,8 +268,8 @@ export default function PublicMatrimonial() {
                             {age && gender ? " · " : ""}
                             {gender === "male" ? "Groom" : gender === "female" ? "Bride" : ""}
                           </div>
-                          {(member?.chapters as any)?.name && (
-                            <div style={{ fontSize: 11, color: "#aaa" }}>{(member?.chapters as any).name}</div>
+                          {(member?.chapters as { name: string } | null)?.name && (
+                            <div style={{ fontSize: 11, color: "#aaa" }}>{(member?.chapters as { name: string } | null)?.name ?? ""}</div>
                           )}
                         </div>
                       </div>
@@ -331,7 +331,7 @@ export default function PublicMatrimonial() {
                       {p.about && (
                         <p style={{ fontSize: 12, color: "#777", margin: "0 0 10px", lineHeight: 1.55,
                           overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2,
-                          WebkitBoxOrient: "vertical" as any,
+                          WebkitBoxOrient: "vertical",
                         }}>
                           {p.about}
                         </p>

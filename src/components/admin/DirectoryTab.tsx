@@ -146,9 +146,9 @@ export default function DirectoryTab({ myChapterId }: DirectoryTabProps) {
         description: newBiz.description.trim() || null,
         phone: newBiz.phone.trim() || null,
         website: newBiz.website.trim() || null,
-        chapter_id: myChapterId || null,
+        chapter_id: myChapterId,
         verified: false,
-      });
+      } as never);
       if (error) throw error;
     },
     onSuccess: () => {

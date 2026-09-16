@@ -4087,7 +4087,7 @@ export type Database = {
         Returns: string
       }
       get_member_emails: {
-        Args: { }
+        Args: Record<string, never>
         Returns: {
           member_id: string
           email: string
@@ -4095,7 +4095,7 @@ export type Database = {
         }[]
       }
       get_member_phones: {
-        Args: { }
+        Args: Record<string, never>
         Returns: {
           member_id: string
           phone: string

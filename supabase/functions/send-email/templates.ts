@@ -339,7 +339,8 @@ export type EmailTemplate =
   | "global_id_assigned"
   | "family_invitation_sent"
   | "chapter_admin_invite"
-  | "member_invitation";
+  | "member_invitation"
+  | "chapter_transfer_history_update";
 
 export function buildEmailHtml(template: EmailTemplate, vars: Record<string, string>): { subject: string; html: string } {
   const name = vars.name ?? "Member";

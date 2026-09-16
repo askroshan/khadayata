@@ -52,7 +52,7 @@ export default function Settings() {
     if (member) {
       setPrivacy((member.privacy as Record<string, string>) ?? {});
     }
-  }, [member?.id]);
+  }, [member]);
 
   useEffect(() => {
     if (!notifLocal) {
@@ -63,7 +63,7 @@ export default function Settings() {
         chapter_notifications_enabled: notifPrefs?.chapter_notifications_enabled ?? true,
       });
     }
-  }, [notifPrefs?.email_enabled, notifPrefs?.whatsapp_enabled, notifPrefs?.push_enabled]);
+  }, [notifLocal, notifPrefs?.email_enabled, notifPrefs?.whatsapp_enabled, notifPrefs?.push_enabled, notifPrefs?.chapter_notifications_enabled]);
 
   const handleTabChange = (value: string) => {
     setSearchParams({ tab: value }, { replace: true });

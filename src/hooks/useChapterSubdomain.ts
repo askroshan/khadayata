@@ -43,7 +43,7 @@ export function useChapterSubdomain() {
     chapter,
     isChapterSite: !!subdomain,
     isLoading: !!subdomain && isPending,
-    error: !!subdomain ? error : null,
+    error: subdomain ? error : null,
   };
 }
 

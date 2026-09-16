@@ -372,7 +372,7 @@ export default function AnalyticsTab({ myChapterId }: Props) {
   const { data: matrimonialStats } = useQuery({
     queryKey: ["analytics-matrimonial", myChapterId],
     queryFn: async () => {
-      let q = supabase.from("matrimonial_profiles").select("id, verified, suspended, members!matrimonial_profiles_member_id_fkey(chapter_id)");
+      const q = supabase.from("matrimonial_profiles").select("id, verified, suspended, members!matrimonial_profiles_member_id_fkey(chapter_id)");
       const { data } = await q;
       if (!data) return null;
       const scoped = myChapterId

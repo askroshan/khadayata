@@ -193,9 +193,6 @@ export default function Events() {
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
-  if (loading) return <div className="flex min-h-screen items-center justify-center"><div className="animate-pulse text-muted-foreground">Loading...</div></div>;
-  if (!user) return <Navigate to="/auth" replace />;
-
   const { data: eventPhotoCounts } = useQuery({
     queryKey: ["event-photo-counts", events?.map((e) => e.id).join(",")],
     queryFn: async () => {
@@ -210,6 +207,9 @@ export default function Events() {
     },
     enabled: !!events && events.length > 0,
   });
+
+  if (loading) return <div className="flex min-h-screen items-center justify-center"><div className="animate-pulse text-muted-foreground">Loading...</div></div>;
+  if (!user) return <Navigate to="/auth" replace />;
 
   const upcoming = filterByChapter(events?.filter((e) => new Date(e.starts_at) >= new Date()) ?? [], chapterFilter);
   const past = filterByChapter(events?.filter((e) => new Date(e.starts_at) < new Date()) ?? [], chapterFilter);

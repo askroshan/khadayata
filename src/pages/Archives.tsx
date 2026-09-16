@@ -30,7 +30,7 @@ export default function Archives() {
     mutationFn: async () => {
       const { error } = await supabase.from("magazine_issues").insert({
         title: issueForm.title.trim(),
-        volume: issueForm.volume ? Number(issueForm.volume) : null,
+        volume: issueForm.volume.trim() || null,
         issue_date: issueForm.issue_date || null,
         pdf_url: issueForm.pdf_url.trim() || null,
       });

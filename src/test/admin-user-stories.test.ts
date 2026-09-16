@@ -35,10 +35,10 @@ function generateCsvFilename(): string {
 
 describe("US-001: Filter Members by Date Range", () => {
   const mockMembers: Member[] = [
-    { id: "1", first_name: "Harsh", last_name: "Shah", verification_level: 3, onboarding_completed: true, chapter_id: "ch1", created_at: "2026-01-15T10:00:00Z", chapters: { name: "Mumbai" } },
-    { id: "2", first_name: "Aman", last_name: "Patel", verification_level: 1, onboarding_completed: false, chapter_id: "ch2", created_at: "2026-02-20T15:30:00Z", chapters: { name: "Ahmedabad" } },
-    { id: "3", first_name: "Neev", last_name: "Mehta", verification_level: 2, onboarding_completed: true, chapter_id: "ch1", created_at: "2026-03-10T08:45:00Z", chapters: { name: "Mumbai" } },
-    { id: "4", first_name: "Rina", last_name: "Shah", verification_level: 0, onboarding_completed: false, chapter_id: "ch3", created_at: undefined, chapters: { name: "Toronto" } },
+    { id: "1", user_id: "u1", first_name: "Harsh", last_name: "Shah", verification_level: 3, onboarding_completed: true, chapter_id: "ch1", created_at: "2026-01-15T10:00:00Z", chapters: { name: "Mumbai" } },
+    { id: "2", user_id: "u2", first_name: "Aman", last_name: "Patel", verification_level: 1, onboarding_completed: false, chapter_id: "ch2", created_at: "2026-02-20T15:30:00Z", chapters: { name: "Ahmedabad" } },
+    { id: "3", user_id: "u3", first_name: "Neev", last_name: "Mehta", verification_level: 2, onboarding_completed: true, chapter_id: "ch1", created_at: "2026-03-10T08:45:00Z", chapters: { name: "Mumbai" } },
+    { id: "4", user_id: "u4", first_name: "Rina", last_name: "Shah", verification_level: 0, onboarding_completed: false, chapter_id: "ch3", created_at: undefined, chapters: { name: "Toronto" } },
   ];
 
   it("AC: date range filter has from and to inputs that work together", () => {
@@ -323,8 +323,8 @@ describe("US-005: Verification Level Changes with Authorization", () => {
 
 describe("US-006: CSV Export with Filtering", () => {
   const mockMembers: Member[] = [
-    { id: "1", first_name: "Harsh", last_name: "Shah", verification_level: 3, onboarding_completed: true, chapter_id: "ch1", created_at: "2026-01-15T10:00:00Z", chapters: { name: "Mumbai" } },
-    { id: "2", first_name: 'Rina "R"', last_name: "O'Shah", verification_level: 0, onboarding_completed: false, chapter_id: null, created_at: undefined, chapters: null },
+    { id: "1", user_id: "u1", first_name: "Harsh", last_name: "Shah", verification_level: 3, onboarding_completed: true, chapter_id: "ch1", created_at: "2026-01-15T10:00:00Z", chapters: { name: "Mumbai" } },
+    { id: "2", user_id: "u5", first_name: 'Rina "R"', last_name: "O'Shah", verification_level: 0, onboarding_completed: false, chapter_id: null, created_at: undefined, chapters: null },
   ];
 
   it("AC: CSV includes correct headers", () => {

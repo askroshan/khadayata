@@ -52,7 +52,7 @@ export default function PublicScholarships() {
     s.name?.toLowerCase().includes(search.toLowerCase()) ||
     s.description?.toLowerCase().includes(search.toLowerCase()) ||
     s.eligibility?.toLowerCase().includes(search.toLowerCase()) ||
-    (s.chapters as any)?.name?.toLowerCase().includes(search.toLowerCase())
+    (s.chapters as { name: string } | null)?.name?.toLowerCase().includes(search.toLowerCase())
   );
 
   const open = filtered.filter(s => !s.deadline || !isPast(new Date(s.deadline)));
@@ -175,9 +175,9 @@ export default function PublicScholarships() {
                               Closed
                             </span>
                           )}
-                          {(s.chapters as any)?.name && (
+                          {(s.chapters as { name: string } | null)?.name && (
                             <span style={{ background: "#f5f0e8", color: "#888", borderRadius: 20, padding: "2px 8px", fontSize: 10 }}>
-                              {(s.chapters as any).name}
+                              {(s.chapters as { name: string } | null)?.name ?? ""}
                             </span>
                           )}
                         </div>
@@ -190,7 +190,7 @@ export default function PublicScholarships() {
                     {s.description && (
                       <p style={{ fontSize: 13, color: "#555", margin: "10px 0 0", lineHeight: 1.55,
                         overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3,
-                        WebkitBoxOrient: "vertical" as any,
+                        WebkitBoxOrient: "vertical",
                       }}>
                         {s.description}
                       </p>
@@ -216,7 +216,7 @@ export default function PublicScholarships() {
                         <div style={{ fontSize: 10, fontWeight: 700, color: "#888", letterSpacing: 0.5, marginBottom: 3 }}>ELIGIBILITY</div>
                         <p style={{ fontSize: 12, color: "#555", margin: 0, lineHeight: 1.5,
                           overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2,
-                          WebkitBoxOrient: "vertical" as any,
+                          WebkitBoxOrient: "vertical",
                         }}>
                           {s.eligibility}
                         </p>

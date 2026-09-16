@@ -211,7 +211,7 @@ export function RishtaWorkflow({ myProfileId, targetProfileId, introMessage, onR
         `)
         .or(`from_profile_id.eq.${myProfileId},to_profile_id.eq.${myProfileId}`)
         .order("updated_at", { ascending: false });
-      return (data ?? []) as RishtaRequest[];
+      return (data ?? []) as unknown as RishtaRequest[];
     },
     enabled: !!myProfileId,
   });
@@ -261,7 +261,7 @@ export function RishtaWorkflow({ myProfileId, targetProfileId, introMessage, onR
         update.status = status;
       }
 
-      const { error } = await supabase.from("rishta_requests").update(update).eq("id", id);
+      const { error } = await supabase.from("rishta_requests").update(update as never).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {

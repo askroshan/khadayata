@@ -34,7 +34,7 @@ export default function Chapters() {
   const [selectedState, setSelectedState] = useState<string>("all");
   const [selectedCity, setSelectedCity] = useState<string>("all");
 
-  const typedChapters = (chapters ?? []) as unknown as ChapterWithLocation[];
+  const typedChapters = useMemo(() => (chapters ?? []) as unknown as ChapterWithLocation[], [chapters]);
 
   // Build filter options from the chapters data itself — no extra DB calls
   const countries = useMemo(() => {

@@ -39,8 +39,9 @@ type AssignResult =
   | { ok: false; error: string };
 
 function expectFailure(result: AssignResult, messagePart: string) {
-  if (result.ok) throw new Error("expected failure but got success");
-  expect(result.error).toContain(messagePart);
+  const failure = result as { ok: false; error: string };
+  expect(failure.ok).toBe(false);
+  expect(failure.error).toContain(messagePart);
 }
 
 function expectSuccess(result: AssignResult) {

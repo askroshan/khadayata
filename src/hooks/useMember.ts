@@ -26,7 +26,7 @@ export function useMember() {
       if (!user) throw new Error("Not authenticated");
       const { data, error } = await supabase
         .from("members")
-        .update(updates)
+        .update(updates as never)
         .eq("user_id", user.id)
         .select()
         .single();

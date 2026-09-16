@@ -50,7 +50,7 @@ function useContentQuery(type: ContentType, search: string) {
       const { data } = await q;
       if (!data) return [];
 
-      return data.map((item: Record<string, unknown>) => {
+      return (data as unknown as Record<string, unknown>[]).map((item) => {
         let name = "";
         let subtitle = "";
         let status = "";

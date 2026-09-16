@@ -115,7 +115,7 @@ function calculateNextDueDate(pledge: RecurringPledge): string | null {
   const start = new Date(pledge.start_date);
   const now = new Date();
 
-  let next = new Date(start);
+  const next = new Date(start);
   while (next <= now) {
     if (pledge.interval === "monthly") next.setMonth(next.getMonth() + 1);
     else if (pledge.interval === "quarterly") next.setMonth(next.getMonth() + 3);

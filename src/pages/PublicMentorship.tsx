@@ -50,7 +50,7 @@ export default function PublicMentorship() {
   const allSkills = Array.from(new Set(mentors.flatMap(m => (m.skills as string[]) ?? []))).sort();
 
   const filtered = mentors.filter(m => {
-    const mentor = m.mentor as any;
+    const mentor = m.mentor as { first_name: string | null; last_name: string | null; verification_level: number | null; photo_url: string | null; chapters: { name: string } | null } | null;
     const name = `${mentor?.first_name ?? ""} ${mentor?.last_name ?? ""}`.toLowerCase();
     const skills = (m.skills as string[]) ?? [];
     const matchesSearch = !search || name.includes(search.toLowerCase()) ||
@@ -59,14 +59,14 @@ export default function PublicMentorship() {
     return matchesSearch && matchesSkill;
   });
 
-  const verificationBadge = (level: string | null) => {
-    if (!level || level === "unverified") return null;
+  const verificationBadge = (level: number | string | null) => {
+    if (level === null || level === undefined || level === "unverified") return null;
     const colors: Record<string, { bg: string; text: string; label: string }> = {
       L1: { bg: "#EBF5FB", text: "#2980B9", label: "Verified" },
       L2: { bg: "#E8F8F5", text: "#16A085", label: "L2 Member" },
       L3: { bg: "#FEF9E7", text: "#E67E22", label: "Elder" },
     };
-    const c = colors[level] ?? colors.L1;
+    const c = colors[String(level)] ?? colors.L1;
     return (
       <span style={{ background: c.bg, color: c.text, borderRadius: 20, padding: "2px 8px", fontSize: 10, fontWeight: 700 }}>
         {c.label}
@@ -198,7 +198,7 @@ export default function PublicMentorship() {
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 20 }}>
               {filtered.map(m => {
-                const mentor = m.mentor as any;
+                const mentor = m.mentor as { first_name: string | null; last_name: string | null; verification_level: number | null; photo_url: string | null; chapters: { name: string } | null } | null;
                 const skills = (m.skills as string[]) ?? [];
                 const initials = `${mentor?.first_name?.[0] ?? ""}${mentor?.last_name?.[0] ?? ""}`.toUpperCase();
                 return (
@@ -228,8 +228,8 @@ export default function PublicMentorship() {
                           </span>
                           {verificationBadge(mentor?.verification_level)}
                         </div>
-                        {(mentor?.chapters as any)?.name && (
-                          <div style={{ fontSize: 11, color: "#aaa" }}>{(mentor?.chapters as any).name}</div>
+                        {(mentor?.chapters as { name: string } | null)?.name && (
+                          <div style={{ fontSize: 11, color: "#aaa" }}>{(mentor?.chapters as { name: string } | null)?.name ?? ""}</div>
                         )}
                       </div>
                     </div>
@@ -237,7 +237,7 @@ export default function PublicMentorship() {
                     {m.description && (
                       <p style={{ fontSize: 13, color: "#555", margin: "0 0 10px", lineHeight: 1.55,
                         overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3,
-                        WebkitBoxOrient: "vertical" as any,
+                        WebkitBoxOrient: "vertical",
                       }}>
                         {m.description}
                       </p>
