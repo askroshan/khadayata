@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -27,7 +27,7 @@ function LoginGate({ message }: { message: string }) {
 }
 
 export default function PublicArchives() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
 
   const { data: stats } = useQuery({
     queryKey: ["public-archive-stats"],
@@ -47,16 +47,18 @@ export default function PublicArchives() {
     },
   });
 
-  if (user) {
+  if (loading) {
     return (
       <PublicLayout>
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "40px 24px", textAlign: "center" }}>
-          <p style={{ color: "#2E2E2E80", fontSize: 15 }}>
-            You are signed in. <Link to="/archives/full" style={{ color: "#F39C12", fontWeight: 600 }}>Go to Archives &rarr;</Link>
-          </p>
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "40px 24px", textAlign: "center", color: "#2E2E2E80", fontSize: 15 }}>
+          Loading...
         </div>
       </PublicLayout>
     );
+  }
+
+  if (user) {
+    return <Navigate to="/archives/full" replace />;
   }
 
   return (
