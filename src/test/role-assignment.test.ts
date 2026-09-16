@@ -38,10 +38,15 @@ type AssignResult =
   | { ok: true }
   | { ok: false; error: string };
 
-/**
- * Validates whether a caller can assign a role to a target member.
- * Mirrors the logic in the assign_role SECURITY DEFINER function.
- */
+function expectFailure(result: AssignResult, messagePart: string) {
+  if (result.ok) throw new Error("expected failure but got success");
+  expect(result.error).toContain(messagePart);
+}
+
+function expectSuccess(result: AssignResult) {
+  expect(result.ok).toBe(true);
+}
+
 function canAssignRole(
   caller: Caller,
   targetMember: TargetMember,
@@ -143,44 +148,35 @@ describe("Role Assignment Authorization: assign_role", () => {
   const chapterAdminRole: RoleInfo = { id: "r-ca", name: "Chapter Admin", scope: "chapter" };
 
   it("allows Global Admin to assign any role", () => {
-    expect(canAssignRole(globalAdmin, targetInCh1, committeeRole).ok).toBe(true);
-    expect(canAssignRole(globalAdmin, targetInCh2, chapterAdminRole).ok).toBe(true);
-    expect(canAssignRole(globalAdmin, targetInCh1, globalAdminRole).ok).toBe(true);
+    expectSuccess(canAssignRole(globalAdmin, targetInCh1, committeeRole));
+    expectSuccess(canAssignRole(globalAdmin, targetInCh2, chapterAdminRole));
+    expectSuccess(canAssignRole(globalAdmin, targetInCh1, globalAdminRole));
   });
 
   it("allows Chapter Admin to assign chapter roles within their chapter", () => {
-    expect(canAssignRole(chapterAdmin, targetInCh1, committeeRole).ok).toBe(true);
-    expect(canAssignRole(chapterAdmin, targetInCh1, chapterAdminRole).ok).toBe(true);
+    expectSuccess(canAssignRole(chapterAdmin, targetInCh1, committeeRole));
+    expectSuccess(canAssignRole(chapterAdmin, targetInCh1, chapterAdminRole));
   });
 
   it("prevents Chapter Admin from assigning roles outside their chapter", () => {
-    const result = canAssignRole(chapterAdmin, targetInCh2, committeeRole);
-    expect(result.ok).toBe(false);
-    expect(result.error).toContain("own chapter");
+    expectFailure(canAssignRole(chapterAdmin, targetInCh2, committeeRole), "own chapter");
   });
 
   it("prevents Chapter Admin from assigning global-scope roles", () => {
-    const result = canAssignRole(chapterAdmin, targetInCh1, globalAdminRole);
-    expect(result.ok).toBe(false);
-    expect(result.error).toContain("global-scope");
+    expectFailure(canAssignRole(chapterAdmin, targetInCh1, globalAdminRole), "global-scope");
   });
 
   it("prevents regular member from assigning roles", () => {
-    const result = canAssignRole(regularMember, targetInCh1, committeeRole);
-    expect(result.ok).toBe(false);
-    expect(result.error).toContain("Only Global Admin");
+    expectFailure(canAssignRole(regularMember, targetInCh1, committeeRole), "Only Global Admin");
   });
 
   it("prevents self-escalation to Global Admin", () => {
     const selfTarget: TargetMember = { id: "m-admin", chapterId: null };
-    const result = canAssignRole(globalAdmin, selfTarget, globalAdminRole);
-    expect(result.ok).toBe(false);
-    expect(result.error).toContain("yourself");
+    expectFailure(canAssignRole(globalAdmin, selfTarget, globalAdminRole), "yourself");
   });
 
   it("allows Global Admin to assign Global Admin to a different member", () => {
-    const result = canAssignRole(globalAdmin, targetInCh1, globalAdminRole);
-    expect(result.ok).toBe(true);
+    expectSuccess(canAssignRole(globalAdmin, targetInCh1, globalAdminRole));
   });
 
   it("handles Chapter Admin with no chapter_id", () => {
@@ -190,9 +186,7 @@ describe("Role Assignment Authorization: assign_role", () => {
       roles: ["Chapter Admin"],
       chapterId: null,
     };
-    const result = canAssignRole(orphanChapterAdmin, targetInCh1, committeeRole);
-    expect(result.ok).toBe(false);
-    expect(result.error).toContain("must belong to a chapter");
+    expectFailure(canAssignRole(orphanChapterAdmin, targetInCh1, committeeRole), "must belong to a chapter");
   });
 });
 
@@ -225,30 +219,24 @@ describe("Role Assignment Authorization: revoke_role", () => {
   const globalAdminRole: RoleInfo = { id: "r-ga", name: "Global Admin", scope: "global" };
 
   it("allows Global Admin to revoke any role", () => {
-    expect(canRevokeRole(globalAdmin, targetInCh1, committeeRole).ok).toBe(true);
-    expect(canRevokeRole(globalAdmin, targetInCh2, globalAdminRole).ok).toBe(true);
+    expectSuccess(canRevokeRole(globalAdmin, targetInCh1, committeeRole));
+    expectSuccess(canRevokeRole(globalAdmin, targetInCh2, globalAdminRole));
   });
 
   it("allows Chapter Admin to revoke chapter roles within their chapter", () => {
-    expect(canRevokeRole(chapterAdmin, targetInCh1, committeeRole).ok).toBe(true);
+    expectSuccess(canRevokeRole(chapterAdmin, targetInCh1, committeeRole));
   });
 
   it("prevents Chapter Admin from revoking roles outside their chapter", () => {
-    const result = canRevokeRole(chapterAdmin, targetInCh2, committeeRole);
-    expect(result.ok).toBe(false);
-    expect(result.error).toContain("own chapter");
+    expectFailure(canRevokeRole(chapterAdmin, targetInCh2, committeeRole), "own chapter");
   });
 
   it("prevents Chapter Admin from revoking Global Admin", () => {
-    const result = canRevokeRole(chapterAdmin, targetInCh1, globalAdminRole);
-    expect(result.ok).toBe(false);
-    expect(result.error).toContain("Global Admin");
+    expectFailure(canRevokeRole(chapterAdmin, targetInCh1, globalAdminRole), "Global Admin");
   });
 
   it("prevents regular member from revoking roles", () => {
-    const result = canRevokeRole(regularMember, targetInCh1, committeeRole);
-    expect(result.ok).toBe(false);
-    expect(result.error).toContain("Only Global Admin");
+    expectFailure(canRevokeRole(regularMember, targetInCh1, committeeRole), "Only Global Admin");
   });
 });
 

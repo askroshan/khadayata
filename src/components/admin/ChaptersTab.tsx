@@ -26,6 +26,7 @@ interface Chapter {
     subdomain?: string;
     city?: string;
     country?: string;
+    is_active?: boolean;
   } | null;
   member_count?: number;
   admin_names?: string[];

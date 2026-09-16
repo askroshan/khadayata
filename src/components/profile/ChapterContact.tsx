@@ -47,7 +47,7 @@ export function ChapterContact() {
       if (memberIds.length === 0) return [];
       const { data } = await supabase
         .from("member_contacts")
-        .select("member_id, phone, email")
+        .select("member_id, type, value")
         .in("member_id", memberIds);
       return data ?? [];
     },
@@ -56,11 +56,11 @@ export function ChapterContact() {
 
   // Merge contact info into committee members
   const enrichedMembers: CommitteeMember[] = committeeMembers.map((m) => {
-    const contact = contactsData?.find((c) => c.member_id === m.id);
+    const rows = (contactsData ?? []).filter((c) => c.member_id === m.id);
     return {
       ...m,
-      phone: contact?.phone ?? null,
-      email: contact?.email ?? null,
+      phone: rows.find((c) => c.type === "phone")?.value ?? null,
+      email: rows.find((c) => c.type === "email")?.value ?? null,
     };
   });
 

@@ -278,7 +278,7 @@ export default function Admin() {
           )}
           {canManageAnnouncements && (
             <TabsContent value="announcements" className="mt-4">
-              <AnnouncementsTab announcements={announcements} myChapterId={myChapterId} />
+              <AnnouncementsTab announcements={announcements} />
             </TabsContent>
           )}
           {canManageDirectory && (

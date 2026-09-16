@@ -81,9 +81,8 @@ export default function VerificationDashboard({ myChapterId, isGlobalAdmin = fal
     queryFn: async () => {
       const { data } = await supabase
         .from("tag_requests")
-        .select("id, term, type, created_at")
+        .select("id, term, type")
         .eq("status", "pending")
-        .order("created_at", { ascending: false })
         .limit(10);
       return data ?? [];
     },
@@ -130,7 +129,7 @@ export default function VerificationDashboard({ myChapterId, isGlobalAdmin = fal
       const newStatus = action === "approve" ? "approved" : action === "reject" ? "rejected" : "needs_info";
       const { error } = await supabase
         .from("verification_requests")
-        .update({ status: newStatus, reviewed_by: member.id, reviewed_at: new Date().toISOString(), notes: note || null })
+        .update({ status: newStatus, reviewer_user_id: user?.id, reviewed_at: new Date().toISOString(), notes: note || null })
         .eq("id", requestId);
       if (error) throw error;
       if (action === "approve") {
@@ -437,9 +436,7 @@ export default function VerificationDashboard({ myChapterId, isGlobalAdmin = fal
                   <span className="text-sm font-medium">{t.term}</span>
                   <Badge variant="outline" className="text-xs">{t.type}</Badge>
                 </div>
-                <span className="text-xs text-muted-foreground">{new Date(t.created_at).toLocaleDateString()}</span>
-              </div>
-            ))}
+              </div>))}
             <div className="pt-2">
               <Button size="sm" variant="outline" className="w-full text-xs h-7" onClick={() => {
                 const tagsTab = document.querySelector('[data-value="tags"]') as HTMLElement;

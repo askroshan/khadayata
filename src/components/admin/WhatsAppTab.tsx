@@ -88,11 +88,19 @@ export default function WhatsAppTab() {
     queryFn: async () => {
       const { data } = await supabase
         .from("members")
-        .select("id, first_name, last_name, phone")
-        .not("phone", "is", null)
+        .select("id, first_name, last_name, member_contacts(value)")
         .eq("onboarding_completed", true)
+        .not("member_contacts.value", "is", null)
         .limit(200);
-      return data ?? [];
+      return (data ?? []).map((m) => {
+        const contacts = (m.member_contacts ?? []) as { value: string | null }[];
+        return {
+          id: m.id,
+          first_name: m.first_name,
+          last_name: m.last_name,
+          phone: contacts.find((c) => c.value)?.value ?? null,
+        };
+      });
     },
     enabled: !!user && bulkMode,
   });

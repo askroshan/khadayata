@@ -110,25 +110,25 @@ function DrillDownDialog({ drillKey, myChapterId, onClose }: { drillKey: DrillKe
       }
 
       if (drillKey.startsWith("events-")) {
-        let q = supabase.from("events").select("id, title, status, event_date, chapter_id, chapters(name)").limit(100);
+        let q = supabase.from("events").select("id, name, status, starts_at, chapter_id, chapters(name)").limit(100);
         if (myChapterId) q = q.eq("chapter_id", myChapterId);
         if (drillKey === "events-upcoming") q = q.in("status", ["published", "active"]);
         else if (drillKey === "events-cancelled") q = q.eq("status", "cancelled");
-        q = q.order("event_date", { ascending: false });
+        q = q.order("starts_at", { ascending: false });
         const { data } = await q;
         return (data ?? []).map(e => ({
           id: e.id,
-          label: e.title,
-          sub: `${e.status} · ${(e.chapters as { name: string } | null)?.name ?? "—"} · ${e.event_date ? format(new Date(e.event_date), "dd MMM yyyy") : "—"}`,
+          label: e.name,
+          sub: `${e.status} · ${(e.chapters as { name: string } | null)?.name ?? "—"} · ${e.starts_at ? format(new Date(e.starts_at), "dd MMM yyyy") : "—"}`,
         }));
       }
 
       if (drillKey === "rsvps") {
-        const { data } = await supabase.from("event_rsvps").select("id, member_id, event_id, status, created_at, members(first_name, last_name), events(title)").limit(100).order("created_at", { ascending: false });
+        const { data } = await supabase.from("event_rsvps").select("id, member_id, event_id, status, created_at, members(first_name, last_name), events(name)").limit(100).order("created_at", { ascending: false });
         return (data ?? []).map(r => ({
           id: r.id,
           label: `${(r.members as { first_name: string; last_name: string } | null)?.first_name ?? ""} ${(r.members as { first_name: string; last_name: string } | null)?.last_name ?? ""}`,
-          sub: `${(r.events as { title: string } | null)?.title ?? "—"} · ${r.status}`,
+          sub: `${(r.events as { name: string } | null)?.name ?? "—"} · ${r.status}`,
         }));
       }
 
@@ -147,7 +147,7 @@ function DrillDownDialog({ drillKey, myChapterId, onClose }: { drillKey: DrillKe
       }
 
       if (drillKey.startsWith("jobs-")) {
-        let q = supabase.from("jobs").select("id, title, status, company, chapter_id, chapters(name)").limit(100);
+        let q = supabase.from("jobs").select("id, title, status, location, chapter_id, chapters(name)").limit(100);
         if (myChapterId) q = q.eq("chapter_id", myChapterId);
         if (drillKey === "jobs-active") q = q.eq("status", "open");
         q = q.order("title");
@@ -155,14 +155,14 @@ function DrillDownDialog({ drillKey, myChapterId, onClose }: { drillKey: DrillKe
         return (data ?? []).map(j => ({
           id: j.id,
           label: j.title,
-          sub: `${j.company ?? "—"} · ${j.status} · ${(j.chapters as { name: string } | null)?.name ?? "—"}`,
+          sub: `${j.location ?? "—"} · ${j.status} · ${(j.chapters as { name: string } | null)?.name ?? "—"}`,
         }));
       }
 
       if (drillKey.startsWith("matrimonial-")) {
-        let q = supabase.from("matrimonial_profiles").select("id, status, created_at, members(first_name, last_name, chapter_id)").limit(100);
-        if (drillKey === "matrimonial-active") q = q.eq("status", "approved");
-        else if (drillKey === "matrimonial-pending") q = q.eq("status", "pending");
+        let q = supabase.from("matrimonial_profiles").select("id, visibility, verified, suspended, created_at, members!matrimonial_profiles_member_id_fkey(first_name, last_name, chapter_id)").limit(100);
+        if (drillKey === "matrimonial-active") q = q.eq("visibility", "public").eq("suspended", false);
+        else if (drillKey === "matrimonial-pending") q = q.eq("verified", false);
         q = q.order("created_at", { ascending: false });
         const { data } = await q;
         return (data ?? []).filter(p => {
@@ -174,7 +174,7 @@ function DrillDownDialog({ drillKey, myChapterId, onClose }: { drillKey: DrillKe
           return {
             id: p.id,
             label: `${m?.first_name ?? ""} ${m?.last_name ?? ""}`,
-            sub: `${p.status} · ${format(new Date(p.created_at), "dd MMM yyyy")}`,
+            sub: `${p.verified ? "Verified" : "Unverified"} · ${format(new Date(p.created_at), "dd MMM yyyy")}`,
           };
         });
       }
@@ -189,7 +189,7 @@ function DrillDownDialog({ drillKey, myChapterId, onClose }: { drillKey: DrillKe
       }
 
       if (drillKey.startsWith("reports-")) {
-        let q = supabase.from("reports").select("id, reason, status, created_at, reporter_id").limit(100);
+        let q = supabase.from("reports").select("id, reason, status, created_at, category").limit(100);
         if (drillKey === "reports-pending") q = q.eq("status", "pending");
         q = q.order("created_at", { ascending: false });
         const { data } = await q;
@@ -372,14 +372,16 @@ export default function AnalyticsTab({ myChapterId }: Props) {
   const { data: matrimonialStats } = useQuery({
     queryKey: ["analytics-matrimonial", myChapterId],
     queryFn: async () => {
-      let q = supabase.from("matrimonial_profiles").select("id, status, chapter_id");
-      if (myChapterId) q = q.eq("chapter_id", myChapterId);
+      let q = supabase.from("matrimonial_profiles").select("id, verified, suspended, members!matrimonial_profiles_member_id_fkey(chapter_id)");
       const { data } = await q;
       if (!data) return null;
+      const scoped = myChapterId
+        ? data.filter(p => (p.members as { chapter_id: string | null } | null)?.chapter_id === myChapterId)
+        : data;
       return {
-        total: data.length,
-        active: data.filter(p => p.status === "approved").length,
-        pending: data.filter(p => p.status === "pending").length,
+        total: scoped.length,
+        active: scoped.filter(p => !p.suspended).length,
+        pending: scoped.filter(p => !p.verified && !p.suspended).length,
       };
     },
     staleTime: 60000,

@@ -42,7 +42,7 @@ export default function PublicEldersCouncil() {
     queryFn: async () => {
       const { data } = await supabase
         .from("council_threads")
-        .select("id, title, body, category, pinned, created_at, vote_sum, reply_count, author:members!council_threads_author_id_fkey(first_name, last_name, verification_level)")
+        .select("id, title, body, category, pinned, created_at, author:members!council_threads_author_id_fkey(first_name, last_name, verification_level)")
         .eq("closed", false)
         .order("pinned", { ascending: false })
         .order("created_at", { ascending: false })
@@ -186,7 +186,7 @@ export default function PublicEldersCouncil() {
                         </p>
                         <div style={{ display: "flex", gap: 14, fontSize: 11, color: "#2E2E2E50", flexWrap: "wrap" }}>
                           <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                            <MessageCircle size={10} /> {(thread.reply_count as number) ?? 0} replies
+                            <MessageCircle size={10} /> Sign in to join the discussion
                           </span>
                           {thread.created_at && (
                             <span>{formatDistanceToNow(new Date(thread.created_at as string), { addSuffix: true })}</span>

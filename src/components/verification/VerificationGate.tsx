@@ -38,7 +38,7 @@ export function VerificationGate({ requiredLevel, children, featureName, fallbac
 
 interface L2GateButtonProps {
   featureName: string;
-  children: ReactNode;
+  children?: ReactNode;
 }
 
 export function L2GateButton({ featureName, children }: L2GateButtonProps) {

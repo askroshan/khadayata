@@ -142,14 +142,14 @@ async function sendEventEmails(
 
   const { data: contacts } = await supabase
     .from("member_contacts")
-    .select("member_id, email")
+    .select("member_id, value")
     .in("member_id", memberIds)
-    .not("email", "is", null);
+    .eq("type", "email");
 
   if (!contacts || contacts.length === 0) return;
 
   const emails = contacts
-    .map((c) => c.email)
+    .map((c) => c.value)
     .filter((e): e is string => !!e);
 
   if (emails.length === 0) return;
@@ -212,14 +212,15 @@ export async function notifyRSVPConfirmation(
   // Send confirmation email
   const { data: contact } = await supabase
     .from("member_contacts")
-    .select("email")
+    .select("value")
     .eq("member_id", memberId)
+    .eq("type", "email")
     .maybeSingle();
 
-  if (contact?.email) {
+  if (contact?.value) {
     await supabase.functions.invoke("send-email", {
       body: {
-        to: contact.email,
+        to: contact.value,
         template: "event_rsvp_confirmation",
         data: { event_name: event.name, event_id: event.id },
       },

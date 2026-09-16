@@ -8,7 +8,7 @@ import SEOMeta from "@/components/SEOMeta";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Newspaper, Search, Clock, Eye, MapPin, Pin, Star, ArrowRight, Lock } from "lucide-react";
+import { Newspaper, Search, Clock, MapPin, Pin, Star, ArrowRight, Lock } from "lucide-react";
 import { format } from "date-fns";
 
 const NEWS_CATEGORIES = [
@@ -55,7 +55,7 @@ export default function PublicNews() {
     queryFn: async () => {
       let q = supabase
         .from("content_news")
-        .select("id, title, summary, body, cover_image_url, image_alt, category, tags, featured, pinned, pinned_until, article_type, scope, author_name, read_time_minutes, views, published_at, created_at, chapters(name), countries(name), states(name), cities(name)")
+        .select("id, title, summary, body, cover_image_url, image_alt, category, tags, featured, pinned, pinned_until, article_type, scope, author_name, read_time_minutes, published_at, created_at, chapters(name), countries(name), states(name), cities(name)")
         .eq("status", "published")
         .order("pinned", { ascending: false })
         .order("published_at", { ascending: false });
@@ -327,11 +327,6 @@ function NewsCard({ article, isLoggedIn, locationStr }: {
           <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <Clock size={11} /> {readTime} min read
           </span>
-          {(article.views as number) > 0 && (
-            <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <Eye size={11} /> {(article.views as number).toLocaleString()}
-            </span>
-          )}
           {loc && (
             <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
               <MapPin size={11} /> {loc}
