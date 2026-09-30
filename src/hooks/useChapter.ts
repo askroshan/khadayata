@@ -214,16 +214,14 @@ export function useTotalChapterCount() {
   });
 }
 
-/** Total business count */
+/** Total business count (all businesses, not just verified) */
 export function useTotalBusinessCount() {
   return useQuery({
     queryKey: ["total-business-count"],
     queryFn: async () => {
       const { count, error } = await supabase
         .from("businesses")
-        .select("id", { count: "exact", head: true })
-        .eq("verified", true)
-        .eq("suspended", false);
+        .select("id", { count: "exact", head: true });
       if (error) throw error;
       return count ?? 0;
     },
@@ -238,10 +236,11 @@ export function useTotalCountryCount() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("chapters")
-        .select("country_id")
-        .not("country_id", "is", null);
+        .select("country_id");
       if (error) throw error;
-      const distinct = new Set((data ?? []).map((c) => c.country_id).filter(Boolean));
+      const distinct = new Set(
+        (data ?? []).map((c) => c.country_id).filter(Boolean)
+      );
       return distinct.size;
     },
     staleTime: 60_000,
