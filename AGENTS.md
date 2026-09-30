@@ -102,13 +102,24 @@ regular member (plus unverified members).
   test before the implementation.
 - Existing suites to keep green: authorization, role-assignment, admin
   navigation, navigation-integrity, rls-invariants, chapter-nav-utils,
-  file-validation, bulk-invite, family-invitations, notification-utils.
+  file-validation, bulk-invite, family-invitations, notification-utils,
+  role-tab-matrix, permissions-matrix, route-guards.
 - `navigation-integrity.test.ts` statically asserts every internal link target
   resolves to a route in `App.tsx`. When adding a route, add it to
   `ROUTE_PATTERNS` in that test in the same change.
 - `rls-invariants.test.ts` runs against the live database; it must pass after
   any migration. If a migration intentionally changes an invariant, update the
   test in the same PR with a justification note.
+- `role-tab-matrix.test.ts` asserts every role x tab access combination. When
+  adding a new admin tab or changing a role's tab access, update
+  `EXPECTED_ACCESS` in that test in the same change.
+- `permissions-matrix.test.ts` asserts every permission x role combination for
+  `usePermissions()`. When adding a permission, update `EXPECTED` in that test.
+- `route-guards.test.ts` asserts every route has the correct auth guard. When
+  adding a route, add it to the `ROUTES` array with the correct category.
+- **Never re-implement authorization logic in tests.** Always import
+  `canEditMember`, `canAccessTab`, `getAdminShortcuts` from
+  `@/lib/admin-utils`. Parallel implementations drift and hide real bugs.
 
 ## 6. Frontend conventions
 

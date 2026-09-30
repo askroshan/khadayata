@@ -60,6 +60,22 @@ These guardrails apply to every change in the Khadayata Online platform. They ex
 - `navigation-integrity.test.ts` and `rls-invariants.test.ts` must stay green — update them in the same change when adding routes or changing invariants.
 - `npm run build` + `npx vitest run` must pass before finishing any work.
 
+### Regression test suites (must stay green)
+
+- **`role-tab-matrix.test.ts`**: Tests every one of the 10 roles against every one of the 21 admin tabs. If you add a new admin tab, add it to `VALID_ADMIN_TABS` in `admin-utils.ts`, add it to `EXPECTED_ACCESS` in the test, and verify all role-tab combinations pass.
+- **`permissions-matrix.test.ts`**: Tests every permission derived by `usePermissions()` across all 8 admin roles + regular member. If you add a new permission to `usePermissions()`, add it to the `EXPECTED` matrix and verify all role-permission combinations pass.
+- **`route-guards.test.ts`**: Tests that every route in `App.tsx` has the correct auth guard (public, signed-in, or admin). If you add a new route, add it to the `ROUTES` array with the correct category and verify the guard pattern exists in the page component source.
+- **`authorization.test.ts`**: Tests `canEditMember`, `canChangeLevel`, `canAccessTab`, and `getAdminShortcuts` using the production functions from `@/lib/admin-utils`. Never re-implement authorization logic in tests — always import from the production module.
+
+### Regression prevention rules
+
+1. **Never re-implement authorization logic in tests.** Always import `canEditMember`, `canAccessTab`, `canAccessAdmin`, `getAdminShortcuts` from `@/lib/admin-utils` and `usePermissions` derivations from the real hook. Parallel implementations drift from production and hide real bugs.
+2. **When adding a new admin tab**, update in the same change: `VALID_ADMIN_TABS` in `admin-utils.ts`, the `canAccessTab` switch statement, `EXPECTED_ACCESS` in `role-tab-matrix.test.ts`, and `navigation-integrity.test.ts` if new routes are involved.
+3. **When adding a new route**, update in the same change: `App.tsx` routes, `ROUTE_PATTERNS` in `navigation-integrity.test.ts`, `ROUTES` array in `route-guards.test.ts` with the correct guard category.
+4. **When adding a new permission** to `usePermissions()`, update in the same change: the `EXPECTED` matrix in `permissions-matrix.test.ts` and verify every role's expected access.
+5. **When changing a role's tab access** in `canAccessTab`, update `EXPECTED_ACCESS` in `role-tab-matrix.test.ts` in the same change. The test is the source of truth for the intended access matrix.
+6. **Test files must import from production code**, not re-define functions. If a test file has its own copy of authorization logic, it is a bug — rewrite it to import from the production module.
+
 ## Frontend conventions
 
 - `PublicLayout` for public pages, `AppLayout`/`ChapterLayout` for signed-in pages.

@@ -1,354 +1,222 @@
 import { describe, it, expect } from "vitest";
+import {
+  canEditMember,
+  canChangeLevel,
+  canAccessTab,
+  getAdminShortcuts,
+  canAccessAdmin,
+  type AuthUser,
+  type EditableMember,
+  type UserRoles,
+} from "@/lib/admin-utils";
 
-interface User {
-  id: string;
-  roles: string[];
-  chapter_id?: string;
-}
+// ─── Role fixtures using production types ─────────────────────────────────────
 
-interface Member {
-  id: string;
-  chapter_id: string | null;
-  verification_level: number;
-}
+const globalAdmin: AuthUser = { id: "ga-1", roles: ["Global Admin"] };
+const chapterAdmin: AuthUser = { id: "ca-1", roles: ["Chapter Admin"], chapter_id: "ch1" };
+const dataSteward: AuthUser = { id: "ds-1", roles: ["Data Steward"], chapter_id: "ch1" };
+const moderator: AuthUser = { id: "mod-1", roles: ["Moderator"] };
+const regularMember: AuthUser = { id: "mem-1", roles: [] };
+const noRolesUser: AuthUser = { id: "mem-2", roles: [] };
 
-function canEditMember(user: User, member: Member): boolean {
-  if (!user.roles.includes("admin") && !user.roles.includes("director")) {
-    return false;
-  }
+const memberInCh1: EditableMember = { id: "m1", chapter_id: "ch1", verification_level: 1 };
+const memberInCh2: EditableMember = { id: "m2", chapter_id: "ch2", verification_level: 1 };
+const memberNoChapter: EditableMember = { id: "m3", chapter_id: null, verification_level: 0 };
 
-  if (user.roles.includes("director") && user.chapter_id && member.chapter_id !== user.chapter_id) {
-    return false;
-  }
+const NO_ROLES: UserRoles = {
+  isGlobalAdmin: false, isChapterAdmin: false, isDataSteward: false,
+  isDirectoryManager: false, isEventManager: false, isFinanceAdmin: false,
+  isPublisher: false, isModerator: false,
+};
 
-  return true;
-}
-
-function canChangeMemberLevel(user: User, member: Member): boolean {
-  if (!user.roles.includes("admin") && !user.roles.includes("director")) {
-    return false;
-  }
-
-  if (user.roles.includes("director") && user.chapter_id && member.chapter_id !== user.chapter_id) {
-    return false;
-  }
-
-  return true;
-}
-
-function canViewAdminSection(user: User, section: string): boolean {
-  const rolePermissions: Record<string, string[]> = {
-    stats: ["admin", "director", "moderator"],
-    members: ["admin", "director"],
-    chapters: ["admin"],
-    roles: ["admin"],
-    events: ["admin", "director"],
-    "news-publisher": ["admin", "global-publisher"],
-    moderator: ["admin", "moderator"],
-    announcements: ["admin"],
-    finance: ["admin", "finance-manager"],
-  };
-
-  const requiredRoles = rolePermissions[section] || [];
-  return user.roles.some(role => requiredRoles.includes(role));
-}
-
-describe("Authorization", () => {
-  describe("Member Editing Authorization", () => {
-    const admin: User = {
-      id: "admin-1",
-      roles: ["admin"],
-    };
-
-    const director: User = {
-      id: "dir-1",
-      roles: ["director"],
-      chapter_id: "ch1",
-    };
-
-    const memberInChapter1: Member = {
-      id: "mem-1",
-      chapter_id: "ch1",
-      verification_level: 1,
-    };
-
-    const memberInChapter2: Member = {
-      id: "mem-2",
-      chapter_id: "ch2",
-      verification_level: 1,
-    };
-
-    it("should allow admin to edit any member", () => {
-      expect(canEditMember(admin, memberInChapter1)).toBe(true);
-      expect(canEditMember(admin, memberInChapter2)).toBe(true);
-    });
-
-    it("should allow director to edit members in their chapter", () => {
-      expect(canEditMember(director, memberInChapter1)).toBe(true);
-    });
-
-    it("should prevent director from editing members in other chapters", () => {
-      expect(canEditMember(director, memberInChapter2)).toBe(false);
-    });
-
-    it("should prevent non-admin from editing members", () => {
-      const regularUser: User = {
-        id: "user-1",
-        roles: ["member"],
-      };
-      expect(canEditMember(regularUser, memberInChapter1)).toBe(false);
-    });
-
-    it("should prevent edit when user has no roles", () => {
-      const userNoRoles: User = {
-        id: "user-2",
-        roles: [],
-      };
-      expect(canEditMember(userNoRoles, memberInChapter1)).toBe(false);
-    });
+describe("Authorization — member editing", () => {
+  it("Global Admin can edit any member in any chapter", () => {
+    expect(canEditMember(globalAdmin, memberInCh1)).toBe(true);
+    expect(canEditMember(globalAdmin, memberInCh2)).toBe(true);
+    expect(canEditMember(globalAdmin, memberNoChapter)).toBe(true);
   });
 
-  describe("Verification Level Change Authorization", () => {
-    const admin: User = {
-      id: "admin-1",
-      roles: ["admin"],
-    };
-
-    const director: User = {
-      id: "dir-1",
-      roles: ["director"],
-      chapter_id: "ch1",
-    };
-
-    const member: Member = {
-      id: "mem-1",
-      chapter_id: "ch1",
-      verification_level: 2,
-    };
-
-    it("should allow admin to change level", () => {
-      expect(canChangeMemberLevel(admin, member)).toBe(true);
-    });
-
-    it("should allow director for their chapter", () => {
-      expect(canChangeMemberLevel(director, member)).toBe(true);
-    });
-
-    it("should prevent level change outside scope", () => {
-      const otherMember: Member = {
-        id: "mem-2",
-        chapter_id: "ch2",
-        verification_level: 1,
-      };
-      expect(canChangeMemberLevel(director, otherMember)).toBe(false);
-    });
+  it("Chapter Admin can edit members in their own chapter", () => {
+    expect(canEditMember(chapterAdmin, memberInCh1)).toBe(true);
   });
 
-  describe("Admin Section Access Control", () => {
-    const admin: User = {
-      id: "admin-1",
-      roles: ["admin"],
-    };
-
-    const director: User = {
-      id: "dir-1",
-      roles: ["director"],
-      chapter_id: "ch1",
-    };
-
-    const moderator: User = {
-      id: "mod-1",
-      roles: ["moderator"],
-    };
-
-    const publisher: User = {
-      id: "pub-1",
-      roles: ["global-publisher"],
-    };
-
-    const financeManager: User = {
-      id: "fin-1",
-      roles: ["finance-manager"],
-    };
-
-    const regularMember: User = {
-      id: "mem-1",
-      roles: ["member"],
-    };
-
-    it("should allow admin to view all sections", () => {
-      expect(canViewAdminSection(admin, "stats")).toBe(true);
-      expect(canViewAdminSection(admin, "members")).toBe(true);
-      expect(canViewAdminSection(admin, "chapters")).toBe(true);
-      expect(canViewAdminSection(admin, "roles")).toBe(true);
-      expect(canViewAdminSection(admin, "events")).toBe(true);
-      expect(canViewAdminSection(admin, "news-publisher")).toBe(true);
-      expect(canViewAdminSection(admin, "moderator")).toBe(true);
-      expect(canViewAdminSection(admin, "announcements")).toBe(true);
-      expect(canViewAdminSection(admin, "finance")).toBe(true);
-    });
-
-    it("should allow director to view stats and events", () => {
-      expect(canViewAdminSection(director, "stats")).toBe(true);
-      expect(canViewAdminSection(director, "events")).toBe(true);
-    });
-
-    it("should prevent director from viewing chapters and roles", () => {
-      expect(canViewAdminSection(director, "chapters")).toBe(false);
-      expect(canViewAdminSection(director, "roles")).toBe(false);
-    });
-
-    it("should allow moderator to view stats and moderator section", () => {
-      expect(canViewAdminSection(moderator, "stats")).toBe(true);
-      expect(canViewAdminSection(moderator, "moderator")).toBe(true);
-    });
-
-    it("should allow publisher to view news section", () => {
-      expect(canViewAdminSection(publisher, "news-publisher")).toBe(true);
-    });
-
-    it("should allow finance manager to view finance section", () => {
-      expect(canViewAdminSection(financeManager, "finance")).toBe(true);
-    });
-
-    it("should prevent regular member from viewing admin sections", () => {
-      expect(canViewAdminSection(regularMember, "stats")).toBe(false);
-      expect(canViewAdminSection(regularMember, "members")).toBe(false);
-      expect(canViewAdminSection(regularMember, "chapters")).toBe(false);
-    });
-
-    it("should handle unknown section gracefully", () => {
-      expect(canViewAdminSection(admin, "unknown-section")).toBe(false);
-    });
+  it("Chapter Admin cannot edit members in other chapters", () => {
+    expect(canEditMember(chapterAdmin, memberInCh2)).toBe(false);
   });
 
-  describe("Sidebar Navigation Visibility", () => {
-    const visibleSections = {
-      admin: [
-        "stats",
-        "members",
-        "chapters",
-        "roles",
-        "events",
-        "news-publisher",
-        "moderator",
-        "announcements",
-        "finance",
-      ],
-      director: ["stats", "events"],
-      moderator: ["stats", "moderator"],
-      publisher: ["news-publisher"],
-      financeManager: ["finance"],
-    };
-
-    it("should show correct shortcuts for admin", () => {
-      const admin: User = {
-        id: "admin-1",
-        roles: ["admin"],
-      };
-      const accessibleSections = visibleSections.admin;
-      expect(accessibleSections.length).toBeGreaterThan(5);
-    });
-
-    it("should show limited shortcuts for director", () => {
-      const director: User = {
-        id: "dir-1",
-        roles: ["director"],
-        chapter_id: "ch1",
-      };
-      const accessibleSections = visibleSections.director;
-      expect(accessibleSections).toContain("stats");
-      expect(accessibleSections).toContain("events");
-      expect(accessibleSections).not.toContain("chapters");
-    });
-
-    it("should not show any admin shortcuts for regular member", () => {
-      const member: User = {
-        id: "mem-1",
-        roles: ["member"],
-      };
-      const accessibleSections = [];
-      expect(accessibleSections).toHaveLength(0);
-    });
+  it("Data Steward can edit members in their own chapter", () => {
+    expect(canEditMember(dataSteward, memberInCh1)).toBe(true);
   });
 
-  describe("Invite Input Validation", () => {
-    function validateInviteInput(email: string, firstName: string): { valid: boolean; error?: string } {
-      if (!email?.trim() || !firstName?.trim()) {
-        return { valid: false, error: "Email and first name are required" };
-      }
-      return { valid: true };
+  it("Data Steward cannot edit members in other chapters", () => {
+    expect(canEditMember(dataSteward, memberInCh2)).toBe(false);
+  });
+
+  it("Regular member cannot edit anyone", () => {
+    expect(canEditMember(regularMember, memberInCh1)).toBe(false);
+  });
+
+  it("User with no roles cannot edit anyone", () => {
+    expect(canEditMember(noRolesUser, memberInCh1)).toBe(false);
+  });
+});
+
+describe("Authorization — verification level changes", () => {
+  it("Global Admin can change any member's level", () => {
+    expect(canChangeLevel(globalAdmin, memberInCh1)).toBe(true);
+    expect(canChangeLevel(globalAdmin, memberInCh2)).toBe(true);
+  });
+
+  it("Chapter Admin can change level for own chapter members", () => {
+    expect(canChangeLevel(chapterAdmin, memberInCh1)).toBe(true);
+  });
+
+  it("Chapter Admin cannot change level for other chapter members", () => {
+    expect(canChangeLevel(chapterAdmin, memberInCh2)).toBe(false);
+  });
+
+  it("Regular member cannot change levels", () => {
+    expect(canChangeLevel(regularMember, memberInCh1)).toBe(false);
+  });
+});
+
+describe("Authorization — admin section access", () => {
+  const adminRoles: UserRoles = { ...NO_ROLES, isGlobalAdmin: true };
+  const chapterAdminRoles: UserRoles = { ...NO_ROLES, isChapterAdmin: true };
+  const moderatorRoles: UserRoles = { ...NO_ROLES, isModerator: true };
+  const publisherRoles: UserRoles = { ...NO_ROLES, isPublisher: true };
+  const financeAdminRoles: UserRoles = { ...NO_ROLES, isFinanceAdmin: true };
+  const regularRoles: UserRoles = { ...NO_ROLES };
+
+  it("Global Admin can view all sections", () => {
+    expect(canAccessTab(adminRoles, "stats")).toBe(true);
+    expect(canAccessTab(adminRoles, "members")).toBe(true);
+    expect(canAccessTab(adminRoles, "chapters")).toBe(true);
+    expect(canAccessTab(adminRoles, "roles")).toBe(true);
+    expect(canAccessTab(adminRoles, "events")).toBe(true);
+    expect(canAccessTab(adminRoles, "news-publisher")).toBe(true);
+    expect(canAccessTab(adminRoles, "moderator")).toBe(true);
+    expect(canAccessTab(adminRoles, "announcements")).toBe(true);
+    expect(canAccessTab(adminRoles, "finance")).toBe(true);
+    expect(canAccessTab(adminRoles, "audits")).toBe(true);
+    expect(canAccessTab(adminRoles, "analytics")).toBe(true);
+  });
+
+  it("Chapter Admin can view stats, members, events, roles, announcements but NOT chapters, analytics, bulk-content", () => {
+    expect(canAccessTab(chapterAdminRoles, "stats")).toBe(true);
+    expect(canAccessTab(chapterAdminRoles, "members")).toBe(true);
+    expect(canAccessTab(chapterAdminRoles, "events")).toBe(true);
+    expect(canAccessTab(chapterAdminRoles, "roles")).toBe(true);
+    expect(canAccessTab(chapterAdminRoles, "announcements")).toBe(true);
+    expect(canAccessTab(chapterAdminRoles, "chapters")).toBe(false);
+    expect(canAccessTab(chapterAdminRoles, "analytics")).toBe(false);
+    expect(canAccessTab(chapterAdminRoles, "bulk-content")).toBe(false);
+    expect(canAccessTab(chapterAdminRoles, "audits")).toBe(false);
+  });
+
+  it("Moderator can view stats, moderator, reports, banned-keywords but NOT members, finance", () => {
+    expect(canAccessTab(moderatorRoles, "stats")).toBe(true);
+    expect(canAccessTab(moderatorRoles, "moderator")).toBe(true);
+    expect(canAccessTab(moderatorRoles, "reports")).toBe(true);
+    expect(canAccessTab(moderatorRoles, "banned-keywords")).toBe(true);
+    expect(canAccessTab(moderatorRoles, "members")).toBe(false);
+    expect(canAccessTab(moderatorRoles, "finance")).toBe(false);
+  });
+
+  it("Publisher can view news-publisher", () => {
+    expect(canAccessTab(publisherRoles, "news-publisher")).toBe(true);
+    expect(canAccessTab(publisherRoles, "members")).toBe(false);
+  });
+
+  it("Finance Admin can view finance", () => {
+    expect(canAccessTab(financeAdminRoles, "finance")).toBe(true);
+    expect(canAccessTab(financeAdminRoles, "members")).toBe(false);
+  });
+
+  it("Regular member cannot view any admin section", () => {
+    expect(canAccessTab(regularRoles, "stats")).toBe(false);
+    expect(canAccessTab(regularRoles, "members")).toBe(false);
+    expect(canAccessTab(regularRoles, "chapters")).toBe(false);
+    expect(canAccessAdmin(regularRoles)).toBe(false);
+  });
+
+  it("Unknown section returns false", () => {
+    expect(canAccessTab(adminRoles, "unknown" as never)).toBe(false);
+  });
+});
+
+describe("Authorization — sidebar shortcuts", () => {
+  it("Global Admin has 5+ shortcuts", () => {
+    expect(getAdminShortcuts({ ...NO_ROLES, isGlobalAdmin: true }).length).toBeGreaterThan(5);
+  });
+
+  it("Chapter Admin has stats/events/members but NOT chapters", () => {
+    const shortcuts = getAdminShortcuts({ ...NO_ROLES, isChapterAdmin: true });
+    const tabs = shortcuts.map(s => s.tab);
+    expect(tabs).toContain("events");
+    expect(tabs).toContain("members");
+    expect(tabs).not.toContain("chapters");
+  });
+
+  it("Regular member has no shortcuts", () => {
+    expect(getAdminShortcuts({ ...NO_ROLES })).toHaveLength(0);
+  });
+});
+
+describe("Authorization — invite input validation", () => {
+  function validateInviteInput(email: string, firstName: string): { valid: boolean; error?: string } {
+    if (!email?.trim() || !firstName?.trim()) {
+      return { valid: false, error: "Email and first name are required" };
     }
+    return { valid: true };
+  }
 
-    function safeLastName(lastName?: string): string {
-      return lastName?.trim() || "Member";
-    }
+  function safeLastName(lastName?: string): string {
+    return lastName?.trim() || "Member";
+  }
 
-    it("should require email and first name", () => {
-      expect(validateInviteInput("", "John").valid).toBe(false);
-      expect(validateInviteInput("test@test.com", "").valid).toBe(false);
-      expect(validateInviteInput("", "").valid).toBe(false);
-    });
-
-    it("should pass with valid email and first name", () => {
-      expect(validateInviteInput("test@test.com", "John").valid).toBe(true);
-    });
-
-    it("should default last name to Member when empty to satisfy DB constraint", () => {
-      expect(safeLastName("")).toBe("Member");
-      expect(safeLastName(undefined)).toBe("Member");
-      expect(safeLastName("  ")).toBe("Member");
-    });
-
-    it("should preserve provided last name", () => {
-      expect(safeLastName("Shah")).toBe("Shah");
-      expect(safeLastName("  Patel  ")).toBe("Patel");
-    });
-
-    it("should normalize email to lowercase", () => {
-      const email = "  Test@Example.COM  ";
-      expect(email.trim().toLowerCase()).toBe("test@example.com");
-    });
+  it("requires email and first name", () => {
+    expect(validateInviteInput("", "John").valid).toBe(false);
+    expect(validateInviteInput("test@test.com", "").valid).toBe(false);
+    expect(validateInviteInput("", "").valid).toBe(false);
   });
 
-  describe("Cross-Chapter Data Access Prevention", () => {
-    it("should prevent chapter-scoped user from accessing other chapter data", () => {
-      const directorCh1: User = {
-        id: "dir-1",
-        roles: ["director"],
-        chapter_id: "ch1",
-      };
+  it("passes with valid email and first name", () => {
+    expect(validateInviteInput("test@test.com", "John").valid).toBe(true);
+  });
 
-      const memberCh2: Member = {
-        id: "mem-2",
-        chapter_id: "ch2",
-        verification_level: 1,
-      };
+  it("defaults last name to Member when empty", () => {
+    expect(safeLastName("")).toBe("Member");
+    expect(safeLastName(undefined)).toBe("Member");
+    expect(safeLastName("  ")).toBe("Member");
+  });
 
-      expect(canEditMember(directorCh1, memberCh2)).toBe(false);
-      expect(canChangeMemberLevel(directorCh1, memberCh2)).toBe(false);
-    });
+  it("preserves provided last name", () => {
+    expect(safeLastName("Shah")).toBe("Shah");
+    expect(safeLastName("  Patel  ")).toBe("Patel");
+  });
 
-    it("should allow cross-chapter access only for global admins", () => {
-      const globalAdmin: User = {
-        id: "admin-1",
-        roles: ["admin"],
-      };
+  it("normalizes email to lowercase", () => {
+    const email = "  Test@Example.COM  ";
+    expect(email.trim().toLowerCase()).toBe("test@example.com");
+  });
+});
 
-      const memberCh1: Member = {
-        id: "mem-1",
-        chapter_id: "ch1",
-        verification_level: 1,
-      };
+describe("Authorization — cross-chapter data access prevention", () => {
+  it("prevents chapter-scoped Chapter Admin from accessing other chapter data", () => {
+    expect(canEditMember(chapterAdmin, memberInCh2)).toBe(false);
+    expect(canChangeLevel(chapterAdmin, memberInCh2)).toBe(false);
+  });
 
-      const memberCh2: Member = {
-        id: "mem-2",
-        chapter_id: "ch2",
-        verification_level: 1,
-      };
+  it("prevents chapter-scoped Data Steward from accessing other chapter data", () => {
+    expect(canEditMember(dataSteward, memberInCh2)).toBe(false);
+    expect(canChangeLevel(dataSteward, memberInCh2)).toBe(false);
+  });
 
-      expect(canEditMember(globalAdmin, memberCh1)).toBe(true);
-      expect(canEditMember(globalAdmin, memberCh2)).toBe(true);
-    });
+  it("allows Global Admin cross-chapter access", () => {
+    expect(canEditMember(globalAdmin, memberInCh1)).toBe(true);
+    expect(canEditMember(globalAdmin, memberInCh2)).toBe(true);
+    expect(canChangeLevel(globalAdmin, memberInCh1)).toBe(true);
+    expect(canChangeLevel(globalAdmin, memberInCh2)).toBe(true);
   });
 });
