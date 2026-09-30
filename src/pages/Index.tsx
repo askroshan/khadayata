@@ -15,20 +15,46 @@ const MANDALA_IMG = "/mandala-pattern.webp";
 const COMMUNITY_IMG = "/community-celebration.webp";
 const BUSINESS_IMG = "/business-network.webp";
 
+// WCAG 2.2 AA accessible color system
+// Accent colors for graphical elements (borders, backgrounds, gradients) — not used as text on light bg
+const ACCENT = {
+  saffron: "#F39C12",
+  pink: "#E91E63",
+  blue: "#1E88E5",
+  green: "#43A047",
+  gold: "#F4B400",
+};
+// Accessible text colors on light backgrounds (cream/sand/white) — meet 4.5:1 on #FDEBD0
+const TEXT_ACCENT = {
+  saffron: "#96600b",
+  pink: "#cf1a58",
+  blue: "#186eb9",
+  green: "#327935",
+  gold: "#886400",
+};
+// Accessible text colors on dark hero card (~#444) — meet 3:1 for large text
+const LIGHT_ACCENT = {
+  saffron: "#ffb74d",
+  pink: "#ff5ba8",
+  blue: "#42a5f5",
+  green: "#66bb6a",
+  gold: "#ffca28",
+};
+
 const FEATURES = [
-  { icon: Globe, label: "Global Identity", desc: "One verified GlobalID across all chapters", color: "#F39C12" },
-  { icon: Users, label: "Member Directory", desc: "Find & connect with members worldwide", color: "#43A047" },
-  { icon: Shield, label: "Privacy Controls", desc: "Field-level visibility settings", color: "#1E88E5" },
-  { icon: Briefcase, label: "Business Network", desc: "List and discover community businesses", color: "#E91E63" },
-  { icon: BookOpen, label: "Heritage Archives", desc: "Khadayata Jyoti magazine digitized", color: "#F4B400" },
-  { icon: Building2, label: "Kotyark Temple", desc: "Live Aarti, donations & more", color: "#43A047" },
+  { icon: Globe, label: "Global Identity", desc: "One verified GlobalID across all chapters", color: ACCENT.saffron, textColor: TEXT_ACCENT.saffron },
+  { icon: Users, label: "Member Directory", desc: "Find & connect with members worldwide", color: ACCENT.green, textColor: TEXT_ACCENT.green },
+  { icon: Shield, label: "Privacy Controls", desc: "Field-level visibility settings", color: ACCENT.blue, textColor: TEXT_ACCENT.blue },
+  { icon: Briefcase, label: "Business Network", desc: "List and discover community businesses", color: ACCENT.pink, textColor: TEXT_ACCENT.pink },
+  { icon: BookOpen, label: "Heritage Archives", desc: "Khadayata Jyoti magazine digitized", color: ACCENT.gold, textColor: TEXT_ACCENT.gold },
+  { icon: Building2, label: "Kotyark Temple", desc: "Live Aarti, donations & more", color: ACCENT.green, textColor: TEXT_ACCENT.green },
 ];
 
 const EVENTS = [
-  { title: "Garba Night 2026", type: "Cultural", date: "Oct 14", location: "Ahmedabad", typeColor: "#F39C12" },
-  { title: "Community Meetup", type: "Social", date: "Nov 2", location: "Houston, TX", typeColor: "#43A047" },
-  { title: "Kotyark Temple Puja", type: "Religious", date: "Oct 21", location: "Vadodara", typeColor: "#1E88E5" },
-  { title: "Youth Networking", type: "Professional", date: "Nov 10", location: "London, UK", typeColor: "#E91E63" },
+  { title: "Garba Night 2026", type: "Cultural", date: "Oct 14", location: "Ahmedabad", typeColor: ACCENT.saffron, textColor: TEXT_ACCENT.saffron },
+  { title: "Community Meetup", type: "Social", date: "Nov 2", location: "Houston, TX", typeColor: ACCENT.green, textColor: TEXT_ACCENT.green },
+  { title: "Kotyark Temple Puja", type: "Religious", date: "Oct 21", location: "Vadodara", typeColor: ACCENT.blue, textColor: TEXT_ACCENT.blue },
+  { title: "Youth Networking", type: "Professional", date: "Nov 10", location: "London, UK", typeColor: ACCENT.pink, textColor: TEXT_ACCENT.pink },
 ];
 
 const TESTIMONIALS = [
@@ -137,10 +163,10 @@ export default function Index() {
   const scrollY = useParallax();
 
   const liveStats = [
-    { value: totalMembers ?? 0, suffix: "+", label: "Members Worldwide", color: "#F39C12" },
-    { value: totalChapters ?? 0, suffix: "", label: "Chapters", color: "#E91E63" },
-    { value: totalCountries ?? 0, suffix: "", label: "Countries", color: "#1E88E5" },
-    { value: totalBusinesses ?? 0, suffix: "", label: "Businesses", color: "#43A047" },
+    { value: totalMembers ?? 0, suffix: "+", label: "Members Worldwide", color: LIGHT_ACCENT.saffron },
+    { value: totalChapters ?? 0, suffix: "", label: "Chapters", color: LIGHT_ACCENT.pink },
+    { value: totalCountries ?? 0, suffix: "", label: "Countries", color: LIGHT_ACCENT.blue },
+    { value: totalBusinesses ?? 0, suffix: "", label: "Businesses", color: LIGHT_ACCENT.green },
   ];
 
   return (
@@ -175,7 +201,7 @@ export default function Index() {
           <nav style={{ display: "flex", gap: 28, fontSize: 14, fontWeight: 500 }} className="hidden md:flex" aria-label="Main navigation">
             {[["Events", "/events"], ["Directory", "/directory"], ["Business", "/business"], ["Chapters", "/chapters"], ["News", "/news"]].map(([label, href]) => (
               <Link key={href} to={href} style={{ color: "#2E2E2E", textDecoration: "none", transition: "color .2s" }}
-                onMouseEnter={e => (e.currentTarget.style.color = "#F39C12")}
+                onMouseEnter={e => (e.currentTarget.style.color = TEXT_ACCENT.saffron)}
                 onMouseLeave={e => (e.currentTarget.style.color = "#2E2E2E")}>
                 {label}
               </Link>
@@ -233,7 +259,7 @@ export default function Index() {
               display: "inline-flex", alignItems: "center", gap: 8,
               padding: "6px 16px", borderRadius: 50, marginBottom: 24,
               background: "rgba(243,156,18,0.2)", border: "1px solid rgba(243,156,18,0.5)",
-              fontSize: 12, fontWeight: 600, color: "#F4B400", letterSpacing: "0.06em",
+              fontSize: 12, fontWeight: 600, color: LIGHT_ACCENT.gold, letterSpacing: "0.06em",
             }}>
               <Sparkles size={13} /> KHADAYATA COMMUNITY PLATFORM
             </div>
@@ -290,8 +316,8 @@ export default function Index() {
               border: "1px solid rgba(255,255,255,0.2)", borderRadius: 20, padding: "20px 24px",
               display: "flex", alignItems: "center", gap: 12,
             }}>
-              <Search size={18} style={{ color: "rgba(255,255,255,0.5)", flexShrink: 0 }} />
-              <Link to="/directory" style={{ flex: 1, color: "rgba(255,255,255,0.5)", fontSize: 14, textDecoration: "none" }}>
+              <Search size={18} style={{ color: "rgba(255,255,255,0.7)", flexShrink: 0 }} />
+              <Link to="/directory" style={{ flex: 1, color: "rgba(255,255,255,0.7)", fontSize: 14, textDecoration: "none" }}>
                 Search members, businesses, chapters…
               </Link>
               <Link to="/directory" style={{
@@ -304,7 +330,7 @@ export default function Index() {
 
         <div style={{ position: "absolute", bottom: 28, left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
           <div style={{ width: 1, height: 40, background: "linear-gradient(to bottom,rgba(255,255,255,0),rgba(255,255,255,0.5))" }} />
-          <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", letterSpacing: "0.12em" }}>SCROLL</p>
+          <p style={{ fontSize: 10, color: "rgba(255,255,255,0.6)", letterSpacing: "0.12em" }}>SCROLL</p>
         </div>
       </section>
 
@@ -315,9 +341,9 @@ export default function Index() {
       <section style={{ background: "#fff", padding: "72px 24px" }}>
         <div style={{ maxWidth: 1280, margin: "0 auto" }}>
           <Reveal style={{ textAlign: "center", marginBottom: 52 }}>
-            <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: "#F39C12", textTransform: "uppercase", marginBottom: 10 }}>Platform Features</p>
+            <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: TEXT_ACCENT.saffron, textTransform: "uppercase", marginBottom: 10 }}>Platform Features</p>
             <h2 style={{ fontSize: "clamp(1.8rem,3vw,2.6rem)", fontWeight: 800, margin: 0, color: "#2E2E2E" }}>Everything Your Community Needs</h2>
-            <p style={{ marginTop: 12, color: "#2E2E2E99", fontSize: 16, maxWidth: 520, margin: "12px auto 0" }}>A comprehensive platform built for every aspect of Khadayata community life.</p>
+            <p style={{ marginTop: 12, color: "rgba(46,46,46,0.7)", fontSize: 16, maxWidth: 520, margin: "12px auto 0" }}>A comprehensive platform built for every aspect of Khadayata community life.</p>
           </Reveal>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 20 }}>
             {FEATURES.map((f, i) => {
@@ -339,7 +365,7 @@ export default function Index() {
                       <Icon size={22} style={{ color: f.color }} />
                     </div>
                     <p style={{ fontWeight: 700, fontSize: 15, margin: 0, color: "#2E2E2E" }}>{f.label}</p>
-                    <p style={{ fontSize: 13, color: "#2E2E2E80", marginTop: 6, lineHeight: 1.5 }}>{f.desc}</p>
+                    <p style={{ fontSize: 13, color: "rgba(46,46,46,0.7)", marginTop: 6, lineHeight: 1.5 }}>{f.desc}</p>
                   </div>
                 </Reveal>
               );
@@ -354,16 +380,16 @@ export default function Index() {
         <div style={{ maxWidth: 1280, margin: "0 auto", position: "relative", zIndex: 1 }}>
           <Reveal style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 40, flexWrap: "wrap", gap: 16 }}>
             <div>
-              <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: "#E91E63", textTransform: "uppercase", marginBottom: 8 }}>What's Happening</p>
+              <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: TEXT_ACCENT.pink, textTransform: "uppercase", marginBottom: 8 }}>What's Happening</p>
               <h2 style={{ fontSize: "clamp(1.8rem,3vw,2.4rem)", fontWeight: 800, margin: 0, color: "#2E2E2E" }}>Upcoming Events</h2>
             </div>
             <Link to="/events" style={{
               display: "flex", alignItems: "center", gap: 6, padding: "10px 22px", borderRadius: 50,
-              border: "1.5px solid #F39C12", color: "#F39C12", fontSize: 13, fontWeight: 600, textDecoration: "none",
+              border: `1.5px solid ${ACCENT.saffron}`, color: TEXT_ACCENT.saffron, fontSize: 13, fontWeight: 600, textDecoration: "none",
               transition: "background .2s, color .2s",
             }}
-              onMouseEnter={e => { e.currentTarget.style.background = "#F39C12"; e.currentTarget.style.color = "#fff"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#F39C12"; }}>View All Events <ChevronRight size={16} /></Link>
+              onMouseEnter={e => { e.currentTarget.style.background = ACCENT.saffron; e.currentTarget.style.color = "#fff"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = TEXT_ACCENT.saffron; }}>View All Events <ChevronRight size={16} /></Link>
           </Reveal>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))", gap: 24 }}>
             {EVENTS.map((ev, i) => (
@@ -381,7 +407,7 @@ export default function Index() {
                   </div>
                   <div style={{ padding: "18px 20px" }}>
                     <p style={{ fontWeight: 700, fontSize: 16, margin: 0, color: "#2E2E2E" }}>{ev.title}</p>
-                    <div style={{ display: "flex", gap: 16, marginTop: 8, fontSize: 12, color: "#2E2E2E80" }}>
+                    <div style={{ display: "flex", gap: 16, marginTop: 8, fontSize: 12, color: "rgba(46,46,46,0.7)" }}>
                       <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Calendar size={12} />{ev.date}</span>
                       <span style={{ display: "flex", alignItems: "center", gap: 4 }}><MapPin size={12} />{ev.location}</span>
                     </div>
@@ -403,33 +429,33 @@ export default function Index() {
       {/* ─── COMMUNITY DIRECTORY ─── */}
       <section style={{ padding: "80px 24px", background: "#fff" }}>
         <Reveal style={{ maxWidth: 900, margin: "0 auto", textAlign: "center" }}>
-          <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: "#1E88E5", textTransform: "uppercase", marginBottom: 10 }}>Find Your People</p>
+          <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: TEXT_ACCENT.blue, textTransform: "uppercase", marginBottom: 10 }}>Find Your People</p>
           <h2 style={{ fontSize: "clamp(1.8rem,3vw,2.5rem)", fontWeight: 800, margin: 0, color: "#2E2E2E" }}>Community Directory</h2>
-          <p style={{ color: "#2E2E2E80", marginTop: 12, fontSize: 15, maxWidth: 500, margin: "12px auto 36px" }}>Search members, businesses, and chapters across the entire Khadayata global network.</p>
+          <p style={{ color: "rgba(46,46,46,0.7)", marginTop: 12, fontSize: 15, maxWidth: 500, margin: "12px auto 36px" }}>Search members, businesses, and chapters across the entire Khadayata global network.</p>
           <div style={{ display: "flex", alignItems: "center", background: "#fff", border: "2px solid #E8A317", borderRadius: 60, padding: "6px 8px 6px 20px", boxShadow: "0 8px 32px rgba(232,163,23,0.18)", transition: "box-shadow .2s" }}
             onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 12px 40px rgba(232,163,23,0.25)")}
             onMouseLeave={e => (e.currentTarget.style.boxShadow = "0 8px 32px rgba(232,163,23,0.18)")}>
-            <Search size={18} style={{ color: "#2E2E2E40", flexShrink: 0 }} />
-            <Link to="/directory" style={{ flex: 1, fontSize: 15, color: "#2E2E2E40", padding: "8px 12px", textDecoration: "none", textAlign: "left" }}>Search members, businesses, chapters...</Link>
+            <Search size={18} style={{ color: "#757575", flexShrink: 0 }} />
+            <Link to="/directory" style={{ flex: 1, fontSize: 15, color: "#757575", padding: "8px 12px", textDecoration: "none", textAlign: "left" }}>Search members, businesses, chapters...</Link>
             <Link to="/directory" style={{ padding: "12px 28px", borderRadius: 50, fontSize: 14, fontWeight: 700, color: "#fff", background: "linear-gradient(135deg,#F39C12,#E91E63)", textDecoration: "none" }}>Search</Link>
           </div>
           <div style={{ display: "flex", justifyContent: "center", gap: 12, marginTop: 24, flexWrap: "wrap" }}>
             {[
-              { label: "Find Members", link: "/directory", color: "#F39C12" },
-              { label: "Find Businesses", link: "/business", color: "#43A047" },
-              { label: "Find Chapters", link: "/chapters", color: "#1E88E5" },
+              { label: "Find Members", link: "/directory", color: ACCENT.saffron, textColor: TEXT_ACCENT.saffron },
+              { label: "Find Businesses", link: "/business", color: ACCENT.green, textColor: TEXT_ACCENT.green },
+              { label: "Find Chapters", link: "/chapters", color: ACCENT.blue, textColor: TEXT_ACCENT.blue },
             ].map((item) => (
               <Link key={item.label} to={item.link} style={{
                 padding: "10px 22px", borderRadius: 50, fontSize: 13, fontWeight: 600,
-                border: `2px solid ${item.color}`, color: item.color, background: `${item.color}0f`,
+                border: `2px solid ${item.color}`, color: item.textColor, background: `${item.color}0f`,
                 textDecoration: "none", transition: "all .2s",
               }}
                 onMouseEnter={e => { e.currentTarget.style.background = item.color; e.currentTarget.style.color = "#fff"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = `${item.color}0f`; e.currentTarget.style.color = item.color; }}>{item.label}</Link>
+                onMouseLeave={e => { e.currentTarget.style.background = `${item.color}0f`; e.currentTarget.style.color = item.textColor; }}>{item.label}</Link>
             ))}
           </div>
           <div style={{ marginTop: 44 }}>
-            <p style={{ fontSize: 12, color: "#2E2E2E60", fontWeight: 600, marginBottom: 16, textTransform: "uppercase", letterSpacing: "0.08em" }}>Popular Business Categories</p>
+            <p style={{ fontSize: 12, color: "rgba(46,46,46,0.7)", fontWeight: 600, marginBottom: 16, textTransform: "uppercase", letterSpacing: "0.08em" }}>Popular Business Categories</p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center" }}>
               {BUSINESS_CATS.map((cat) => (
                 <Link key={cat} to="/business" style={{
@@ -437,7 +463,7 @@ export default function Index() {
                   background: "#FFF7E6", border: "1.5px solid #E8A31760", color: "#2E2E2E",
                   textDecoration: "none", transition: "all .2s",
                 }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = "#F39C12"; e.currentTarget.style.background = "#FFF0D0"; }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = ACCENT.saffron; e.currentTarget.style.background = "#FFF0D0"; }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = "#E8A31760"; e.currentTarget.style.background = "#FFF7E6"; }}>
                   {cat}
                 </Link>
@@ -451,21 +477,21 @@ export default function Index() {
       <section style={{ background: "#FDEBD0", padding: "80px 24px", overflow: "hidden", position: "relative" }}>
         <div style={{ maxWidth: 1280, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 64, alignItems: "center" }} className="split-grid">
           <Reveal>
-            <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: "#43A047", textTransform: "uppercase", marginBottom: 12 }}>Our Roots</p>
+            <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: TEXT_ACCENT.green, textTransform: "uppercase", marginBottom: 12 }}>Our Roots</p>
             <h2 style={{ fontSize: "clamp(1.8rem,3vw,2.5rem)", fontWeight: 800, margin: 0, color: "#2E2E2E", lineHeight: 1.2 }}>
-              A Family That Spans<br /><span style={{ color: "#F39C12" }}>Continents</span>
+              A Family That Spans<br /><span style={{ color: TEXT_ACCENT.saffron }}>Continents</span>
             </h2>
-            <p style={{ marginTop: 18, fontSize: 15, color: "#2E2E2E99", lineHeight: 1.75, maxWidth: 460 }}>
+            <p style={{ marginTop: 18, fontSize: 15, color: "rgba(46,46,46,0.7)", lineHeight: 1.75, maxWidth: 460 }}>
               From Ahmedabad to Houston, Mumbai to London — Khadayata families thrive across borders. Our platform preserves ancient traditions while powering modern connections.
             </p>
             <div style={{ marginTop: 32, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
               {[
-                { icon: Users, label: "Member Directory", color: "#F39C12" },
-                { icon: Heart, label: "Matrimonial", color: "#E91E63" },
-                { icon: Calendar, label: "Events", color: "#1E88E5" },
-                { icon: Building2, label: "Temple", color: "#43A047" },
-                { icon: Newspaper, label: "News & Archives", color: "#F4B400" },
-                { icon: BookOpen, label: "Oral History", color: "#1E88E5" },
+                { icon: Users, label: "Member Directory", color: ACCENT.saffron },
+                { icon: Heart, label: "Matrimonial", color: ACCENT.pink },
+                { icon: Calendar, label: "Events", color: ACCENT.blue },
+                { icon: Building2, label: "Temple", color: ACCENT.green },
+                { icon: Newspaper, label: "News & Archives", color: ACCENT.gold },
+                { icon: BookOpen, label: "Oral History", color: ACCENT.blue },
               ].map((item, i) => {
                 const Icon = item.icon;
                 return (
@@ -518,19 +544,19 @@ export default function Index() {
             </div>
           </Reveal>
           <Reveal delay={0.15}>
-            <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: "#43A047", textTransform: "uppercase", marginBottom: 12 }}>Business Network</p>
+            <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: TEXT_ACCENT.green, textTransform: "uppercase", marginBottom: 12 }}>Business Network</p>
             <h2 style={{ fontSize: "clamp(1.8rem,3vw,2.5rem)", fontWeight: 800, margin: 0, color: "#2E2E2E", lineHeight: 1.2 }}>
-              Support <span style={{ color: "#F39C12" }}>Khadayata</span><br />Businesses
+              Support <span style={{ color: TEXT_ACCENT.saffron }}>Khadayata</span><br />Businesses
             </h2>
-            <p style={{ marginTop: 18, fontSize: 15, color: "#2E2E2E99", lineHeight: 1.75, maxWidth: 440 }}>
+            <p style={{ marginTop: 18, fontSize: 15, color: "rgba(46,46,46,0.7)", lineHeight: 1.75, maxWidth: 440 }}>
               Discover businesses run by community members — from restaurants to professional services. Shop local, grow together.
             </p>
             <div style={{ marginTop: 28, display: "flex", flexDirection: "column", gap: 14 }}>
               {[
-                { icon: Globe, text: "Join any chapter worldwide", color: "#F39C12" },
-                { icon: Calendar, text: "Attend exclusive member events", color: "#E91E63" },
-                { icon: Briefcase, text: "Expand your business network", color: "#43A047" },
-                { icon: Heart, text: "Enrol in volunteer programs", color: "#1E88E5" },
+                { icon: Globe, text: "Join any chapter worldwide", color: ACCENT.saffron },
+                { icon: Calendar, text: "Attend exclusive member events", color: ACCENT.pink },
+                { icon: Briefcase, text: "Expand your business network", color: ACCENT.green },
+                { icon: Heart, text: "Enrol in volunteer programs", color: ACCENT.blue },
               ].map((item, i) => {
                 const Icon = item.icon;
                 return (
@@ -541,7 +567,7 @@ export default function Index() {
                       <div style={{ width: 36, height: 36, borderRadius: 10, background: `${item.color}18`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                         <Icon size={17} style={{ color: item.color }} />
                       </div>
-                      <span style={{ fontSize: 14, color: "#2E2E2ECC" }}>{item.text}</span>
+                      <span style={{ fontSize: 14, color: "rgba(46,46,46,0.85)" }}>{item.text}</span>
                     </div>
                   </Reveal>
                 );
@@ -592,7 +618,7 @@ export default function Index() {
       <section style={{ background: "#FDEBD0", padding: "80px 24px" }}>
         <div style={{ maxWidth: 1280, margin: "0 auto" }}>
           <Reveal style={{ textAlign: "center", marginBottom: 48 }}>
-            <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: "#E91E63", textTransform: "uppercase", marginBottom: 10 }}>Community Love</p>
+            <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: TEXT_ACCENT.pink, textTransform: "uppercase", marginBottom: 10 }}>Community Love</p>
             <h2 style={{ fontSize: "clamp(1.8rem,3vw,2.4rem)", fontWeight: 800, margin: 0, color: "#2E2E2E" }}>Loved by Our Members</h2>
           </Reveal>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 24 }}>
@@ -608,14 +634,14 @@ export default function Index() {
                   <div style={{ display: "flex", gap: 3, marginBottom: 16 }}>
                     {[1,2,3,4,5].map(s => <Star key={s} size={15} style={{ fill: "#F4B400", color: "#F4B400" }} />)}
                   </div>
-                  <p style={{ fontSize: 15, color: "#2E2E2EBB", lineHeight: 1.65, fontStyle: "italic", margin: 0 }}>"{t.text}"</p>
+                  <p style={{ fontSize: 15, color: "rgba(46,46,46,0.75)", lineHeight: 1.65, fontStyle: "italic", margin: 0 }}>"{t.text}"</p>
                   <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 22, paddingTop: 18, borderTop: "1px solid rgba(232,163,23,0.2)" }}>
                     <div style={{ width: 44, height: 44, borderRadius: "50%", background: "linear-gradient(135deg,#F39C12,#E91E63)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 16 }}>
                       {t.name.charAt(0)}
                     </div>
                     <div>
                       <p style={{ fontWeight: 700, fontSize: 14, margin: 0, color: "#2E2E2E" }}>{t.name}</p>
-                      <p style={{ fontSize: 12, color: "#2E2E2E70", margin: "3px 0 0" }}>{t.chapter}</p>
+                      <p style={{ fontSize: 12, color: "rgba(46,46,46,0.7)", margin: "3px 0 0" }}>{t.chapter}</p>
                     </div>
                   </div>
                 </div>
@@ -630,16 +656,16 @@ export default function Index() {
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg,#F4B400 0%,#E8A317 45%,#F39C12 100%)" }} />
         <img src={MANDALA_IMG} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0.08, objectFit: "cover", pointerEvents: "none" }} />
         <Reveal style={{ maxWidth: 800, margin: "0 auto", textAlign: "center", position: "relative", zIndex: 1 }}>
-          <Sparkles size={32} style={{ color: "#fff", opacity: 0.8, marginBottom: 16 }} />
+          <Sparkles size={32} style={{ color: "#fff", marginBottom: 16 }} />
           <h2 style={{ fontSize: "clamp(2rem,4vw,3.2rem)", fontWeight: 800, color: "#fff", margin: 0, lineHeight: 1.2 }}>
             Join {totalMembers != null ? `${totalMembers.toLocaleString()}+ ` : ""}Khadayata Members Worldwide
           </h2>
-          <p style={{ marginTop: 16, fontSize: 17, color: "rgba(255,255,255,0.85)", maxWidth: 520, margin: "16px auto 0", lineHeight: 1.65 }}>
+          <p style={{ marginTop: 16, fontSize: 17, color: "rgba(255,255,255,0.95)", maxWidth: 520, margin: "16px auto 0", lineHeight: 1.65 }}>
             Create your free account today and become part of the world's most connected Khadayata community platform.
           </p>
           <Link to="/auth" style={{
             display: "inline-flex", alignItems: "center", gap: 10, marginTop: 40,
-            padding: "16px 42px", borderRadius: 50, fontSize: 16, fontWeight: 800, color: "#F39C12",
+            padding: "16px 42px", borderRadius: 50, fontSize: 16, fontWeight: 800, color: TEXT_ACCENT.saffron,
             background: "#fff", textDecoration: "none",
             boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
             transition: "transform .2s, box-shadow .2s",
@@ -657,11 +683,11 @@ export default function Index() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 40, paddingBottom: 48 }}>
             <div>
               <img src={LOGO} alt="Khadayata" style={{ height: 50, width: "auto", mixBlendMode: "screen", opacity: 0.92, marginBottom: 16 }} />
-              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", lineHeight: 1.7, marginBottom: 16 }}>Preserving heritage. Empowering community. Connecting generations.</p>
-              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", lineHeight: 1.8 }}>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.7, marginBottom: 16 }}>Preserving heritage. Empowering community. Connecting generations.</p>
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", lineHeight: 1.8 }}>
                 <p style={{ margin: 0 }}>Fort Worth, TX</p>
-                <a href="tel:+19723710001" style={{ color: "rgba(255,255,255,0.4)", textDecoration: "none", display: "block" }}>+1 972 371 0001</a>
-                <Link to="/contact" style={{ color: "rgba(255,255,255,0.4)", textDecoration: "none", display: "block" }}>Contact Us</Link>
+                <a href="tel:+19723710001" style={{ color: "rgba(255,255,255,0.5)", textDecoration: "none", display: "block" }}>+1 972 371 0001</a>
+                <Link to="/contact" style={{ color: "rgba(255,255,255,0.5)", textDecoration: "none", display: "block" }}>Contact Us</Link>
               </div>
             </div>
             {[
@@ -670,18 +696,18 @@ export default function Index() {
               { title: "Legal", links: [["Terms of Use", "/terms"], ["Privacy Policy", "/privacy"], ["Accessibility", "/accessibility"]] },
             ].map((col) => (
               <div key={col.title}>
-                <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: "rgba(255,255,255,0.55)", textTransform: "uppercase", marginBottom: 16 }}>{col.title}</p>
+                <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: "rgba(255,255,255,0.7)", textTransform: "uppercase", marginBottom: 16 }}>{col.title}</p>
                 <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 10 }}>
                   {col.links.map(([label, href]) => (
-                    <li key={href}><Link to={href} style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", textDecoration: "none", transition: "color .2s" }}
+                    <li key={href}><Link to={href} style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", textDecoration: "none", transition: "color .2s" }}
                       onMouseEnter={e => (e.currentTarget.style.color = "#F4B400")}
-                      onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.45)")}>{label}</Link></li>
+                      onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.5)")}>{label}</Link></li>
                   ))}
                 </ul>
               </div>
             ))}
           </div>
-          <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", padding: "20px 0", textAlign: "center", fontSize: 12, color: "rgba(255,255,255,0.3)" }}>
+          <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", padding: "20px 0", textAlign: "center", fontSize: 12, color: "rgba(255,255,255,0.5)" }}>
             &copy; {new Date().getFullYear()} Khadayata. All rights reserved. &bull; Jai Jai Khadayata
           </div>
         </div>

@@ -4,34 +4,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import PublicLayout from "@/components/PublicLayout";
 import SEOMeta from "@/components/SEOMeta";
+import LoginGate from "@/components/LoginGate";
 import { Crown, MessageCircle, Lock, ArrowRight, Globe, Scroll, Megaphone, Pin, ChartBar as BarChart2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
-function LoginGate({ message }: { message: string }) {
-  return (
-    <div style={{
-      display: "flex", alignItems: "center", gap: 10, padding: "12px 16px",
-      background: "rgba(243,156,18,0.08)", border: "1.5px dashed rgba(243,156,18,0.4)",
-      borderRadius: 12, marginTop: 16,
-    }}>
-      <Lock size={15} style={{ color: "#F39C12", flexShrink: 0 }} />
-      <span style={{ fontSize: 13, color: "#2E2E2E99", flex: 1 }}>{message}</span>
-      <Link to="/auth" style={{
-        fontSize: 12, fontWeight: 700, color: "#F39C12", textDecoration: "none",
-        display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap",
-      }}>
-        Sign in <ArrowRight size={12} />
-      </Link>
-    </div>
-  );
-}
-
 const CATEGORY_META: Record<string, { label: string; color: string; icon: React.ElementType }> = {
-  general: { label: "General", color: "#1E88E5", icon: Globe },
+  general: { label: "General", color: "#186eb9", icon: Globe },
   governance: { label: "Governance", color: "#D4A017", icon: Crown },
   tradition: { label: "Tradition", color: "#E67E22", icon: Scroll },
   announcement: { label: "Announcement", color: "#E53935", icon: Megaphone },
-  poll: { label: "Poll", color: "#43A047", icon: BarChart2 },
+  poll: { label: "Poll", color: "#327935", icon: BarChart2 },
 };
 
 export default function PublicEldersCouncil() {
@@ -55,8 +37,8 @@ export default function PublicEldersCouncil() {
     return (
       <PublicLayout>
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "40px 24px", textAlign: "center" }}>
-          <p style={{ color: "#2E2E2E80", fontSize: 15 }}>
-            You are signed in. <Link to="/elders-council/full" style={{ color: "#F39C12", fontWeight: 600 }}>Go to Elders Council &rarr;</Link>
+          <p style={{ color: "rgba(46,46,46,0.75)", fontSize: 15 }}>
+            You are signed in. <Link to="/elders-council/full" style={{ color: "#96600b", fontWeight: 600 }}>Go to Elders Council &rarr;</Link>
           </p>
         </div>
       </PublicLayout>
@@ -109,10 +91,10 @@ export default function PublicEldersCouncil() {
               { icon: BarChart2, label: "Open Polls", value: `${(threads ?? []).filter(t => (t as Record<string,unknown>).category === "poll").length || "—"}` },
             ].map(({ icon: Icon, label, value }) => (
               <div key={label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <Icon size={20} style={{ color: "#F39C12" }} />
+                <Icon size={20} style={{ color: "#96600b" }} />
                 <div>
                   <div style={{ fontSize: 18, fontWeight: 800, color: "#2E2E2E" }}>{value}</div>
-                  <div style={{ fontSize: 12, color: "#2E2E2E70" }}>{label}</div>
+                  <div style={{ fontSize: 12, color: "rgba(46,46,46,0.75)" }}>{label}</div>
                 </div>
               </div>
             ))}
@@ -168,7 +150,7 @@ export default function PublicEldersCouncil() {
                           {thread.pinned && (
                             <span style={{
                               display: "flex", alignItems: "center", gap: 3,
-                              fontSize: 10, fontWeight: 700, color: "#F39C12",
+                              fontSize: 10, fontWeight: 700, color: "#96600b",
                             }}>
                               <Pin size={9} /> Pinned
                             </span>
@@ -181,10 +163,10 @@ export default function PublicEldersCouncil() {
                         <h3 style={{ fontSize: 15, fontWeight: 700, color: "#2E2E2E", margin: "0 0 4px", lineHeight: 1.35 }}>
                           {thread.title as string}
                         </h3>
-                        <p style={{ fontSize: 12, color: "#2E2E2E60", margin: "0 0 8px", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" } as React.CSSProperties}>
+                        <p style={{ fontSize: 12, color: "rgba(46,46,46,0.75)", margin: "0 0 8px", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" } as React.CSSProperties}>
                           {thread.body as string}
                         </p>
-                        <div style={{ display: "flex", gap: 14, fontSize: 11, color: "#2E2E2E50", flexWrap: "wrap" }}>
+                        <div style={{ display: "flex", gap: 14, fontSize: 11, color: "#757575", flexWrap: "wrap" }}>
                           <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
                             <MessageCircle size={10} /> Sign in to join the discussion
                           </span>
@@ -193,19 +175,19 @@ export default function PublicEldersCouncil() {
                           )}
                         </div>
                       </div>
-                      <Lock size={14} style={{ color: "#F39C12", flexShrink: 0, marginTop: 4 }} />
+                      <Lock size={14} style={{ color: "#96600b", flexShrink: 0, marginTop: 4 }} />
                     </div>
                   );
                 })}
               </div>
             ) : (
-              <div style={{ textAlign: "center", padding: "40px 0", color: "#2E2E2E50" }}>
+              <div style={{ textAlign: "center", padding: "40px 0", color: "#757575" }}>
                 <Crown size={40} style={{ margin: "0 auto 12px", opacity: 0.3 }} />
                 <p>No active discussions yet. Be the first to participate.</p>
               </div>
             )}
 
-            <LoginGate message="Sign in to vote on discussions, reply, and participate in community governance" />
+            <LoginGate title="Sign In Required" message="Sign in to vote on discussions, reply, and participate in community governance" ctaLabel="Sign in" />
           </div>
 
           {/* What is the Council */}
@@ -226,10 +208,10 @@ export default function PublicEldersCouncil() {
                   background: "linear-gradient(135deg,rgba(243,156,18,0.15),rgba(230,126,34,0.08))",
                   display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14,
                 }}>
-                  <Icon size={20} style={{ color: "#F39C12" }} />
+                  <Icon size={20} style={{ color: "#96600b" }} />
                 </div>
                 <h3 style={{ fontSize: 15, fontWeight: 700, color: "#2E2E2E", margin: "0 0 6px" }}>{title}</h3>
-                <p style={{ fontSize: 13, color: "#2E2E2E70", lineHeight: 1.6, margin: 0 }}>{desc}</p>
+                <p style={{ fontSize: 13, color: "rgba(46,46,46,0.75)", lineHeight: 1.6, margin: 0 }}>{desc}</p>
               </div>
             ))}
           </div>

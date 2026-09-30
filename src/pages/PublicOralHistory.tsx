@@ -4,27 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import PublicLayout from "@/components/PublicLayout";
 import SEOMeta from "@/components/SEOMeta";
+import LoginGate from "@/components/LoginGate";
 import { Mic, Video, Play, Clock, Lock, ArrowRight, Users, Tag, BookOpen, Heart } from "lucide-react";
 import { format } from "date-fns";
-
-function LoginGate({ message }: { message: string }) {
-  return (
-    <div style={{
-      display: "flex", alignItems: "center", gap: 10, padding: "12px 16px",
-      background: "rgba(243,156,18,0.08)", border: "1.5px dashed rgba(243,156,18,0.4)",
-      borderRadius: 12, marginTop: 16,
-    }}>
-      <Lock size={15} style={{ color: "#F39C12", flexShrink: 0 }} />
-      <span style={{ fontSize: 13, color: "#2E2E2E99", flex: 1 }}>{message}</span>
-      <Link to="/auth" style={{
-        fontSize: 12, fontWeight: 700, color: "#F39C12", textDecoration: "none",
-        display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap",
-      }}>
-        Sign in <ArrowRight size={12} />
-      </Link>
-    </div>
-  );
-}
 
 export default function PublicOralHistory() {
   const { user } = useAuth();
@@ -47,8 +29,8 @@ export default function PublicOralHistory() {
     return (
       <PublicLayout>
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "40px 24px", textAlign: "center" }}>
-          <p style={{ color: "#2E2E2E80", fontSize: 15 }}>
-            You are signed in. <Link to="/oral-history/full" style={{ color: "#F39C12", fontWeight: 600 }}>Go to Oral History Project &rarr;</Link>
+          <p style={{ color: "rgba(46,46,46,0.75)", fontSize: 15 }}>
+            You are signed in. <Link to="/oral-history/full" style={{ color: "#96600b", fontWeight: 600 }}>Go to Oral History Project &rarr;</Link>
           </p>
         </div>
       </PublicLayout>
@@ -101,10 +83,10 @@ export default function PublicOralHistory() {
               { icon: Users, label: "Narrators", value: `${new Set((histories ?? []).map(h => h.narrator_name).filter(Boolean)).size || "—"}` },
             ].map(({ icon: Icon, label, value }) => (
               <div key={label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <Icon size={20} style={{ color: "#F39C12" }} />
+                <Icon size={20} style={{ color: "#96600b" }} />
                 <div>
                   <div style={{ fontSize: 18, fontWeight: 800, color: "#2E2E2E" }}>{value}</div>
-                  <div style={{ fontSize: 12, color: "#2E2E2E70" }}>{label}</div>
+                  <div style={{ fontSize: 12, color: "rgba(46,46,46,0.75)" }}>{label}</div>
                 </div>
               </div>
             ))}
@@ -165,18 +147,18 @@ export default function PublicOralHistory() {
                         {h.title}
                       </h3>
                       {h.narrator_name && (
-                        <p style={{ fontSize: 12, color: "#2E2E2E70", margin: "0 0 8px", display: "flex", alignItems: "center", gap: 4 }}>
+                        <p style={{ fontSize: 12, color: "rgba(46,46,46,0.75)", margin: "0 0 8px", display: "flex", alignItems: "center", gap: 4 }}>
                           <Users size={10} /> {h.narrator_name}
                         </p>
                       )}
                       {h.description && (
-                        <p style={{ fontSize: 12, color: "#2E2E2E60", lineHeight: 1.5, margin: "0 0 10px", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" } as React.CSSProperties}>
+                        <p style={{ fontSize: 12, color: "rgba(46,46,46,0.75)", lineHeight: 1.5, margin: "0 0 10px", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" } as React.CSSProperties}>
                           {h.description}
                         </p>
                       )}
                       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
                         {h.duration_seconds && (
-                          <span style={{ fontSize: 11, color: "#2E2E2E50", display: "flex", alignItems: "center", gap: 3 }}>
+                          <span style={{ fontSize: 11, color: "#757575", display: "flex", alignItems: "center", gap: 3 }}>
                             <Clock size={10} /> {Math.floor(h.duration_seconds / 60)}m {h.duration_seconds % 60}s
                           </span>
                         )}
@@ -195,13 +177,13 @@ export default function PublicOralHistory() {
                 ))}
               </div>
             ) : (
-              <div style={{ textAlign: "center", padding: "40px 0", color: "#2E2E2E50" }}>
+              <div style={{ textAlign: "center", padding: "40px 0", color: "#757575" }}>
                 <Mic size={40} style={{ margin: "0 auto 12px", opacity: 0.3 }} />
                 <p>Recordings are being added — check back soon.</p>
               </div>
             )}
 
-            <LoginGate message="Sign in to listen to recordings and contribute your own oral history" />
+            <LoginGate title="Sign In Required" message="Sign in to listen to recordings and contribute your own oral history" ctaLabel="Sign in" />
           </div>
 
           {/* What the project contains */}
@@ -227,10 +209,10 @@ export default function PublicOralHistory() {
                     background: "linear-gradient(135deg,rgba(243,156,18,0.15),rgba(230,126,34,0.08))",
                     display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14,
                   }}>
-                    <Icon size={20} style={{ color: "#F39C12" }} />
+                    <Icon size={20} style={{ color: "#96600b" }} />
                   </div>
                   <h3 style={{ fontSize: 15, fontWeight: 700, color: "#2E2E2E", margin: "0 0 6px" }}>{title}</h3>
-                  <p style={{ fontSize: 13, color: "#2E2E2E70", lineHeight: 1.6, margin: 0 }}>{desc}</p>
+                  <p style={{ fontSize: 13, color: "rgba(46,46,46,0.75)", lineHeight: 1.6, margin: 0 }}>{desc}</p>
                 </div>
               ))}
             </div>

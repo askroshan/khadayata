@@ -8,27 +8,9 @@ import SEOMeta from "@/components/SEOMeta";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Heart, Search, MapPin, GraduationCap, Lock, ArrowRight, User, Users, Star } from "lucide-react";
+import LoginGate from "@/components/LoginGate";
 
 const LOGO = "/Screenshot_2026-03-16_at_9.18.14_AM.png";
-
-function LoginGate({ message }: { message: string }) {
-  return (
-    <div style={{
-      display: "flex", alignItems: "center", gap: 10, padding: "10px 14px",
-      background: "rgba(243,156,18,0.07)", border: "1.5px dashed rgba(243,156,18,0.38)",
-      borderRadius: 10, marginTop: 12,
-    }}>
-      <Lock size={13} style={{ color: "#F39C12", flexShrink: 0 }} />
-      <span style={{ fontSize: 12, color: "#2E2E2E80", flex: 1 }}>{message}</span>
-      <Link to="/auth" style={{
-        fontSize: 11, fontWeight: 700, color: "#F39C12", textDecoration: "none",
-        display: "flex", alignItems: "center", gap: 3, whiteSpace: "nowrap",
-      }}>
-        Sign in <ArrowRight size={11} />
-      </Link>
-    </div>
-  );
-}
 
 const DIET_LABELS: Record<string, string> = {
   vegetarian: "Vegetarian", vegan: "Vegan", non_vegetarian: "Non-Veg", jain: "Jain",
@@ -138,7 +120,7 @@ export default function PublicMatrimonial() {
       <div style={{ background: "#fff", borderBottom: "1px solid #f0ece4", padding: "16px 24px", fontFamily: "'Poppins', sans-serif" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
           <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
-            <Search size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#aaa" }} />
+            <Search size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#757575" }} />
             <Input
               placeholder="Search by name, city, gotra, education..."
               value={search}
@@ -188,7 +170,7 @@ export default function PublicMatrimonial() {
             </Link>
           ) : (
             <Link to="/auth" style={{
-              padding: "8px 18px", borderRadius: 8, background: "#F39C12", color: "#fff",
+              padding: "8px 18px", borderRadius: 8, background: "#96600b", color: "#fff",
               textDecoration: "none", fontSize: 13, fontWeight: 700, whiteSpace: "nowrap",
             }}>
               Create Profile
@@ -211,11 +193,11 @@ export default function PublicMatrimonial() {
       <div style={{ background: "#FFF7E6", minHeight: "60vh", padding: "32px 24px", fontFamily: "'Poppins', sans-serif" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           {isLoading ? (
-            <div style={{ textAlign: "center", padding: "60px 0", color: "#aaa", fontSize: 14 }}>Loading profiles...</div>
+            <div style={{ textAlign: "center", padding: "60px 0", color: "#757575", fontSize: 14 }}>Loading profiles...</div>
           ) : filtered.length === 0 ? (
             <div style={{ textAlign: "center", padding: "60px 0" }}>
-              <Heart size={40} style={{ color: "#ddd", margin: "0 auto 12px", display: "block" }} />
-              <p style={{ color: "#aaa", fontSize: 14 }}>No profiles match your search.</p>
+              <Heart size={40} style={{ color: "#bdbdbd", margin: "0 auto 12px", display: "block" }} />
+              <p style={{ color: "#757575", fontSize: 14 }}>No profiles match your search.</p>
             </div>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 20 }}>
@@ -263,13 +245,13 @@ export default function PublicMatrimonial() {
                               </span>
                             )}
                           </div>
-                          <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>
+                          <div style={{ fontSize: 12, color: "#757575", marginTop: 2 }}>
                             {age ? `${age} yrs` : ""}
                             {age && gender ? " · " : ""}
                             {gender === "male" ? "Groom" : gender === "female" ? "Bride" : ""}
                           </div>
                           {(member?.chapters as { name: string } | null)?.name && (
-                            <div style={{ fontSize: 11, color: "#aaa" }}>{(member?.chapters as { name: string } | null)?.name ?? ""}</div>
+                            <div style={{ fontSize: 11, color: "#757575" }}>{(member?.chapters as { name: string } | null)?.name ?? ""}</div>
                           )}
                         </div>
                       </div>
@@ -279,7 +261,7 @@ export default function PublicMatrimonial() {
                       {/* Key info chips */}
                       <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 10 }}>
                         {p.marital_status && (
-                          <span style={{ background: "#f5f0e8", color: "#888", borderRadius: 20, padding: "2px 8px", fontSize: 10 }}>
+                          <span style={{ background: "#f5f0e8", color: "#757575", borderRadius: 20, padding: "2px 8px", fontSize: 10 }}>
                             {MARITAL_LABELS[p.marital_status] ?? p.marital_status}
                           </span>
                         )}
@@ -329,7 +311,7 @@ export default function PublicMatrimonial() {
                       </div>
 
                       {p.about && (
-                        <p style={{ fontSize: 12, color: "#777", margin: "0 0 10px", lineHeight: 1.55,
+                        <p style={{ fontSize: 12, color: "#757575", margin: "0 0 10px", lineHeight: 1.55,
                           overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2,
                           WebkitBoxOrient: "vertical",
                         }}>
@@ -337,7 +319,7 @@ export default function PublicMatrimonial() {
                         </p>
                       )}
 
-                      <LoginGate message="Sign in to view full profile and send introduction" />
+                      <LoginGate title="Sign In Required" message="Sign in to view full profile and send introduction" ctaLabel="Sign in" />
                     </div>
                   </div>
                 );

@@ -7,29 +7,11 @@ import PublicLayout from "@/components/PublicLayout";
 import SEOMeta from "@/components/SEOMeta";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, MapPin, Users, Clock, Lock, ArrowRight, Search, Video, Globe, Ticket } from "lucide-react";
+import { Calendar, MapPin, Users, Clock, Search, Video, Globe, Ticket } from "lucide-react";
 import { format, isPast } from "date-fns";
+import LoginGate from "@/components/LoginGate";
 
 const LOGO = "/Screenshot_2026-03-16_at_9.18.14_AM.png";
-
-function LoginGate({ message }: { message: string }) {
-  return (
-    <div style={{
-      display: "flex", alignItems: "center", gap: 10, padding: "10px 14px",
-      background: "rgba(243,156,18,0.07)", border: "1.5px dashed rgba(243,156,18,0.38)",
-      borderRadius: 10, marginTop: 12,
-    }}>
-      <Lock size={13} style={{ color: "#F39C12", flexShrink: 0 }} />
-      <span style={{ fontSize: 12, color: "#2E2E2E80", flex: 1 }}>{message}</span>
-      <Link to="/auth" style={{
-        fontSize: 11, fontWeight: 700, color: "#F39C12", textDecoration: "none",
-        display: "flex", alignItems: "center", gap: 3, whiteSpace: "nowrap",
-      }}>
-        Sign in <ArrowRight size={11} />
-      </Link>
-    </div>
-  );
-}
 
 export default function PublicEvents() {
   const { user } = useAuth();
@@ -115,7 +97,7 @@ export default function PublicEvents() {
       <div style={{ background: "#fff", borderBottom: "1px solid #f0ece4", padding: "16px 24px", fontFamily: "'Poppins', sans-serif" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
           <div style={{ position: "relative", flex: 1, minWidth: 220 }}>
-            <Search size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#aaa" }} />
+            <Search size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#757575" }} />
             <Input
               placeholder="Search events, organizer, city..."
               value={search}
@@ -142,7 +124,7 @@ export default function PublicEvents() {
           </div>
           {user && (
             <Link to="/events/manage" style={{
-              padding: "8px 18px", borderRadius: 8, background: "#F39C12", color: "#fff",
+              padding: "8px 18px", borderRadius: 8, background: "#96600b", color: "#fff",
               textDecoration: "none", fontSize: 13, fontWeight: 700, whiteSpace: "nowrap",
             }}>
               + Manage Events
@@ -155,11 +137,11 @@ export default function PublicEvents() {
       <div style={{ background: "#FFF7E6", minHeight: "60vh", padding: "32px 24px", fontFamily: "'Poppins', sans-serif" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           {isLoading ? (
-            <div style={{ textAlign: "center", padding: "60px 0", color: "#aaa", fontSize: 14 }}>Loading events...</div>
+            <div style={{ textAlign: "center", padding: "60px 0", color: "#757575", fontSize: 14 }}>Loading events...</div>
           ) : filtered.length === 0 ? (
             <div style={{ textAlign: "center", padding: "60px 0" }}>
-              <Calendar size={40} style={{ color: "#ddd", margin: "0 auto 12px", display: "block" }} />
-              <p style={{ color: "#aaa", fontSize: 14 }}>No {tab} events found.</p>
+              <Calendar size={40} style={{ color: "#bdbdbd", margin: "0 auto 12px", display: "block" }} />
+              <p style={{ color: "#757575", fontSize: 14 }}>No {tab} events found.</p>
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -246,7 +228,7 @@ export default function PublicEvents() {
                         </p>
                       )}
 
-                      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", fontSize: 12, color: "#777" }}>
+                      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", fontSize: 12, color: "#757575" }}>
                         <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
                           <Clock size={11} style={{ color: catColor }} />
                           {format(new Date(event.starts_at), "EEE, MMM d · h:mm a")}
@@ -271,7 +253,7 @@ export default function PublicEvents() {
                           </span>
                         )}
                         {(event.chapters as { name: string } | null)?.name && (
-                          <span style={{ fontSize: 11, color: "#aaa" }}>
+                          <span style={{ fontSize: 11, color: "#757575" }}>
                             {(event.chapters as { name: string } | null)?.name ?? ""}
                           </span>
                         )}
@@ -281,14 +263,14 @@ export default function PublicEvents() {
                         <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 8 }}>
                           {(event.tags as string[]).slice(0, 4).map(tag => (
                             <span key={tag} style={{
-                              background: "#f5f0e8", color: "#777",
+                              background: "#f5f0e8", color: "#757575",
                               borderRadius: 6, padding: "2px 8px", fontSize: 10,
                             }}>#{tag}</span>
                           ))}
                         </div>
                       )}
 
-                      <LoginGate message="Sign in to RSVP, view contact details, or get the virtual link" />
+                      <LoginGate title="Sign In Required" message="Sign in to RSVP, view contact details, or get the virtual link" ctaLabel="Sign in" />
                     </div>
                   </div>
                 );

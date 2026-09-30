@@ -14,12 +14,12 @@
     --popover: 36 60% 98%;
     --popover-foreground: 0 0% 18%;
 
-    /* Saffron Orange — Primary */
-    --primary: 37 90% 51%;
+    /* Saffron Orange — Primary (L=34% for 4.5:1 with white text) */
+    --primary: 37 90% 34%;
     --primary-foreground: 0 0% 100%;
 
-    /* Festival Pink — Secondary */
-    --secondary: 336 79% 51%;
+    /* Festival Pink — Secondary (L=50% for 4.5:1 with white text) */
+    --secondary: 336 79% 50%;
     --secondary-foreground: 0 0% 100%;
 
     /* Muted sand tones */
@@ -40,12 +40,12 @@
 
     --radius: 0.75rem;
 
-    /* Leaf Green */
-    --success: 123 38% 45%;
+    /* Leaf Green (L=38% for 4.5:1 with white text) */
+    --success: 123 38% 38%;
     --success-foreground: 0 0% 100%;
 
-    /* Peacock Blue */
-    --jewel: 214 76% 52%;
+    /* Peacock Blue (L=50% for 4.5:1 with white text) */
+    --jewel: 214 76% 50%;
     --jewel-foreground: 0 0% 100%;
 
     /* Turmeric Gold */
@@ -86,7 +86,7 @@
     --primary: 37 90% 55%;
     --primary-foreground: 0 0% 10%;
 
-    --secondary: 336 79% 58%;
+    --secondary: 336 79% 50%;
     --secondary-foreground: 0 0% 100%;
 
     --muted: 0 0% 18%;

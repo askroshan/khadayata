@@ -24,15 +24,15 @@ const NotFound = () => {
             marginBottom: 16,
           }}>404</div>
           <h1 style={{ fontSize: "1.5rem", fontWeight: 700, color: "#2E2E2E", marginBottom: 12 }}>Page Not Found</h1>
-          <p style={{ fontSize: 15, color: "#2E2E2E80", lineHeight: 1.6, marginBottom: 32 }}>
+          <p style={{ fontSize: 15, color: "rgba(46,46,46,0.75)", lineHeight: 1.6, marginBottom: 32 }}>
             The page you're looking for doesn't exist or may have been moved.
           </p>
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
             <Link to="/" style={{
               display: "flex", alignItems: "center", gap: 8,
               padding: "12px 28px", borderRadius: 50, fontSize: 14, fontWeight: 700, color: "#fff",
-              background: "linear-gradient(135deg,#F39C12,#E91E63)", textDecoration: "none",
-              boxShadow: "0 4px 18px rgba(243,156,18,.4)",
+              background: "linear-gradient(135deg,#96600b,#cf1a58)", textDecoration: "none",
+              boxShadow: "0 4px 18px rgba(150,96,11,.4)",
             }}>
               <Home size={16} /> Go Home
             </Link>

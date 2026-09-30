@@ -5,26 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchArchiveStats } from "@/lib/archive-stats";
 import PublicLayout from "@/components/PublicLayout";
 import SEOMeta from "@/components/SEOMeta";
+import LoginGate from "@/components/LoginGate";
 import { Library, BookOpen, Mic, Lock, ArrowRight, FileText, Calendar } from "lucide-react";
-
-function LoginGate({ message }: { message: string }) {
-  return (
-    <div style={{
-      display: "flex", alignItems: "center", gap: 10, padding: "12px 16px",
-      background: "rgba(243,156,18,0.08)", border: "1.5px dashed rgba(243,156,18,0.4)",
-      borderRadius: 12, marginTop: 16,
-    }}>
-      <Lock size={15} style={{ color: "#F39C12", flexShrink: 0 }} />
-      <span style={{ fontSize: 13, color: "#2E2E2E99", flex: 1 }}>{message}</span>
-      <Link to="/auth" style={{
-        fontSize: 12, fontWeight: 700, color: "#F39C12", textDecoration: "none",
-        display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap",
-      }}>
-        Sign in <ArrowRight size={12} />
-      </Link>
-    </div>
-  );
-}
 
 export default function PublicArchives() {
   const { user, loading } = useAuth();
@@ -50,7 +32,7 @@ export default function PublicArchives() {
   if (loading) {
     return (
       <PublicLayout>
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "40px 24px", textAlign: "center", color: "#2E2E2E80", fontSize: 15 }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "40px 24px", textAlign: "center", color: "rgba(46,46,46,0.75)", fontSize: 15 }}>
           Loading...
         </div>
       </PublicLayout>
@@ -107,12 +89,12 @@ export default function PublicArchives() {
               { icon: Mic, label: "Oral History Recordings", value: "Growing" },
             ].map(({ icon: Icon, label, value }) => (
               <div key={label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <Icon size={20} style={{ color: "#F39C12" }} />
+                <Icon size={20} style={{ color: "#96600b" }} />
                 <div>
                   <div style={{ fontSize: 18, fontWeight: 800, color: "#2E2E2E" }}>
-                    {value ?? <span style={{ color: "#2E2E2E50" }}>&ndash;</span>}
+                    {value ?? <span style={{ color: "#757575" }}>&ndash;</span>}
                   </div>
-                  <div style={{ fontSize: 12, color: "#2E2E2E70" }}>{label}</div>
+                  <div style={{ fontSize: 12, color: "rgba(46,46,46,0.75)" }}>{label}</div>
                 </div>
               </div>
             ))}
@@ -146,26 +128,26 @@ export default function PublicArchives() {
                       {issue.title}
                     </p>
                     {issue.volume && (
-                      <p style={{ fontSize: 12, color: "#2E2E2E60", margin: "0 0 4px" }}>Vol. {issue.volume}</p>
+                      <p style={{ fontSize: 12, color: "rgba(46,46,46,0.75)", margin: "0 0 4px" }}>Vol. {issue.volume}</p>
                     )}
                     {issue.issue_date && (
-                      <p style={{ fontSize: 11, color: "#2E2E2E50", margin: 0, display: "flex", alignItems: "center", gap: 4 }}>
+                      <p style={{ fontSize: 11, color: "#757575", margin: 0, display: "flex", alignItems: "center", gap: 4 }}>
                         <Calendar size={10} />
                         {new Date(issue.issue_date).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
                       </p>
                     )}
                   </div>
-                  <Lock size={14} style={{ color: "#F39C12", flexShrink: 0, marginTop: 2 }} />
+                  <Lock size={14} style={{ color: "#96600b", flexShrink: 0, marginTop: 2 }} />
                 </div>
               ))}
               {(!magazines || magazines.length === 0) && (
-                <div style={{ gridColumn: "1/-1", textAlign: "center", padding: "40px 0", color: "#2E2E2E50" }}>
+                <div style={{ gridColumn: "1/-1", textAlign: "center", padding: "40px 0", color: "#757575" }}>
                   <Library size={40} style={{ margin: "0 auto 12px", opacity: 0.3 }} />
                   <p>Magazine archive loading...</p>
                 </div>
               )}
             </div>
-            <LoginGate message="Sign in to read, download, or search full magazine issues" />
+            <LoginGate title="Sign In Required" message="Sign in to read, download, or search full magazine issues" ctaLabel="Sign in" />
           </div>
 
           {/* Heritage features teaser */}
@@ -195,12 +177,12 @@ export default function PublicArchives() {
                   width: 48, height: 48, borderRadius: 14, background: "linear-gradient(135deg,rgba(243,156,18,0.15),rgba(230,126,34,0.1))",
                   display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16,
                 }}>
-                  <Icon size={22} style={{ color: "#F39C12" }} />
+                  <Icon size={22} style={{ color: "#96600b" }} />
                 </div>
                 <h3 style={{ fontSize: 16, fontWeight: 700, color: "#2E2E2E", margin: "0 0 8px" }}>{title}</h3>
-                <p style={{ fontSize: 13, color: "#2E2E2E70", lineHeight: 1.6, margin: "0 0 16px" }}>{desc}</p>
+                <p style={{ fontSize: 13, color: "rgba(46,46,46,0.75)", lineHeight: 1.6, margin: "0 0 16px" }}>{desc}</p>
                 <Link to="/auth" style={{
-                  fontSize: 13, fontWeight: 600, color: "#F39C12", textDecoration: "none",
+                  fontSize: 13, fontWeight: 600, color: "#96600b", textDecoration: "none",
                   display: "flex", alignItems: "center", gap: 4,
                 }}>
                   {cta} <ArrowRight size={13} />

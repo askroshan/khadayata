@@ -8,7 +8,8 @@ import SEOMeta from "@/components/SEOMeta";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, Search, MapPin, CircleCheck as CheckCircle, Briefcase, Users, Globe, ExternalLink, ArrowRight, Lock, TrendingUp, Clock, GraduationCap, DollarSign } from "lucide-react";
+import { Building2, Search, MapPin, CircleCheck as CheckCircle, Briefcase, Users, Globe, ExternalLink, ArrowRight, TrendingUp, Clock, GraduationCap, DollarSign } from "lucide-react";
+import LoginGate from "@/components/LoginGate";
 
 const SECTORS = [
   "Healthcare", "Technology", "Education", "Finance", "Real Estate",
@@ -25,25 +26,6 @@ const EMPLOYMENT_TYPES = [
   { value: "freelance", label: "Freelance" },
   { value: "volunteer", label: "Volunteer" },
 ];
-
-function LoginGate({ message }: { message: string }) {
-  return (
-    <div style={{
-      display: "flex", alignItems: "center", gap: 10, padding: "10px 14px",
-      background: "rgba(243,156,18,0.07)", border: "1.5px dashed rgba(243,156,18,0.38)",
-      borderRadius: 10, marginTop: 12,
-    }}>
-      <Lock size={13} style={{ color: "#F39C12", flexShrink: 0 }} />
-      <span style={{ fontSize: 12, color: "#2E2E2E80", flex: 1 }}>{message}</span>
-      <Link to="/auth" style={{
-        fontSize: 11, fontWeight: 700, color: "#F39C12", textDecoration: "none",
-        display: "flex", alignItems: "center", gap: 3, whiteSpace: "nowrap",
-      }}>
-        Sign in <ArrowRight size={11} />
-      </Link>
-    </div>
-  );
-}
 
 export default function PublicBusiness() {
   const { user } = useAuth();
@@ -169,7 +151,7 @@ export default function PublicBusiness() {
               {/* Filters */}
               <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                 <div style={{ position: "relative", flex: 1, minWidth: 220 }}>
-                  <Search size={16} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#2E2E2E50" }} />
+                  <Search size={16} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#757575" }} />
                   <Input placeholder="Search businesses..." value={searchBiz} onChange={e => setSearchBiz(e.target.value)} style={{ paddingLeft: 38 }} />
                 </div>
                 <Select value={sectorFilter} onValueChange={setSectorFilter}>
@@ -191,7 +173,7 @@ export default function PublicBusiness() {
                   <Link to="/business/manage" style={{
                     display: "flex", alignItems: "center", gap: 6,
                     padding: "9px 18px", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#fff",
-                    background: "linear-gradient(135deg,#43A047,#1E88E5)", textDecoration: "none",
+                    background: "linear-gradient(135deg,#327935,#186eb9)", textDecoration: "none",
                     whiteSpace: "nowrap",
                   }}>
                     Manage Listings <ArrowRight size={14} />
@@ -200,7 +182,7 @@ export default function PublicBusiness() {
               </div>
 
               {bizLoading && (
-                <div style={{ textAlign: "center", padding: "60px 0", color: "#2E2E2E60" }}>
+                <div style={{ textAlign: "center", padding: "60px 0", color: "rgba(46,46,46,0.75)" }}>
                   <Building2 size={40} style={{ margin: "0 auto 12px", opacity: 0.2, display: "block" }} />
                   <p>Loading businesses...</p>
                 </div>
@@ -208,7 +190,7 @@ export default function PublicBusiness() {
               {!bizLoading && businesses?.length === 0 && (
                 <div style={{ textAlign: "center", padding: "60px 0" }}>
                   <Building2 size={48} style={{ margin: "0 auto 16px", color: "#2E2E2E30", display: "block" }} />
-                  <p style={{ color: "#2E2E2E60" }}>No businesses found</p>
+                  <p style={{ color: "rgba(46,46,46,0.75)" }}>No businesses found</p>
                 </div>
               )}
 
@@ -226,23 +208,23 @@ export default function PublicBusiness() {
                       onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = "0 14px 36px rgba(46,46,46,0.14)"; }}
                       onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(46,46,46,0.08)"; }}
                     >
-                      <div style={{ height: 4, background: b.verified ? "linear-gradient(90deg,#43A047,#1E88E5)" : "linear-gradient(90deg,#F39C12,#F4B400)" }} />
+                      <div style={{ height: 4, background: b.verified ? "linear-gradient(90deg,#327935,#186eb9)" : "linear-gradient(90deg,#96600b,#F4B400)" }} />
                       <div style={{ padding: "18px 20px" }}>
                         {/* Header */}
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <h3 style={{ fontSize: 15, fontWeight: 700, color: "#2E2E2E", margin: "0 0 6px", display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                               {b.name}
-                              {b.verified && <CheckCircle size={15} style={{ color: "#43A047", flexShrink: 0 }} />}
+                              {b.verified && <CheckCircle size={15} style={{ color: "#327935", flexShrink: 0 }} />}
                             </h3>
                             {b.sector && (
-                              <span style={{ padding: "3px 10px", borderRadius: 50, fontSize: 11, color: "#2E2E2E80", background: "#F0F0F0", display: "inline-block" }}>
+                              <span style={{ padding: "3px 10px", borderRadius: 50, fontSize: 11, color: "rgba(46,46,46,0.75)", background: "#F0F0F0", display: "inline-block" }}>
                                 {b.sector}
                               </span>
                             )}
                           </div>
                           {b.website && (
-                            <a href={b.website as string} target="_blank" rel="noopener noreferrer" style={{ color: "#1E88E5", padding: 6, borderRadius: 8, transition: "background .18s" }}
+                            <a href={b.website as string} target="_blank" rel="noopener noreferrer" style={{ color: "#186eb9", padding: 6, borderRadius: 8, transition: "background .18s" }}
                               onMouseEnter={e => (e.currentTarget.style.background = "#E8F4FD")}
                               onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
                               title="Visit website">
@@ -253,13 +235,13 @@ export default function PublicBusiness() {
 
                         {/* Description */}
                         {b.description && (
-                          <p style={{ fontSize: 13, color: "#2E2E2E80", lineHeight: 1.6, margin: "0 0 12px", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" } as React.CSSProperties}>
+                          <p style={{ fontSize: 13, color: "rgba(46,46,46,0.75)", lineHeight: 1.6, margin: "0 0 12px", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" } as React.CSSProperties}>
                             {b.description as string}
                           </p>
                         )}
 
                         {/* Meta chips */}
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, fontSize: 11, color: "#2E2E2E70" }}>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, fontSize: 11, color: "rgba(46,46,46,0.75)" }}>
                           {loc && <span style={{ display: "flex", alignItems: "center", gap: 4, background: "#F5F5F5", padding: "4px 10px", borderRadius: 50 }}><MapPin size={10} />{loc}</span>}
                           {b.employee_count && <span style={{ display: "flex", alignItems: "center", gap: 4, background: "#F5F5F5", padding: "4px 10px", borderRadius: 50 }}><Users size={10} />{b.employee_count as string} emp.</span>}
                           {b.founded_year && <span style={{ background: "#F5F5F5", padding: "4px 10px", borderRadius: 50 }}>Est. {b.founded_year as number}</span>}
@@ -269,17 +251,17 @@ export default function PublicBusiness() {
                         {(b.tags as string[])?.length > 0 && (
                           <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 10 }}>
                             {(b.tags as string[]).slice(0, 4).map(t => (
-                              <span key={t} style={{ padding: "3px 8px", borderRadius: 6, fontSize: 10, color: "#2E2E2E70", border: "1px solid rgba(232,163,23,0.35)", background: "rgba(232,163,23,0.06)" }}>{t}</span>
+                              <span key={t} style={{ padding: "3px 8px", borderRadius: 6, fontSize: 10, color: "rgba(46,46,46,0.75)", border: "1px solid rgba(232,163,23,0.35)", background: "rgba(232,163,23,0.06)" }}>{t}</span>
                             ))}
                           </div>
                         )}
 
                         {/* Login gate for contact */}
                         {!user ? (
-                          <LoginGate message="Sign in to view contact details and connect" />
+                          <LoginGate title="Sign In Required" message="Sign in to view contact details and connect" ctaLabel="Sign in" />
                         ) : (
-                          <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(232,163,23,0.15)", fontSize: 12, color: "#2E2E2E70" }}>
-                            <Link to="/business/manage" style={{ color: "#43A047", fontWeight: 600, textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
+                          <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(232,163,23,0.15)", fontSize: 12, color: "rgba(46,46,46,0.75)" }}>
+                            <Link to="/business/manage" style={{ color: "#327935", fontWeight: 600, textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
                               View full details <ArrowRight size={12} />
                             </Link>
                           </div>
@@ -296,7 +278,7 @@ export default function PublicBusiness() {
               {/* Filters */}
               <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                 <div style={{ position: "relative", flex: 1, minWidth: 220 }}>
-                  <Search size={16} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#2E2E2E50" }} />
+                  <Search size={16} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#757575" }} />
                   <Input placeholder="Search jobs..." value={searchJob} onChange={e => setSearchJob(e.target.value)} style={{ paddingLeft: 38 }} />
                 </div>
                 <Select value={jobTypeFilter} onValueChange={setJobTypeFilter}>
@@ -310,7 +292,7 @@ export default function PublicBusiness() {
                   <Link to="/business/manage" style={{
                     display: "flex", alignItems: "center", gap: 6,
                     padding: "9px 18px", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#fff",
-                    background: "linear-gradient(135deg,#F39C12,#E91E63)", textDecoration: "none",
+                    background: "linear-gradient(135deg,#96600b,#cf1a58)", textDecoration: "none",
                     whiteSpace: "nowrap",
                   }}>
                     Post a Job <ArrowRight size={14} />
@@ -319,7 +301,7 @@ export default function PublicBusiness() {
               </div>
 
               {jobLoading && (
-                <div style={{ textAlign: "center", padding: "60px 0", color: "#2E2E2E60" }}>
+                <div style={{ textAlign: "center", padding: "60px 0", color: "rgba(46,46,46,0.75)" }}>
                   <Briefcase size={40} style={{ margin: "0 auto 12px", opacity: 0.2, display: "block" }} />
                   <p>Loading jobs...</p>
                 </div>
@@ -327,7 +309,7 @@ export default function PublicBusiness() {
               {!jobLoading && jobs?.length === 0 && (
                 <div style={{ textAlign: "center", padding: "60px 0" }}>
                   <Briefcase size={48} style={{ margin: "0 auto 16px", color: "#2E2E2E30", display: "block" }} />
-                  <p style={{ color: "#2E2E2E60" }}>No job listings found</p>
+                  <p style={{ color: "rgba(46,46,46,0.75)" }}>No job listings found</p>
                 </div>
               )}
 
@@ -356,16 +338,16 @@ export default function PublicBusiness() {
                             {j.title}
                           </h3>
                           {employer && (
-                            <p style={{ fontSize: 13, color: "#1E88E5", fontWeight: 600, margin: "0 0 10px" }}>{employer}</p>
+                            <p style={{ fontSize: 13, color: "#186eb9", fontWeight: 600, margin: "0 0 10px" }}>{employer}</p>
                           )}
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, fontSize: 12, color: "#2E2E2E70" }}>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, fontSize: 12, color: "rgba(46,46,46,0.75)" }}>
                             {typeMeta && (
-                              <span style={{ padding: "4px 10px", borderRadius: 50, background: "#E8F5E9", color: "#43A047", fontWeight: 600 }}>
+                              <span style={{ padding: "4px 10px", borderRadius: 50, background: "#E8F5E9", color: "#327935", fontWeight: 600 }}>
                                 {typeMeta.label}
                               </span>
                             )}
                             {j.remote && (
-                              <span style={{ padding: "4px 10px", borderRadius: 50, background: "#E3F2FD", color: "#1E88E5", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
+                              <span style={{ padding: "4px 10px", borderRadius: 50, background: "#E3F2FD", color: "#186eb9", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
                                 <Globe size={10} /> Remote
                               </span>
                             )}
@@ -375,7 +357,7 @@ export default function PublicBusiness() {
                               </span>
                             )}
                             {salary && (
-                              <span style={{ display: "flex", alignItems: "center", gap: 4, background: "#FFF8E1", color: "#F39C12", padding: "4px 10px", borderRadius: 50, fontWeight: 600 }}>
+                              <span style={{ display: "flex", alignItems: "center", gap: 4, background: "#FFF8E1", color: "#96600b", padding: "4px 10px", borderRadius: 50, fontWeight: 600 }}>
                                 <DollarSign size={10} />{salary}
                               </span>
                             )}
@@ -383,7 +365,7 @@ export default function PublicBusiness() {
                         </div>
                         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8, flexShrink: 0 }}>
                           {j.positions_available && (
-                            <span style={{ fontSize: 11, color: "#2E2E2E60", background: "#F5F5F5", padding: "4px 10px", borderRadius: 50 }}>
+                            <span style={{ fontSize: 11, color: "rgba(46,46,46,0.75)", background: "#F5F5F5", padding: "4px 10px", borderRadius: 50 }}>
                               {j.positions_available as number} position{(j.positions_available as number) > 1 ? "s" : ""}
                             </span>
                           )}
@@ -391,12 +373,12 @@ export default function PublicBusiness() {
                       </div>
 
                       {j.description && (
-                        <p style={{ fontSize: 13, color: "#2E2E2E80", lineHeight: 1.65, margin: "12px 0 0", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" } as React.CSSProperties}>
+                        <p style={{ fontSize: 13, color: "rgba(46,46,46,0.75)", lineHeight: 1.65, margin: "12px 0 0", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" } as React.CSSProperties}>
                           {j.description as string}
                         </p>
                       )}
 
-                      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 10, fontSize: 11, color: "#2E2E2E60" }}>
+                      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 10, fontSize: 11, color: "rgba(46,46,46,0.75)" }}>
                         {(j.experience_min || j.experience_max) && (
                           <span style={{ display: "flex", alignItems: "center", gap: 4, background: "#F5F5F5", padding: "3px 10px", borderRadius: 50 }}>
                             <Clock size={10} />
@@ -415,13 +397,13 @@ export default function PublicBusiness() {
 
                       {/* Login gate for applying */}
                       {!user ? (
-                        <LoginGate message="Sign in to apply for this position and view contact details" />
+                        <LoginGate title="Sign In Required" message="Sign in to apply for this position and view contact details" ctaLabel="Sign in" />
                       ) : (
                         <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid rgba(232,163,23,0.15)" }}>
                           <Link to="/business/manage" style={{
                             display: "inline-flex", alignItems: "center", gap: 6,
                             padding: "9px 22px", borderRadius: 50, fontSize: 13, fontWeight: 700, color: "#fff",
-                            background: "linear-gradient(135deg,#F39C12,#E91E63)", textDecoration: "none",
+                            background: "linear-gradient(135deg,#96600b,#cf1a58)", textDecoration: "none",
                           }}>
                             Apply Now <ArrowRight size={14} />
                           </Link>

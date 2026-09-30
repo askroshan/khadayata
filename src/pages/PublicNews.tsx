@@ -8,8 +8,9 @@ import SEOMeta from "@/components/SEOMeta";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Newspaper, Search, Clock, MapPin, Pin, Star, ArrowRight, Lock } from "lucide-react";
+import { Newspaper, Search, Clock, MapPin, Pin, Star, ArrowRight } from "lucide-react";
 import { format } from "date-fns";
+import LoginGate from "@/components/LoginGate";
 
 const NEWS_CATEGORIES = [
   "Announcements", "Community News", "Education", "Religion & Culture",
@@ -24,25 +25,6 @@ const TYPE_BADGE: Record<string, { label: string; color: string }> = {
 
 function estimateReadTime(text: string): number {
   return Math.max(1, Math.round(text.trim().split(/\s+/).length / 200));
-}
-
-function LoginGate({ message }: { message: string }) {
-  return (
-    <div style={{
-      display: "flex", alignItems: "center", gap: 10, padding: "12px 16px",
-      background: "rgba(243,156,18,0.08)", border: "1.5px dashed rgba(243,156,18,0.4)",
-      borderRadius: 12, marginTop: 12,
-    }}>
-      <Lock size={15} style={{ color: "#F39C12", flexShrink: 0 }} />
-      <span style={{ fontSize: 13, color: "#2E2E2E99", flex: 1 }}>{message}</span>
-      <Link to="/auth" style={{
-        fontSize: 12, fontWeight: 700, color: "#F39C12", textDecoration: "none",
-        display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap",
-      }}>
-        Sign in <ArrowRight size={12} />
-      </Link>
-    </div>
-  );
 }
 
 export default function PublicNews() {
@@ -127,7 +109,7 @@ export default function PublicNews() {
         <div style={{ background: "#fff", borderBottom: "1px solid rgba(232,163,23,0.2)", padding: "16px 24px" }}>
           <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", gap: 12, flexWrap: "wrap" }}>
             <div style={{ position: "relative", flex: 1, minWidth: 220 }}>
-              <Search size={16} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#2E2E2E50" }} />
+              <Search size={16} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#757575" }} />
               <Input
                 placeholder="Search articles..."
                 value={search}
@@ -146,7 +128,7 @@ export default function PublicNews() {
               <Link to="/news/manage" style={{
                 display: "flex", alignItems: "center", gap: 6,
                 padding: "9px 18px", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#fff",
-                background: "linear-gradient(135deg,#F39C12,#E91E63)", textDecoration: "none",
+                background: "linear-gradient(135deg,#96600b,#cf1a58)", textDecoration: "none",
                 whiteSpace: "nowrap",
               }}>
                 Manage News <ArrowRight size={14} />
@@ -183,7 +165,7 @@ export default function PublicNews() {
           )}
 
           {isLoading && (
-            <div style={{ textAlign: "center", padding: "60px 0", color: "#2E2E2E60" }}>
+            <div style={{ textAlign: "center", padding: "60px 0", color: "rgba(46,46,46,0.75)" }}>
               <Newspaper size={40} style={{ margin: "0 auto 12px", opacity: 0.2 }} />
               <p>Loading articles...</p>
             </div>
@@ -192,7 +174,7 @@ export default function PublicNews() {
           {!isLoading && newsList?.length === 0 && (
             <div style={{ textAlign: "center", padding: "60px 0" }}>
               <Newspaper size={48} style={{ margin: "0 auto 16px", color: "#2E2E2E30" }} />
-              <p style={{ color: "#2E2E2E60", fontSize: 15 }}>No news articles found</p>
+              <p style={{ color: "rgba(46,46,46,0.75)", fontSize: 15 }}>No news articles found</p>
             </div>
           )}
 
@@ -302,7 +284,7 @@ function NewsCard({ article, isLoggedIn, locationStr }: {
             </span>
           )}
           {article.category && (
-            <span style={{ padding: "3px 10px", borderRadius: 50, fontSize: 11, color: "#2E2E2E80", background: "#F0F0F0" }}>
+            <span style={{ padding: "3px 10px", borderRadius: 50, fontSize: 11, color: "rgba(46,46,46,0.75)", background: "#F0F0F0" }}>
               {article.category as string}
             </span>
           )}
@@ -317,13 +299,13 @@ function NewsCard({ article, isLoggedIn, locationStr }: {
 
         {/* Summary */}
         {article.summary && (
-          <p style={{ fontSize: 13, color: "#2E2E2E80", lineHeight: 1.6, margin: "0 0 12px", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" } as React.CSSProperties}>
+          <p style={{ fontSize: 13, color: "rgba(46,46,46,0.75)", lineHeight: 1.6, margin: "0 0 12px", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" } as React.CSSProperties}>
             {article.summary as string}
           </p>
         )}
 
         {/* Meta */}
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", fontSize: 11, color: "#2E2E2E60", marginTop: "auto", paddingTop: 10, borderTop: "1px solid rgba(232,163,23,0.15)" }}>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", fontSize: 11, color: "rgba(46,46,46,0.75)", marginTop: "auto", paddingTop: 10, borderTop: "1px solid rgba(232,163,23,0.15)" }}>
           <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <Clock size={11} /> {readTime} min read
           </span>
@@ -341,7 +323,7 @@ function NewsCard({ article, isLoggedIn, locationStr }: {
 
         {/* Login gate for reactions/comments */}
         {!isLoggedIn && (
-          <LoginGate message="Sign in to react, comment, or share this article" />
+          <LoginGate title="Sign In Required" message="Sign in to react, comment, or share this article" ctaLabel="Sign in" />
         )}
       </div>
     </article>

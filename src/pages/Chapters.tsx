@@ -170,7 +170,7 @@ export default function Chapters() {
             {/* State — optional, depends on country */}
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                State <span className="text-muted-foreground/60">(optional)</span>
+                State <span className="text-muted-foreground">(optional)</span>
               </label>
               <Select
                 value={selectedState}
@@ -195,7 +195,7 @@ export default function Chapters() {
             {/* City — optional, depends on state (or country if no states) */}
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                City <span className="text-muted-foreground/60">(optional)</span>
+                City <span className="text-muted-foreground">(optional)</span>
               </label>
               <Select
                 value={selectedCity}
@@ -224,7 +224,7 @@ export default function Chapters() {
           <p className="text-sm text-muted-foreground">
             {isLoading ? "Loading…" : `${filtered.length} chapter${filtered.length !== 1 ? "s" : ""}`}
             {hasFilters && !isLoading && filtered.length !== typedChapters.length && (
-              <span className="text-muted-foreground/60"> of {typedChapters.length}</span>
+              <span className="text-muted-foreground"> of {typedChapters.length}</span>
             )}
           </p>
         </div>
