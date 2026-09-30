@@ -14,7 +14,12 @@ This document describes all test accounts, demo data, and fixtures for the Khada
 
 ## Live Test Accounts
 
-All accounts below are seeded in the live database. Password for all accounts: **`TestPass123!`**
+> **IMPORTANT:** All test accounts below were removed from the production
+> database on 2026-09-30 (migration `remove_test_seed_data_20260930`).
+> They exist only in local development environments. Never seed test
+> accounts into production — see AGENTS.md section 3.1.
+
+All accounts below are seeded in **local development only**. Password for all accounts: **`TestPass123!`**
 
 ### Role-Based Accounts
 

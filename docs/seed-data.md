@@ -142,6 +142,11 @@ ON CONFLICT (name, chapter_id) DO NOTHING;
 
 ## Test User Accounts
 
+> **IMPORTANT:** Test accounts were removed from the production database on
+> 2026-09-30 (migration `remove_test_seed_data_20260930`). Test accounts
+> must never be seeded into production — see AGENTS.md section 3.1. Use
+> these accounts only in local development environments (via `local-install/`).
+
 ### Role-Based Accounts (10)
 
 Migration: `seed_test_users_all_roles`. Auth UUIDs follow pattern `b0000001-cafe-0000-0000-000000000001` through `...000000000010`.

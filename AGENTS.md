@@ -46,6 +46,25 @@ regular member (plus unverified members).
 
 ## 3. Database (Supabase)
 
+### 3.1 No fake data in production
+
+- **Never seed fake user accounts, demo content, or test members into the
+  production database.** This includes test auth users (e.g.
+  `@khadayataonline.com`, `@test.local`), demo events/news/businesses,
+  fake emergency contacts, and sample matrimonial/scholarship/mentorship
+  entries.
+- Migrations that create test accounts or demo content for development
+  must be clearly marked as non-production and must NOT be applied to the
+  live database. Test data belongs in local development environments only.
+- If a migration needs reference/master data (geography, chapters, roles,
+  funds, platform settings), that is legitimate production seed data and
+  is exempt — but it must never include individual user accounts or
+  member-specific content.
+- The `local-install/` directory contains a snapshot for local development
+  only. Never apply it to production.
+
+### 3.2 Schema and migrations
+
 - Schema changes only through versioned migrations in
   `supabase/migrations/` (apply via the Supabase MCP tools, never the CLI).
 - Every table: RLS enabled, four separate policies (SELECT/INSERT/UPDATE/DELETE),
