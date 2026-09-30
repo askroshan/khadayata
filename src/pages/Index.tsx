@@ -7,6 +7,8 @@ import {
   ChevronRight, Newspaper, Music, Sparkles,
 } from "lucide-react";
 import { useTotalMemberCount, useTotalChapterCount, useTotalBusinessCount, useTotalCountryCount } from "@/hooks/useChapter";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 import SEOMeta from "@/components/SEOMeta";
 
 const LOGO = "/Screenshot_2026-03-16_at_9.18.14_AM.png";
@@ -160,6 +162,22 @@ export default function Index() {
   const { data: totalBusinesses } = useTotalBusinessCount();
   const { data: totalCountries } = useTotalCountryCount();
   const scrollY = useParallax();
+
+  const { data: latestMembers, isLoading: latestLoading } = useQuery({
+    queryKey: ["homepage-latest-members"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("members")
+        .select("id, first_name, last_name, global_id, photo_url, verification_level, created_at, chapters(name)")
+        .eq("onboarding_completed", true)
+        .gte("verification_level", 1)
+        .order("created_at", { ascending: false })
+        .limit(5);
+      if (error) throw error;
+      return data ?? [];
+    },
+    staleTime: 60_000,
+  });
 
   const liveStats = [
     { value: totalMembers ?? 0, loaded: totalMembers != null, suffix: "+", label: "Members Worldwide", color: LIGHT_ACCENT.saffron },
@@ -370,6 +388,85 @@ export default function Index() {
               );
             })}
           </div>
+        </div>
+      </section>
+
+      {/* ─── LATEST MEMBERS ─── */}
+      <section style={{ background: "#fff", padding: "80px 24px" }}>
+        <div style={{ maxWidth: 1280, margin: "0 auto" }}>
+          <Reveal style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 40, flexWrap: "wrap", gap: 16 }}>
+            <div>
+              <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: TEXT_ACCENT.green, textTransform: "uppercase", marginBottom: 8 }}>Newest Members</p>
+              <h2 style={{ fontSize: "clamp(1.8rem,3vw,2.4rem)", fontWeight: 800, margin: 0, color: "#2E2E2E" }}>Welcome to the Community</h2>
+            </div>
+            <Link to="/directory" style={{
+              display: "flex", alignItems: "center", gap: 6, padding: "10px 22px", borderRadius: 50,
+              border: `1.5px solid ${ACCENT.green}`, color: TEXT_ACCENT.green, fontSize: 13, fontWeight: 600, textDecoration: "none",
+              transition: "background .2s, color .2s",
+            }}
+              onMouseEnter={e => { e.currentTarget.style.background = ACCENT.green; e.currentTarget.style.color = "#fff"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = TEXT_ACCENT.green; }}>View All Members <ChevronRight size={16} /></Link>
+          </Reveal>
+
+          {latestLoading && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 20 }}>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} style={{ background: "#FFF7E6", borderRadius: 20, padding: 24, border: "1px solid rgba(232,163,23,0.15)", textAlign: "center" }}>
+                  <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(232,163,23,0.15)", margin: "0 auto 14px" }} />
+                  <div style={{ height: 16, background: "rgba(232,163,23,0.15)", borderRadius: 8, margin: "0 auto 8px", width: "70%" }} />
+                  <div style={{ height: 12, background: "rgba(232,163,23,0.1)", borderRadius: 8, margin: "0 auto", width: "50%" }} />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!latestLoading && latestMembers && latestMembers.length > 0 && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 20 }}>
+              {latestMembers.map((m, i) => {
+                const chapter = (m as Record<string, unknown>).chapters as { name: string } | null;
+                return (
+                  <Reveal key={m.id} delay={i * 0.08}>
+                    <Link to={`/member/${m.id}`} style={{ display: "block", textDecoration: "none" }}>
+                      <div style={{
+                        background: "#FFF7E6", borderRadius: 20, padding: 24,
+                        border: "1px solid rgba(232,163,23,0.15)",
+                        textAlign: "center", transition: "transform .2s, box-shadow .2s",
+                      }}
+                        onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-6px)"; e.currentTarget.style.boxShadow = "0 14px 36px rgba(67,160,71,0.15)"; }}
+                        onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "none"; }}>
+                        <div style={{ width: 64, height: 64, borderRadius: "50%", margin: "0 auto 14px", overflow: "hidden", background: "linear-gradient(135deg,#F39C12,#E91E63)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 22, fontWeight: 700, flexShrink: 0 }}>
+                          {m.photo_url ? (
+                            <img src={m.photo_url} alt={`${m.first_name} ${m.last_name}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          ) : (
+                            <span>{(m.first_name ?? "")[0]}{(m.last_name ?? "")[0]}</span>
+                          )}
+                        </div>
+                        <p style={{ fontSize: 14, fontWeight: 700, color: "#2E2E2E", margin: 0, lineHeight: 1.3 }}>
+                          {m.first_name} {m.last_name}
+                        </p>
+                        {chapter?.name && (
+                          <p style={{ fontSize: 12, color: TEXT_ACCENT.green, margin: "4px 0 0", fontWeight: 500 }}>{chapter.name}</p>
+                        )}
+                        {m.global_id && (
+                          <p style={{ fontSize: 11, color: "rgba(46,46,46,0.55)", margin: "6px 0 0", fontFamily: "monospace" }}>{m.global_id}</p>
+                        )}
+                      </div>
+                    </Link>
+                  </Reveal>
+                );
+              })}
+            </div>
+          )}
+
+          {!latestLoading && (!latestMembers || latestMembers.length === 0) && (
+            <div style={{ textAlign: "center", padding: "48px 0", color: "rgba(46,46,46,0.6)" }}>
+              <Users size={40} style={{ margin: "0 auto 12px", opacity: 0.2, display: "block" }} />
+              <p>Be among the first to join our growing community.</p>
+              <Link to="/auth" style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 16, padding: "10px 24px", borderRadius: 50, fontSize: 13, fontWeight: 700, color: "#fff", background: "linear-gradient(135deg,#43A047,#1E88E5)", textDecoration: "none" }}>
+                Join Now <ArrowRight size={15} />
+              </Link>
+            </div>
+          )}
         </div>
       </section>
 
