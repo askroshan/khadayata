@@ -28,7 +28,8 @@ export default function Obituaries() {
         .eq("status", "published")
         .order("created_at", { ascending: false });
       if (search.trim()) q = q.ilike("full_name", `%${search.trim()}%`);
-      const { data } = await q.limit(80);
+      const { data, error } = await q.limit(80);
+      if (error) throw error;
       return data ?? [];
     },
   });

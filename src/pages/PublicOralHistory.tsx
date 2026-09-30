@@ -14,13 +14,14 @@ export default function PublicOralHistory() {
   const { data: histories } = useQuery({
     queryKey: ["public-oral-histories-teaser"],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("oral_histories")
         .select("id, title, description, narrator_name, media_type, duration_seconds, tags, elder_priority, created_at")
         .eq("status", "published")
         .order("elder_priority", { ascending: false })
         .order("created_at", { ascending: false })
         .limit(6);
+      if (error) throw error;
       return data ?? [];
     },
   });

@@ -22,13 +22,14 @@ export default function PublicEldersCouncil() {
   const { data: threads } = useQuery({
     queryKey: ["public-council-teaser"],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("council_threads")
         .select("id, title, body, category, pinned, created_at, author:members!council_threads_author_id_fkey(first_name, last_name, verification_level)")
         .eq("closed", false)
         .order("pinned", { ascending: false })
         .order("created_at", { ascending: false })
         .limit(6);
+      if (error) throw error;
       return data ?? [];
     },
   });

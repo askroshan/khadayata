@@ -20,11 +20,12 @@ export default function PublicArchives() {
   const { data: magazines } = useQuery({
     queryKey: ["public-magazines-teaser"],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("magazine_issues")
         .select("id, title, volume, issue_date, pdf_url")
         .order("issue_date", { ascending: false })
         .limit(6);
+      if (error) throw error;
       return data ?? [];
     },
   });

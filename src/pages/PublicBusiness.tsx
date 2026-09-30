@@ -48,7 +48,8 @@ export default function PublicBusiness() {
       if (sectorFilter !== "__all__") q = q.eq("sector", sectorFilter);
       if (verifiedFilter === "verified") q = q.eq("verified", true);
       if (verifiedFilter === "unverified") q = q.eq("verified", false);
-      const { data } = await q.limit(60);
+      const { data, error } = await q.limit(60);
+      if (error) throw error;
       return data ?? [];
     },
   });
@@ -63,7 +64,8 @@ export default function PublicBusiness() {
         .order("created_at", { ascending: false });
       if (searchJob.trim()) q = q.or(`title.ilike.%${searchJob}%,description.ilike.%${searchJob}%,location.ilike.%${searchJob}%`);
       if (jobTypeFilter !== "__all__") q = q.eq("employment_type", jobTypeFilter);
-      const { data } = await q.limit(60);
+      const { data, error } = await q.limit(60);
+      if (error) throw error;
       return data ?? [];
     },
   });

@@ -43,7 +43,8 @@ export default function PublicNews() {
         .order("published_at", { ascending: false });
       if (search.trim()) q = q.ilike("title", `%${search.trim()}%`);
       if (categoryFilter !== "__all__") q = q.eq("category", categoryFilter);
-      const { data } = await q.limit(80);
+      const { data, error } = await q.limit(80);
+      if (error) throw error;
       return data ?? [];
     },
   });

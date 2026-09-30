@@ -113,21 +113,20 @@ function Reveal({ children, delay = 0, className, style }: RevealProps) {
 function AnimatedCounter({ target, suffix = "", duration = 1800 }: { target: number; suffix?: string; duration?: number }) {
   const [count, setCount] = useState(0);
   const ref = useRef<HTMLSpanElement>(null);
-  const started = useRef(false);
 
   useEffect(() => {
     const el = ref.current;
-    if (!el) return;
+    if (!el || target <= 0) return;
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting && !started.current) {
-            started.current = true;
+          if (entry.isIntersecting) {
             const start = performance.now();
+            const startVal = count;
             const tick = (now: number) => {
               const progress = Math.min((now - start) / duration, 1);
               const eased = 1 - Math.pow(1 - progress, 3);
-              setCount(Math.floor(eased * target));
+              setCount(Math.floor(startVal + (target - startVal) * eased));
               if (progress < 1) requestAnimationFrame(tick);
               else setCount(target);
             };
@@ -163,10 +162,10 @@ export default function Index() {
   const scrollY = useParallax();
 
   const liveStats = [
-    { value: totalMembers ?? 0, suffix: "+", label: "Members Worldwide", color: LIGHT_ACCENT.saffron },
-    { value: totalChapters ?? 0, suffix: "", label: "Chapters", color: LIGHT_ACCENT.pink },
-    { value: totalCountries ?? 0, suffix: "", label: "Countries", color: LIGHT_ACCENT.blue },
-    { value: totalBusinesses ?? 0, suffix: "", label: "Businesses", color: LIGHT_ACCENT.green },
+    { value: totalMembers ?? 0, loaded: totalMembers != null, suffix: "+", label: "Members Worldwide", color: LIGHT_ACCENT.saffron },
+    { value: totalChapters ?? 0, loaded: totalChapters != null, suffix: "", label: "Chapters", color: LIGHT_ACCENT.pink },
+    { value: totalCountries ?? 0, loaded: totalCountries != null, suffix: "", label: "Countries", color: LIGHT_ACCENT.blue },
+    { value: totalBusinesses ?? 0, loaded: totalBusinesses != null, suffix: "", label: "Businesses", color: LIGHT_ACCENT.green },
   ];
 
   return (
@@ -304,7 +303,7 @@ export default function Index() {
                     onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.06)"; }}
                     onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; }}>
                     <p style={{ fontSize: "1.9rem", fontWeight: 800, color: s.color, margin: 0, lineHeight: 1 }}>
-                      {totalMembers != null ? <AnimatedCounter target={s.value} suffix={s.suffix} /> : "…"}
+                      {s.loaded ? <AnimatedCounter target={s.value} suffix={s.suffix} /> : "…"}
                     </p>
                     <p style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", marginTop: 6 }}>{s.label}</p>
                   </div>
@@ -592,10 +591,10 @@ export default function Index() {
         <div style={{ maxWidth: 1100, margin: "0 auto", position: "relative", zIndex: 1 }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 32 }}>
             {[
-              { icon: Users, value: totalMembers ?? 0, suffix: "+", label: "Members", color: "#F39C12" },
-              { icon: Building2, value: totalChapters ?? 0, suffix: "", label: "Chapters", color: "#E91E63" },
-              { icon: Globe, value: totalCountries ?? 0, suffix: "", label: "Countries", color: "#1E88E5" },
-              { icon: Briefcase, value: totalBusinesses ?? 0, suffix: "", label: "Businesses", color: "#43A047" },
+              { icon: Users, value: totalMembers ?? 0, loaded: totalMembers != null, suffix: "+", label: "Members", color: "#F39C12" },
+              { icon: Building2, value: totalChapters ?? 0, loaded: totalChapters != null, suffix: "", label: "Chapters", color: "#E91E63" },
+              { icon: Globe, value: totalCountries ?? 0, loaded: totalCountries != null, suffix: "", label: "Countries", color: "#1E88E5" },
+              { icon: Briefcase, value: totalBusinesses ?? 0, loaded: totalBusinesses != null, suffix: "", label: "Businesses", color: "#43A047" },
             ].map((stat, i) => {
               const Icon = stat.icon;
               return (
@@ -604,7 +603,7 @@ export default function Index() {
                     <Icon size={24} style={{ color: stat.color }} />
                   </div>
                   <p style={{ fontSize: "2rem", fontWeight: 800, color: stat.color, margin: 0, lineHeight: 1 }}>
-                    {totalMembers != null ? <AnimatedCounter target={stat.value} suffix={stat.suffix} /> : "…"}
+                    {stat.loaded ? <AnimatedCounter target={stat.value} suffix={stat.suffix} /> : "…"}
                   </p>
                   <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginTop: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>{stat.label}</p>
                 </Reveal>
