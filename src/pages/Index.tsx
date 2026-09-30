@@ -1,83 +1,20 @@
+import { useRef, useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { Button } from "@/components/ui/button";
 import {
   Globe, Users, Shield, BookOpen, Building2, Briefcase,
   ArrowRight, Heart, Calendar, MapPin, Search, Star,
   ChevronRight, Newspaper, UserCheck, Music, Sparkles,
+  TrendingUp, GraduationCap, Phone, Lock,
 } from "lucide-react";
 import { useTotalMemberCount, useTotalChapterCount, useTotalBusinessCount, useTotalCountryCount } from "@/hooks/useChapter";
 import SEOMeta from "@/components/SEOMeta";
 
 const LOGO = "/Screenshot_2026-03-16_at_9.18.14_AM.png";
-
-const STATS = [
-  { value: "50,000+", label: "Members Worldwide", color: "#F39C12" },
-  { value: "67", label: "Chapters", color: "#E91E63" },
-  { value: "28", label: "Countries", color: "#1E88E5" },
-  { value: "315+", label: "Businesses", color: "#43A047" },
-];
-
-const EVENTS = [
-  {
-    title: "Garba Night 2026",
-    type: "Cultural",
-    date: "Oct 14",
-    location: "Ahmedabad",
-    typeColor: "#F39C12",
-    img: "https://images.pexels.com/photos/3671083/pexels-photo-3671083.jpeg?auto=compress&cs=tinysrgb&w=600",
-  },
-  {
-    title: "Community Meetup",
-    type: "Social",
-    date: "Nov 2",
-    location: "Houston, TX",
-    typeColor: "#43A047",
-    img: "https://images.pexels.com/photos/1290141/pexels-photo-1290141.jpeg?auto=compress&cs=tinysrgb&w=600",
-  },
-  {
-    title: "Kotyark Temple Puja",
-    type: "Religious",
-    date: "Oct 21",
-    location: "Vadodara",
-    typeColor: "#1E88E5",
-    img: "https://images.pexels.com/photos/2161467/pexels-photo-2161467.jpeg?auto=compress&cs=tinysrgb&w=600",
-  },
-  {
-    title: "Youth Networking",
-    type: "Professional",
-    date: "Nov 10",
-    location: "London, UK",
-    typeColor: "#E91E63",
-    img: "https://images.pexels.com/photos/1181396/pexels-photo-1181396.jpeg?auto=compress&cs=tinysrgb&w=600",
-  },
-];
-
-const TESTIMONIALS = [
-  {
-    name: "Rajesh Khadayata",
-    chapter: "Ahmedabad Chapter",
-    text: "Reconnected with relatives I hadn't spoken to in decades. The directory is simply incredible.",
-    stars: 5,
-    avatar: "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=80",
-  },
-  {
-    name: "Priya Shah",
-    chapter: "Houston Chapter",
-    text: "The matrimonial feature is safe and verified — found a wonderful match through proper community introductions.",
-    stars: 5,
-    avatar: "https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=80",
-  },
-  {
-    name: "Amit Khadayata",
-    chapter: "Mumbai Chapter",
-    text: "As a business owner, the directory brought me clients from within our own community. Incredible platform!",
-    stars: 5,
-    avatar: "https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg?auto=compress&cs=tinysrgb&w=80",
-  },
-];
-
-const BUSINESS_CATS = ["🍛 Restaurants", "🩺 Doctors", "⚖️ Lawyers", "💼 Consultants", "🏠 Real Estate", "🛍️ Retail"];
+const HERO_IMG = "/hero-temple-community.webp";
+const MANDALA_IMG = "/mandala-pattern.webp";
+const COMMUNITY_IMG = "/community-celebration.webp";
+const BUSINESS_IMG = "/business-network.webp";
 
 const FEATURES = [
   { icon: Globe, label: "Global Identity", desc: "One verified GlobalID across all chapters", color: "#F39C12" },
@@ -88,18 +25,123 @@ const FEATURES = [
   { icon: Building2, label: "Kotyark Temple", desc: "Live Aarti, donations & more", color: "#43A047" },
 ];
 
+const EVENTS = [
+  { title: "Garba Night 2026", type: "Cultural", date: "Oct 14", location: "Ahmedabad", typeColor: "#F39C12" },
+  { title: "Community Meetup", type: "Social", date: "Nov 2", location: "Houston, TX", typeColor: "#43A047" },
+  { title: "Kotyark Temple Puja", type: "Religious", date: "Oct 21", location: "Vadodara", typeColor: "#1E88E5" },
+  { title: "Youth Networking", type: "Professional", date: "Nov 10", location: "London, UK", typeColor: "#E91E63" },
+];
+
+const TESTIMONIALS = [
+  { name: "Rajesh Khadayata", chapter: "Ahmedabad Chapter", text: "Reconnected with relatives I hadn't spoken to in decades. The directory is simply incredible.", stars: 5 },
+  { name: "Priya Shah", chapter: "Houston Chapter", text: "The matrimonial feature is safe and verified — found a wonderful match through proper community introductions.", stars: 5 },
+  { name: "Amit Khadayata", chapter: "Mumbai Chapter", text: "As a business owner, the directory brought me clients from within our own community. Incredible platform!", stars: 5 },
+];
+
+const BUSINESS_CATS = ["Restaurants", "Doctors", "Lawyers", "Consultants", "Real Estate", "Retail"];
+
+type RevealProps = {
+  children: React.ReactNode;
+  delay?: number;
+  className?: string;
+  style?: React.CSSProperties;
+};
+
+function Reveal({ children, delay = 0, className, style }: RevealProps) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setVisible(true);
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.15 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      className={className}
+      style={{
+        opacity: visible ? 1 : 0,
+        transform: visible ? "translateY(0)" : "translateY(28px)",
+        transition: `opacity 0.7s ease ${delay}s, transform 0.7s ease ${delay}s`,
+        ...style,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function AnimatedCounter({ target, suffix = "", duration = 1800 }: { target: number; suffix?: string; duration?: number }) {
+  const [count, setCount] = useState(0);
+  const ref = useRef<HTMLSpanElement>(null);
+  const started = useRef(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && !started.current) {
+            started.current = true;
+            const start = performance.now();
+            const tick = (now: number) => {
+              const progress = Math.min((now - start) / duration, 1);
+              const eased = 1 - Math.pow(1 - progress, 3);
+              setCount(Math.floor(eased * target));
+              if (progress < 1) requestAnimationFrame(tick);
+              else setCount(target);
+            };
+            requestAnimationFrame(tick);
+          }
+        });
+      },
+      { threshold: 0.5 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [target, duration]);
+
+  return <span ref={ref}>{count.toLocaleString()}{suffix}</span>;
+}
+
+function useParallax() {
+  const [offset, setOffset] = useState(0);
+  useEffect(() => {
+    const onScroll = () => setOffset(window.scrollY);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  return offset;
+}
+
 export default function Index() {
   const { user } = useAuth();
   const { data: totalMembers } = useTotalMemberCount();
   const { data: totalChapters } = useTotalChapterCount();
   const { data: totalBusinesses } = useTotalBusinessCount();
   const { data: totalCountries } = useTotalCountryCount();
+  const scrollY = useParallax();
 
   const liveStats = [
-    { value: totalMembers != null ? `${totalMembers.toLocaleString()}+` : "…", label: "Members Worldwide", color: "#F39C12" },
-    { value: totalChapters != null ? totalChapters.toString() : "…", label: "Chapters", color: "#E91E63" },
-    { value: totalCountries != null ? totalCountries.toString() : "…", label: "Countries", color: "#1E88E5" },
-    { value: totalBusinesses != null ? totalBusinesses.toLocaleString() : "…", label: "Businesses", color: "#43A047" },
+    { value: totalMembers ?? 0, suffix: "+", label: "Members Worldwide", color: "#F39C12" },
+    { value: totalChapters ?? 0, suffix: "", label: "Chapters", color: "#E91E63" },
+    { value: totalCountries ?? 0, suffix: "", label: "Countries", color: "#1E88E5" },
+    { value: totalBusinesses ?? 0, suffix: "", label: "Businesses", color: "#43A047" },
   ];
 
   return (
@@ -111,46 +153,27 @@ export default function Index() {
         url="/"
         breadcrumbs={[{ name: "Home", url: "/" }]}
         faq={[
-          {
-            question: "What is the Khadayata community?",
-            answer: "The Khadayata community is a Gujarati Hindu community originating from the Kutch and Saurashtra regions of Gujarat, India. They are devotees of Kotyark Surya (Sun God) and have a global diaspora across 28+ countries.",
-          },
-          {
-            question: "What is Khadayata Online?",
-            answer: "Khadayata Online (khadayataonline.com) is the official global digital platform for the Khadayata community, providing a verified member directory, chapter management, events, matrimonial services, business networking, heritage archives, and community governance.",
-          },
-          {
-            question: "How do I find a Khadayata chapter near me?",
-            answer: "Visit the Chapters page at khadayataonline.com/chapters to see all 67+ chapters across 28 countries. Each chapter has its own page with local events, members, and businesses.",
-          },
-          {
-            question: "What is a Khadayata Global ID?",
-            answer: "A Khadayata Global ID (format: KHD-XXXXXX) is a unique verified identifier assigned to community members. It works across all chapters worldwide and persists even if a member transfers between chapters.",
-          },
-          {
-            question: "What is Kotyark Temple?",
-            answer: "Kotyark Temple is the principal temple of the Khadayata community, dedicated to Kotyark Surya (the Sun God), located in Koteshwar, Gujarat, India. Virtual access and live Aarti streaming are available on Khadayata Online.",
-          },
+          { question: "What is the Khadayata community?", answer: "The Khadayata community is a Gujarati Hindu community originating from the Kutch and Saurashtra regions of Gujarat, India. They are devotees of Kotyark Surya (Sun God) and have a global diaspora across 28+ countries." },
+          { question: "What is Khadayata Online?", answer: "Khadayata Online (khadayataonline.com) is the official global digital platform for the Khadayata community, providing a verified member directory, chapter management, events, matrimonial services, business networking, heritage archives, and community governance." },
+          { question: "How do I find a Khadayata chapter near me?", answer: "Visit the Chapters page at khadayataonline.com/chapters to see all 67+ chapters across 28 countries. Each chapter has its own page with local events, members, and businesses." },
+          { question: "What is a Khadayata Global ID?", answer: "A Khadayata Global ID (format: KHD-XXXXXX) is a unique verified identifier assigned to community members. It works across all chapters worldwide and persists even if a member transfers between chapters." },
+          { question: "What is Kotyark Temple?", answer: "Kotyark Temple is the principal temple of the Khadayata community, dedicated to Kotyark Surya (the Sun God), located in Koteshwar, Gujarat, India. Virtual access and live Aarti streaming are available on Khadayata Online." },
         ]}
       />
 
       {/* ─── NAVBAR ─── */}
       <header style={{
         position: "sticky", top: 0, zIndex: 100,
-        background: "rgba(255,247,230,0.92)",
-        backdropFilter: "blur(12px)",
+        background: "rgba(255,247,230,0.88)",
+        backdropFilter: "blur(16px)",
         borderBottom: "1px solid rgba(232,163,23,0.25)",
-        boxShadow: "0 1px 20px rgba(243,156,18,0.08)",
+        boxShadow: "0 1px 20px rgba(243,156,18,0.06)",
       }}>
         <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 24px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 68 }}>
-          <Link to="/" style={{ display: "flex", alignItems: "center" }}>
-            <img
-              src={LOGO}
-              alt="Khadayata"
-              style={{ height: 52, width: "auto", mixBlendMode: "multiply" }}
-            />
+          <Link to="/" style={{ display: "flex", alignItems: "center" }} aria-label="Khadayata home">
+            <img src={LOGO} alt="Khadayata" style={{ height: 52, width: "auto", mixBlendMode: "multiply" }} />
           </Link>
-          <nav style={{ display: "flex", gap: 28, fontSize: 14, fontWeight: 500 }} className="hidden md:flex">
+          <nav style={{ display: "flex", gap: 28, fontSize: 14, fontWeight: 500 }} className="hidden md:flex" aria-label="Main navigation">
             {[["Events", "/events"], ["Directory", "/directory"], ["Business", "/business"], ["Chapters", "/chapters"], ["News", "/news"]].map(([label, href]) => (
               <Link key={href} to={href} style={{ color: "#2E2E2E", textDecoration: "none", transition: "color .2s" }}
                 onMouseEnter={e => (e.currentTarget.style.color = "#F39C12")}
@@ -166,7 +189,12 @@ export default function Index() {
                 padding: "9px 20px", borderRadius: 50, fontSize: 13, fontWeight: 600, color: "#fff",
                 background: "linear-gradient(135deg,#F39C12,#E91E63)",
                 textDecoration: "none", boxShadow: "0 4px 15px rgba(243,156,18,.4)",
-              }}>Dashboard <ArrowRight size={15} /></Link>
+                transition: "transform .2s",
+              }}
+                onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.04)")}
+                onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}>
+                Dashboard <ArrowRight size={15} />
+              </Link>
             ) : (
               <>
                 <Link to="/auth" style={{
@@ -178,7 +206,10 @@ export default function Index() {
                   padding: "9px 22px", borderRadius: 50, fontSize: 13, fontWeight: 700, color: "#fff",
                   background: "linear-gradient(135deg,#F39C12,#E91E63)",
                   textDecoration: "none", boxShadow: "0 4px 18px rgba(243,156,18,.45)",
-                }}>Join Free</Link>
+                  transition: "transform .2s",
+                }}
+                  onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.04)")}
+                  onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}>Join Free</Link>
               </>
             )}
           </div>
@@ -187,24 +218,17 @@ export default function Index() {
 
       {/* ─── HERO ─── */}
       <section style={{ position: "relative", minHeight: "92vh", display: "flex", alignItems: "center", overflow: "hidden" }}>
-        {/* Full-bleed hero image */}
         <div style={{ position: "absolute", inset: 0 }}>
           <img
-            src="https://images.pexels.com/photos/3408744/pexels-photo-3408744.jpeg?auto=compress&cs=tinysrgb&w=1600"
-            alt="Khadayata Community"
-            style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }}
+            src={HERO_IMG}
+            alt="Khadayata temple community gathering at golden hour"
+            style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", transform: `translateY(${scrollY * 0.3}px) scale(1.08)` }}
           />
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(110deg, rgba(46,46,46,0.82) 0%, rgba(46,46,46,0.55) 55%, rgba(243,156,18,0.15) 100%)" }} />
-          {/* Subtle mandala overlay */}
-          <div style={{
-            position: "absolute", inset: 0, opacity: 0.07,
-            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300'%3E%3Ccircle cx='150' cy='150' r='140' fill='none' stroke='%23F4B400' stroke-width='1'/%3E%3Ccircle cx='150' cy='150' r='110' fill='none' stroke='%23F39C12' stroke-width='0.8'/%3E%3Ccircle cx='150' cy='150' r='80' fill='none' stroke='%23E91E63' stroke-width='0.7'/%3E%3Ccircle cx='150' cy='150' r='50' fill='none' stroke='%231E88E5' stroke-width='0.6'/%3E%3Cpath d='M150 10 L160 140 L150 150 L140 140 Z' fill='%23F4B400'/%3E%3Cpath d='M290 150 L160 160 L150 150 L160 140 Z' fill='%23F39C12'/%3E%3Cpath d='M150 290 L140 160 L150 150 L160 160 Z' fill='%23E91E63'/%3E%3Cpath d='M10 150 L140 140 L150 150 L140 160 Z' fill='%2343A047'/%3E%3C/svg%3E")`,
-            backgroundSize: "300px 300px",
-          }} />
+          <img src={MANDALA_IMG} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0.06, objectFit: "cover", pointerEvents: "none" }} />
         </div>
 
         <div style={{ position: "relative", zIndex: 2, maxWidth: 1280, margin: "0 auto", padding: "80px 24px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 60, alignItems: "center" }} className="hero-grid">
-          {/* Left: Text */}
           <div>
             <div style={{
               display: "inline-flex", alignItems: "center", gap: 8,
@@ -231,7 +255,9 @@ export default function Index() {
                 background: "linear-gradient(135deg,#F39C12,#E91E63)",
                 textDecoration: "none", boxShadow: "0 6px 28px rgba(243,156,18,.55)",
                 transition: "transform .2s",
-              }}>Join Community <ArrowRight size={18} /></Link>
+              }}
+                onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.04)")}
+                onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}>Join Community <ArrowRight size={18} /></Link>
               <Link to="/events" style={{
                 display: "flex", alignItems: "center", gap: 8,
                 padding: "14px 28px", borderRadius: 50, fontSize: 15, fontWeight: 600, color: "#fff",
@@ -241,7 +267,6 @@ export default function Index() {
             </div>
           </div>
 
-          {/* Right: Stats card */}
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }} className="hero-right">
             <div style={{
               background: "rgba(255,255,255,0.1)", backdropFilter: "blur(20px)",
@@ -250,14 +275,17 @@ export default function Index() {
               <p style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.6)", letterSpacing: "0.08em", marginBottom: 20 }}>LIVE COMMUNITY STATS</p>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
                 {liveStats.map((s) => (
-                  <div key={s.label} style={{ textAlign: "center", padding: "14px", background: "rgba(255,255,255,0.07)", borderRadius: 16, border: `1px solid ${s.color}40` }}>
-                    <p style={{ fontSize: "1.9rem", fontWeight: 800, color: s.color, margin: 0, lineHeight: 1 }}>{s.value}</p>
-                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", marginTop: 4 }}>{s.label}</p>
+                  <div key={s.label} style={{ textAlign: "center", padding: "18px 14px", background: "rgba(255,255,255,0.07)", borderRadius: 16, border: `1px solid ${s.color}40`, transition: "transform .2s" }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.06)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; }}>
+                    <p style={{ fontSize: "1.9rem", fontWeight: 800, color: s.color, margin: 0, lineHeight: 1 }}>
+                      {totalMembers != null ? <AnimatedCounter target={s.value} suffix={s.suffix} /> : "…"}
+                    </p>
+                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", marginTop: 6 }}>{s.label}</p>
                   </div>
                 ))}
               </div>
             </div>
-            {/* Quick search */}
             <div style={{
               background: "rgba(255,255,255,0.1)", backdropFilter: "blur(20px)",
               border: "1px solid rgba(255,255,255,0.2)", borderRadius: 20, padding: "20px 24px",
@@ -275,7 +303,6 @@ export default function Index() {
           </div>
         </div>
 
-        {/* Scroll indicator */}
         <div style={{ position: "absolute", bottom: 28, left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
           <div style={{ width: 1, height: 40, background: "linear-gradient(to bottom,rgba(255,255,255,0),rgba(255,255,255,0.5))" }} />
           <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", letterSpacing: "0.12em" }}>SCROLL</p>
@@ -288,30 +315,34 @@ export default function Index() {
       {/* ─── FEATURES STRIP ─── */}
       <section style={{ background: "#fff", padding: "72px 24px" }}>
         <div style={{ maxWidth: 1280, margin: "0 auto" }}>
-          <div style={{ textAlign: "center", marginBottom: 52 }}>
+          <Reveal style={{ textAlign: "center", marginBottom: 52 }}>
             <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: "#F39C12", textTransform: "uppercase", marginBottom: 10 }}>Platform Features</p>
             <h2 style={{ fontSize: "clamp(1.8rem,3vw,2.6rem)", fontWeight: 800, margin: 0, color: "#2E2E2E" }}>Everything Your Community Needs</h2>
             <p style={{ marginTop: 12, color: "#2E2E2E99", fontSize: 16, maxWidth: 520, margin: "12px auto 0" }}>A comprehensive platform built for every aspect of Khadayata community life.</p>
-          </div>
+          </Reveal>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 20 }}>
-            {FEATURES.map((f) => {
+            {FEATURES.map((f, i) => {
               const Icon = f.icon;
               return (
-                <div key={f.label} style={{
-                  padding: "28px 24px", borderRadius: 20,
-                  background: "#FFF7E6", border: `1.5px solid ${f.color}30`,
-                  borderLeft: `4px solid ${f.color}`,
-                  transition: "transform .2s, box-shadow .2s",
-                  cursor: "default",
-                }}
-                  onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = `0 12px 32px ${f.color}20`; }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "none"; }}>
-                  <div style={{ width: 44, height: 44, borderRadius: 12, background: `${f.color}18`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
-                    <Icon size={22} style={{ color: f.color }} />
+                <Reveal key={f.label} delay={i * 0.08}>
+                  <div style={{
+                    padding: "28px 24px", borderRadius: 20, height: "100%",
+                    background: "#FFF7E6", border: `1.5px solid ${f.color}30`,
+                    borderLeft: `4px solid ${f.color}`,
+                    transition: "transform .2s, box-shadow .2s",
+                    cursor: "default",
+                  }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-6px)"; e.currentTarget.style.boxShadow = `0 14px 36px ${f.color}25`; }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "none"; }}>
+                    <div style={{ width: 48, height: 48, borderRadius: 14, background: `${f.color}18`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16, transition: "transform .2s" }}
+                      onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.1)")}
+                      onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}>
+                      <Icon size={22} style={{ color: f.color }} />
+                    </div>
+                    <p style={{ fontWeight: 700, fontSize: 15, margin: 0, color: "#2E2E2E" }}>{f.label}</p>
+                    <p style={{ fontSize: 13, color: "#2E2E2E80", marginTop: 6, lineHeight: 1.5 }}>{f.desc}</p>
                   </div>
-                  <p style={{ fontWeight: 700, fontSize: 15, margin: 0, color: "#2E2E2E" }}>{f.label}</p>
-                  <p style={{ fontSize: 13, color: "#2E2E2E80", marginTop: 6, lineHeight: 1.5 }}>{f.desc}</p>
-                </div>
+                </Reveal>
               );
             })}
           </div>
@@ -320,9 +351,9 @@ export default function Index() {
 
       {/* ─── UPCOMING EVENTS ─── */}
       <section style={{ background: "#FDEBD0", padding: "80px 24px", position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", inset: 0, opacity: 0.04, backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Ccircle cx='100' cy='100' r='90' fill='none' stroke='%23F39C12' stroke-width='1'/%3E%3Ccircle cx='100' cy='100' r='60' fill='none' stroke='%23E91E63' stroke-width='0.8'/%3E%3C/svg%3E")`, backgroundSize: "200px 200px" }} />
+        <img src={MANDALA_IMG} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0.04, objectFit: "cover", pointerEvents: "none" }} />
         <div style={{ maxWidth: 1280, margin: "0 auto", position: "relative", zIndex: 1 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 40, flexWrap: "wrap", gap: 16 }}>
+          <Reveal style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 40, flexWrap: "wrap", gap: 16 }}>
             <div>
               <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: "#E91E63", textTransform: "uppercase", marginBottom: 8 }}>What's Happening</p>
               <h2 style={{ fontSize: "clamp(1.8rem,3vw,2.4rem)", fontWeight: 800, margin: 0, color: "#2E2E2E" }}>Upcoming Events</h2>
@@ -330,40 +361,41 @@ export default function Index() {
             <Link to="/events" style={{
               display: "flex", alignItems: "center", gap: 6, padding: "10px 22px", borderRadius: 50,
               border: "1.5px solid #F39C12", color: "#F39C12", fontSize: 13, fontWeight: 600, textDecoration: "none",
-              transition: "background .2s",
-            }}>View All Events <ChevronRight size={16} /></Link>
-          </div>
+              transition: "background .2s, color .2s",
+            }}
+              onMouseEnter={e => { e.currentTarget.style.background = "#F39C12"; e.currentTarget.style.color = "#fff"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#F39C12"; }}>View All Events <ChevronRight size={16} /></Link>
+          </Reveal>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))", gap: 24 }}>
-            {EVENTS.map((ev) => (
-              <div key={ev.title} style={{
-                borderRadius: 20, overflow: "hidden", background: "#fff",
-                boxShadow: "0 4px 20px rgba(46,46,46,0.08)",
-                transition: "transform .25s, box-shadow .25s",
-              }}
-                onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-6px)"; e.currentTarget.style.boxShadow = "0 16px 40px rgba(46,46,46,0.16)"; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(46,46,46,0.08)"; }}>
-                <div style={{ position: "relative", height: 200, overflow: "hidden" }}>
-                  <img src={ev.img} alt={ev.title} style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform .4s" }}
-                    onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.06)")}
-                    onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")} />
-                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top,rgba(0,0,0,0.55),transparent)" }} />
-                  <span style={{
-                    position: "absolute", top: 14, left: 14, padding: "4px 12px", borderRadius: 50,
-                    fontSize: 11, fontWeight: 700, color: "#fff", background: ev.typeColor,
-                  }}>{ev.type}</span>
-                </div>
-                <div style={{ padding: "18px 20px" }}>
-                  <p style={{ fontWeight: 700, fontSize: 16, margin: 0, color: "#2E2E2E" }}>{ev.title}</p>
-                  <div style={{ display: "flex", gap: 16, marginTop: 8, fontSize: 12, color: "#2E2E2E80" }}>
-                    <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Calendar size={12} />{ev.date}</span>
-                    <span style={{ display: "flex", alignItems: "center", gap: 4 }}><MapPin size={12} />{ev.location}</span>
+            {EVENTS.map((ev, i) => (
+              <Reveal key={ev.title} delay={i * 0.08}>
+                <div style={{
+                  borderRadius: 20, overflow: "hidden", background: "#fff",
+                  boxShadow: "0 4px 20px rgba(46,46,46,0.08)",
+                  transition: "transform .25s, box-shadow .25s",
+                }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-8px)"; e.currentTarget.style.boxShadow = "0 20px 48px rgba(46,46,46,0.18)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(46,46,46,0.08)"; }}>
+                  <div style={{ height: 180, background: `linear-gradient(135deg, ${ev.typeColor}25, ${ev.typeColor}08)`, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+                    <Calendar size={48} style={{ color: ev.typeColor, opacity: 0.4 }} />
+                    <span style={{ position: "absolute", top: 14, left: 14, padding: "4px 12px", borderRadius: 50, fontSize: 11, fontWeight: 700, color: "#fff", background: ev.typeColor }}>{ev.type}</span>
                   </div>
-                  <Link to="/events" style={{
-                    display: "block", marginTop: 16, padding: "10px 0", borderRadius: 12, textAlign: "center",
-                    fontSize: 13, fontWeight: 700, color: "#fff", background: ev.typeColor, textDecoration: "none",
-                  }}>View Details</Link>
+                  <div style={{ padding: "18px 20px" }}>
+                    <p style={{ fontWeight: 700, fontSize: 16, margin: 0, color: "#2E2E2E" }}>{ev.title}</p>
+                    <div style={{ display: "flex", gap: 16, marginTop: 8, fontSize: 12, color: "#2E2E2E80" }}>
+                      <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Calendar size={12} />{ev.date}</span>
+                      <span style={{ display: "flex", alignItems: "center", gap: 4 }}><MapPin size={12} />{ev.location}</span>
+                    </div>
+                    <Link to="/events" style={{
+                      display: "block", marginTop: 16, padding: "10px 0", borderRadius: 12, textAlign: "center",
+                      fontSize: 13, fontWeight: 700, color: "#fff", background: ev.typeColor, textDecoration: "none",
+                      transition: "opacity .2s",
+                    }}
+                      onMouseEnter={e => (e.currentTarget.style.opacity = "0.85")}
+                      onMouseLeave={e => (e.currentTarget.style.opacity = "1")}>View Details</Link>
+                  </div>
                 </div>
-              </div>
+              </Reveal>
             ))}
           </div>
         </div>
@@ -371,28 +403,17 @@ export default function Index() {
 
       {/* ─── COMMUNITY DIRECTORY ─── */}
       <section style={{ padding: "80px 24px", background: "#fff" }}>
-        <div style={{ maxWidth: 900, margin: "0 auto", textAlign: "center" }}>
+        <Reveal style={{ maxWidth: 900, margin: "0 auto", textAlign: "center" }}>
           <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: "#1E88E5", textTransform: "uppercase", marginBottom: 10 }}>Find Your People</p>
           <h2 style={{ fontSize: "clamp(1.8rem,3vw,2.5rem)", fontWeight: 800, margin: 0, color: "#2E2E2E" }}>Community Directory</h2>
           <p style={{ color: "#2E2E2E80", marginTop: 12, fontSize: 15, maxWidth: 500, margin: "12px auto 36px" }}>Search members, businesses, and chapters across the entire Khadayata global network.</p>
-
-          {/* Search bar */}
-          <div style={{
-            display: "flex", alignItems: "center", background: "#fff",
-            border: "2px solid #E8A317", borderRadius: 60, padding: "6px 8px 6px 20px",
-            boxShadow: "0 8px 32px rgba(232,163,23,0.18)",
-          }}>
+          <div style={{ display: "flex", alignItems: "center", background: "#fff", border: "2px solid #E8A317", borderRadius: 60, padding: "6px 8px 6px 20px", boxShadow: "0 8px 32px rgba(232,163,23,0.18)", transition: "box-shadow .2s" }}
+            onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 12px 40px rgba(232,163,23,0.25)")}
+            onMouseLeave={e => (e.currentTarget.style.boxShadow = "0 8px 32px rgba(232,163,23,0.18)")}>
             <Search size={18} style={{ color: "#2E2E2E40", flexShrink: 0 }} />
-            <Link to="/directory" style={{ flex: 1, fontSize: 15, color: "#2E2E2E40", padding: "8px 12px", textDecoration: "none", textAlign: "left" }}>
-              Search members, businesses, chapters...
-            </Link>
-            <Link to="/directory" style={{
-              padding: "12px 28px", borderRadius: 50, fontSize: 14, fontWeight: 700, color: "#fff",
-              background: "linear-gradient(135deg,#F39C12,#E91E63)", textDecoration: "none",
-            }}>Search</Link>
+            <Link to="/directory" style={{ flex: 1, fontSize: 15, color: "#2E2E2E40", padding: "8px 12px", textDecoration: "none", textAlign: "left" }}>Search members, businesses, chapters...</Link>
+            <Link to="/directory" style={{ padding: "12px 28px", borderRadius: 50, fontSize: 14, fontWeight: 700, color: "#fff", background: "linear-gradient(135deg,#F39C12,#E91E63)", textDecoration: "none" }}>Search</Link>
           </div>
-
-          {/* Quick links */}
           <div style={{ display: "flex", justifyContent: "center", gap: 12, marginTop: 24, flexWrap: "wrap" }}>
             {[
               { label: "Find Members", link: "/directory", color: "#F39C12" },
@@ -403,11 +424,11 @@ export default function Index() {
                 padding: "10px 22px", borderRadius: 50, fontSize: 13, fontWeight: 600,
                 border: `2px solid ${item.color}`, color: item.color, background: `${item.color}0f`,
                 textDecoration: "none", transition: "all .2s",
-              }}>{item.label}</Link>
+              }}
+                onMouseEnter={e => { e.currentTarget.style.background = item.color; e.currentTarget.style.color = "#fff"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = `${item.color}0f`; e.currentTarget.style.color = item.color; }}>{item.label}</Link>
             ))}
           </div>
-
-          {/* Business categories */}
           <div style={{ marginTop: 44 }}>
             <p style={{ fontSize: 12, color: "#2E2E2E60", fontWeight: 600, marginBottom: 16, textTransform: "uppercase", letterSpacing: "0.08em" }}>Popular Business Categories</p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center" }}>
@@ -424,21 +445,19 @@ export default function Index() {
               ))}
             </div>
           </div>
-        </div>
+        </Reveal>
       </section>
 
       {/* ─── CULTURAL HERITAGE ─── */}
       <section style={{ background: "#FDEBD0", padding: "80px 24px", overflow: "hidden", position: "relative" }}>
         <div style={{ maxWidth: 1280, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 64, alignItems: "center" }} className="split-grid">
-          <div>
+          <Reveal>
             <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: "#43A047", textTransform: "uppercase", marginBottom: 12 }}>Our Roots</p>
             <h2 style={{ fontSize: "clamp(1.8rem,3vw,2.5rem)", fontWeight: 800, margin: 0, color: "#2E2E2E", lineHeight: 1.2 }}>
-              A Family That Spans<br />
-              <span style={{ color: "#F39C12" }}>Continents</span>
+              A Family That Spans<br /><span style={{ color: "#F39C12" }}>Continents</span>
             </h2>
             <p style={{ marginTop: 18, fontSize: 15, color: "#2E2E2E99", lineHeight: 1.75, maxWidth: 460 }}>
-              From Ahmedabad to Houston, Mumbai to London — Khadayata families thrive across borders.
-              Our platform preserves ancient traditions while powering modern connections.
+              From Ahmedabad to Houston, Mumbai to London — Khadayata families thrive across borders. Our platform preserves ancient traditions while powering modern connections.
             </p>
             <div style={{ marginTop: 32, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
               {[
@@ -448,62 +467,58 @@ export default function Index() {
                 { icon: Building2, label: "Temple", color: "#43A047" },
                 { icon: Newspaper, label: "News & Archives", color: "#F4B400" },
                 { icon: BookOpen, label: "Oral History", color: "#1E88E5" },
-              ].map((item) => {
+              ].map((item, i) => {
                 const Icon = item.icon;
                 return (
-                  <div key={item.label} style={{
-                    display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
-                    borderRadius: 14, background: "#fff", border: "1px solid rgba(232,163,23,0.25)",
-                    transition: "border-color .2s",
-                  }}>
-                    <Icon size={18} style={{ color: item.color, flexShrink: 0 }} />
-                    <span style={{ fontSize: 13, fontWeight: 600, color: "#2E2E2E" }}>{item.label}</span>
-                  </div>
+                  <Reveal key={item.label} delay={i * 0.05}>
+                    <div style={{
+                      display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
+                      borderRadius: 14, background: "#fff", border: "1px solid rgba(232,163,23,0.25)",
+                      transition: "border-color .2s, transform .2s",
+                    }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = item.color; e.currentTarget.style.transform = "translateX(4px)"; }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(232,163,23,0.25)"; e.currentTarget.style.transform = "translateX(0)"; }}>
+                      <Icon size={18} style={{ color: item.color, flexShrink: 0 }} />
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "#2E2E2E" }}>{item.label}</span>
+                    </div>
+                  </Reveal>
                 );
               })}
             </div>
-          </div>
-          <div style={{ position: "relative" }} className="hide-mobile">
+          </Reveal>
+          <Reveal delay={0.2} style={{ position: "relative" }} className="hide-mobile">
             <div style={{ borderRadius: 28, overflow: "hidden", border: "3px solid #E8A317", boxShadow: "0 20px 60px rgba(243,156,18,0.2)" }}>
-              <img
-                src="https://images.pexels.com/photos/3586966/pexels-photo-3586966.jpeg?auto=compress&cs=tinysrgb&w=700"
-                alt="Indian cultural celebration"
-                style={{ width: "100%", height: 520, objectFit: "cover", display: "block" }}
-              />
+              <img src={COMMUNITY_IMG} alt="Indian cultural celebration" style={{ width: "100%", height: 520, objectFit: "cover", display: "block" }} />
             </div>
             <div style={{
               position: "absolute", bottom: -20, left: -20, borderRadius: 20, padding: "16px 22px",
               background: "linear-gradient(135deg,#F39C12,#E91E63)", color: "#fff",
               boxShadow: "0 8px 24px rgba(243,156,18,0.45)",
             }}>
-              <p style={{ fontSize: "1.6rem", fontWeight: 800, margin: 0 }}>{totalCountries != null ? totalCountries : "…"}</p>
+              <p style={{ fontSize: "1.6rem", fontWeight: 800, margin: 0 }}>{totalCountries != null ? <AnimatedCounter target={totalCountries} /> : "…"}</p>
               <p style={{ fontSize: 12, margin: "2px 0 0", opacity: 0.85 }}>Countries</p>
             </div>
-          </div>
+          </Reveal>
         </div>
       </section>
 
       {/* ─── BUSINESS NETWORK ─── */}
       <section style={{ background: "#fff", padding: "80px 24px" }}>
         <div style={{ maxWidth: 1280, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 64, alignItems: "center" }} className="split-grid">
-          <div style={{ position: "relative" }} className="hide-mobile">
+          <Reveal style={{ position: "relative" }} className="hide-mobile">
             <div style={{ borderRadius: 28, overflow: "hidden", border: "3px solid #43A047", boxShadow: "0 20px 60px rgba(67,160,71,0.2)" }}>
-              <img
-                src="https://images.pexels.com/photos/3184465/pexels-photo-3184465.jpeg?auto=compress&cs=tinysrgb&w=700"
-                alt="Business network"
-                style={{ width: "100%", height: 460, objectFit: "cover", display: "block" }}
-              />
+              <img src={BUSINESS_IMG} alt="Business network" style={{ width: "100%", height: 460, objectFit: "cover", display: "block" }} />
             </div>
             <div style={{
               position: "absolute", top: -16, right: -16, borderRadius: 20, padding: "16px 22px",
               background: "linear-gradient(135deg,#43A047,#1E88E5)", color: "#fff",
               boxShadow: "0 8px 24px rgba(67,160,71,0.45)",
             }}>
-              <p style={{ fontSize: "1.5rem", fontWeight: 800, margin: 0 }}>{totalBusinesses != null ? totalBusinesses.toLocaleString() : "…"}</p>
+              <p style={{ fontSize: "1.5rem", fontWeight: 800, margin: 0 }}>{totalBusinesses != null ? <AnimatedCounter target={totalBusinesses} /> : "…"}</p>
               <p style={{ fontSize: 12, margin: "2px 0 0", opacity: 0.85 }}>Businesses</p>
             </div>
-          </div>
-          <div>
+          </Reveal>
+          <Reveal delay={0.15}>
             <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: "#43A047", textTransform: "uppercase", marginBottom: 12 }}>Business Network</p>
             <h2 style={{ fontSize: "clamp(1.8rem,3vw,2.5rem)", fontWeight: 800, margin: 0, color: "#2E2E2E", lineHeight: 1.2 }}>
               Support <span style={{ color: "#F39C12" }}>Khadayata</span><br />Businesses
@@ -517,15 +532,19 @@ export default function Index() {
                 { icon: Calendar, text: "Attend exclusive member events", color: "#E91E63" },
                 { icon: Briefcase, text: "Expand your business network", color: "#43A047" },
                 { icon: Heart, text: "Enrol in volunteer programs", color: "#1E88E5" },
-              ].map((item) => {
+              ].map((item, i) => {
                 const Icon = item.icon;
                 return (
-                  <div key={item.text} style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 10, background: `${item.color}18`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <Icon size={17} style={{ color: item.color }} />
+                  <Reveal key={item.text} delay={i * 0.06}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 14, transition: "transform .2s" }}
+                      onMouseEnter={e => (e.currentTarget.style.transform = "translateX(6px)")}
+                      onMouseLeave={e => (e.currentTarget.style.transform = "translateX(0)")}>
+                      <div style={{ width: 36, height: 36, borderRadius: 10, background: `${item.color}18`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <Icon size={17} style={{ color: item.color }} />
+                      </div>
+                      <span style={{ fontSize: 14, color: "#2E2E2ECC" }}>{item.text}</span>
                     </div>
-                    <span style={{ fontSize: 14, color: "#2E2E2ECC" }}>{item.text}</span>
-                  </div>
+                  </Reveal>
                 );
               })}
             </div>
@@ -534,7 +553,38 @@ export default function Index() {
               padding: "14px 30px", borderRadius: 50, fontSize: 14, fontWeight: 700, color: "#fff",
               background: "linear-gradient(135deg,#43A047,#1E88E5)", textDecoration: "none",
               boxShadow: "0 6px 24px rgba(67,160,71,0.35)",
-            }}>Browse Businesses <ArrowRight size={17} /></Link>
+              transition: "transform .2s",
+            }}
+              onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.04)")}
+              onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}>Browse Businesses <ArrowRight size={17} /></Link>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ─── STATS BAR ─── */}
+      <section style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #2d2d4e 100%)", padding: "64px 24px", position: "relative", overflow: "hidden" }}>
+        <img src={MANDALA_IMG} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0.04, objectFit: "cover", pointerEvents: "none" }} />
+        <div style={{ maxWidth: 1100, margin: "0 auto", position: "relative", zIndex: 1 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 32 }}>
+            {[
+              { icon: Users, value: totalMembers ?? 0, suffix: "+", label: "Members", color: "#F39C12" },
+              { icon: Building2, value: totalChapters ?? 0, suffix: "", label: "Chapters", color: "#E91E63" },
+              { icon: Globe, value: totalCountries ?? 0, suffix: "", label: "Countries", color: "#1E88E5" },
+              { icon: Briefcase, value: totalBusinesses ?? 0, suffix: "", label: "Businesses", color: "#43A047" },
+            ].map((stat, i) => {
+              const Icon = stat.icon;
+              return (
+                <Reveal key={stat.label} delay={i * 0.1} style={{ textAlign: "center" }}>
+                  <div style={{ width: 52, height: 52, borderRadius: 16, background: `${stat.color}20`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+                    <Icon size={24} style={{ color: stat.color }} />
+                  </div>
+                  <p style={{ fontSize: "2rem", fontWeight: 800, color: stat.color, margin: 0, lineHeight: 1 }}>
+                    {totalMembers != null ? <AnimatedCounter target={stat.value} suffix={stat.suffix} /> : "…"}
+                  </p>
+                  <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginTop: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>{stat.label}</p>
+                </Reveal>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -542,31 +592,35 @@ export default function Index() {
       {/* ─── TESTIMONIALS ─── */}
       <section style={{ background: "#FDEBD0", padding: "80px 24px" }}>
         <div style={{ maxWidth: 1280, margin: "0 auto" }}>
-          <div style={{ textAlign: "center", marginBottom: 48 }}>
+          <Reveal style={{ textAlign: "center", marginBottom: 48 }}>
             <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: "#E91E63", textTransform: "uppercase", marginBottom: 10 }}>Community Love</p>
             <h2 style={{ fontSize: "clamp(1.8rem,3vw,2.4rem)", fontWeight: 800, margin: 0, color: "#2E2E2E" }}>Loved by Our Members</h2>
-          </div>
+          </Reveal>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 24 }}>
             {TESTIMONIALS.map((t, i) => (
-              <div key={i} style={{
-                background: "#fff", borderRadius: 24, padding: "28px",
-                boxShadow: "0 4px 20px rgba(46,46,46,0.07)", border: "1px solid rgba(232,163,23,0.2)",
-                transition: "transform .2s, box-shadow .2s",
-              }}
-                onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = "0 16px 40px rgba(46,46,46,0.12)"; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(46,46,46,0.07)"; }}>
-                <div style={{ display: "flex", gap: 3, marginBottom: 16 }}>
-                  {[1,2,3,4,5].map(s => <Star key={s} size={15} style={{ fill: "#F4B400", color: "#F4B400" }} />)}
-                </div>
-                <p style={{ fontSize: 15, color: "#2E2E2EBB", lineHeight: 1.65, fontStyle: "italic", margin: 0 }}>"{t.text}"</p>
-                <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 22, paddingTop: 18, borderTop: "1px solid rgba(232,163,23,0.2)" }}>
-                  <img src={t.avatar} alt={t.name} style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", border: "2px solid #F39C12" }} />
-                  <div>
-                    <p style={{ fontWeight: 700, fontSize: 14, margin: 0, color: "#2E2E2E" }}>{t.name}</p>
-                    <p style={{ fontSize: 12, color: "#2E2E2E70", margin: "3px 0 0" }}>{t.chapter}</p>
+              <Reveal key={i} delay={i * 0.1}>
+                <div style={{
+                  background: "#fff", borderRadius: 24, padding: "28px",
+                  boxShadow: "0 4px 20px rgba(46,46,46,0.07)", border: "1px solid rgba(232,163,23,0.2)",
+                  transition: "transform .2s, box-shadow .2s",
+                }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-6px)"; e.currentTarget.style.boxShadow = "0 18px 44px rgba(46,46,46,0.14)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(46,46,46,0.07)"; }}>
+                  <div style={{ display: "flex", gap: 3, marginBottom: 16 }}>
+                    {[1,2,3,4,5].map(s => <Star key={s} size={15} style={{ fill: "#F4B400", color: "#F4B400" }} />)}
+                  </div>
+                  <p style={{ fontSize: 15, color: "#2E2E2EBB", lineHeight: 1.65, fontStyle: "italic", margin: 0 }}>"{t.text}"</p>
+                  <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 22, paddingTop: 18, borderTop: "1px solid rgba(232,163,23,0.2)" }}>
+                    <div style={{ width: 44, height: 44, borderRadius: "50%", background: "linear-gradient(135deg,#F39C12,#E91E63)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 16 }}>
+                      {t.name.charAt(0)}
+                    </div>
+                    <div>
+                      <p style={{ fontWeight: 700, fontSize: 14, margin: 0, color: "#2E2E2E" }}>{t.name}</p>
+                      <p style={{ fontSize: 12, color: "#2E2E2E70", margin: "3px 0 0" }}>{t.chapter}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </Reveal>
             ))}
           </div>
         </div>
@@ -575,12 +629,8 @@ export default function Index() {
       {/* ─── CTA ─── */}
       <section style={{ position: "relative", padding: "88px 24px", overflow: "hidden" }}>
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg,#F4B400 0%,#E8A317 45%,#F39C12 100%)" }} />
-        <div style={{
-          position: "absolute", inset: 0, opacity: 0.1,
-          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300'%3E%3Ccircle cx='150' cy='150' r='140' fill='none' stroke='%23fff' stroke-width='1.5'/%3E%3Ccircle cx='150' cy='150' r='100' fill='none' stroke='%23fff' stroke-width='1'/%3E%3Ccircle cx='150' cy='150' r='60' fill='none' stroke='%23fff' stroke-width='0.8'/%3E%3C/svg%3E")`,
-          backgroundSize: "300px 300px",
-        }} />
-        <div style={{ maxWidth: 800, margin: "0 auto", textAlign: "center", position: "relative", zIndex: 1 }}>
+        <img src={MANDALA_IMG} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0.08, objectFit: "cover", pointerEvents: "none" }} />
+        <Reveal style={{ maxWidth: 800, margin: "0 auto", textAlign: "center", position: "relative", zIndex: 1 }}>
           <Sparkles size={32} style={{ color: "#fff", opacity: 0.8, marginBottom: 16 }} />
           <h2 style={{ fontSize: "clamp(2rem,4vw,3.2rem)", fontWeight: 800, color: "#fff", margin: 0, lineHeight: 1.2 }}>
             Join {totalMembers != null ? `${totalMembers.toLocaleString()}+ ` : ""}Khadayata Members Worldwide
@@ -595,11 +645,11 @@ export default function Index() {
             boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
             transition: "transform .2s, box-shadow .2s",
           }}
-            onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.04)"; }}
-            onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; }}>
+            onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.04)"; e.currentTarget.style.boxShadow = "0 12px 40px rgba(0,0,0,0.2)"; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "0 8px 32px rgba(0,0,0,0.15)"; }}>
             Register Free <ArrowRight size={20} />
           </Link>
-        </div>
+        </Reveal>
       </section>
 
       {/* ─── FOOTER ─── */}
@@ -608,9 +658,7 @@ export default function Index() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 40, paddingBottom: 48 }}>
             <div>
               <img src={LOGO} alt="Khadayata" style={{ height: 50, width: "auto", mixBlendMode: "screen", opacity: 0.92, marginBottom: 16 }} />
-              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", lineHeight: 1.7, marginBottom: 16 }}>
-                Preserving heritage. Empowering community. Connecting generations.
-              </p>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", lineHeight: 1.7, marginBottom: 16 }}>Preserving heritage. Empowering community. Connecting generations.</p>
               <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", lineHeight: 1.8 }}>
                 <p style={{ margin: 0 }}>Fort Worth, TX</p>
                 <a href="tel:+19723710001" style={{ color: "rgba(255,255,255,0.4)", textDecoration: "none", display: "block" }}>+1 972 371 0001</a>
@@ -646,6 +694,9 @@ export default function Index() {
           .hero-right { display: none !important; }
           .split-grid { grid-template-columns: 1fr !important; }
           .hide-mobile { display: none !important; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
         }
       `}</style>
     </div>
