@@ -1,11 +1,10 @@
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Globe, Users, Shield, BookOpen, Building2, Briefcase,
   ArrowRight, Heart, Calendar, MapPin, Search, Star,
-  ChevronRight, Newspaper, UserCheck, Music, Sparkles,
-  TrendingUp, GraduationCap, Phone, Lock,
+  ChevronRight, Newspaper, Music, Sparkles,
 } from "lucide-react";
 import { useTotalMemberCount, useTotalChapterCount, useTotalBusinessCount, useTotalCountryCount } from "@/hooks/useChapter";
 import SEOMeta from "@/components/SEOMeta";

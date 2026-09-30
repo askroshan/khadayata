@@ -36,7 +36,7 @@ These guardrails apply to every change in the Khadayata Online platform. They ex
 - **Motion and animation**: respect `prefers-reduced-motion`. Animations should be subtle and enhance, not distract. No auto-playing video or audio.
 - **Skip link**: every page with a nav should have a "Skip to main content" link as the first focusable element.
 - **Language**: set `lang` attribute on `<html>`. Page language matches content language.
-- **Heading hierarchy**: no skipping levels (h1 → h2 → h3, never h1 → h3).
+- **Heading hierarchy**: no skipping levels (h1 to h2 to h3, never h1 to h3).
 
 ## Database and RLS
 
