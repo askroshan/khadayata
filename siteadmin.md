@@ -2,18 +2,22 @@
 
 ## Current State (as of 2026-10-03)
 
-The test admin accounts that were previously seeded into the production
-database have been removed (migration `remove_test_seed_data_20260930`).
-Production no longer contains any fake or test user accounts.
-
 ### Active Admin Users
 
 | Name | Email | Role | Scope |
 |---|---|---|---|
+| Roshan Shah | roshan@khadayataonline.com | Global Admin | Platform-wide |
 | Rushik Shah | rushik@alakmalak.com | Chapter Admin | Ahmedabad |
 | Rushik Shah | rushik@alakmalak.com | Committee Chair | Ahmedabad |
 
-There is currently **no Global Admin** account in the production database.
+### Global Admin Login
+
+- **Email:** roshan@khadayataonline.com
+- **Password:** Managed securely — not stored in this file.
+- The account was created via migration `create_global_admin_roshan_20261003`.
+- Verification level is 0 (unverified). The Global Admin role assignment
+  grants full admin access regardless of verification level. Verification
+  can be completed through the admin panel.
 
 ## Recovering Global Admin Access
 
