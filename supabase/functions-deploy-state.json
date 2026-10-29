@@ -1,0 +1,53 @@
+{
+  "projectId": "64726135",
+  "functions": {
+    "bulk-invite": {
+      "hasChanged": false,
+      "hash": "ec135bff713095eb7a103cba64559fa73369671734429176100607af05262eea"
+    },
+    "delete-user": {
+      "hasChanged": false,
+      "hash": "aaf507d145ae6eb8468949291afc8f70da00ad25231bef096bca3b58c90d84e7"
+    },
+    "generate-global-id": {
+      "hasChanged": false,
+      "hash": "e1884bd83da9e5c850aca54664c271d0cca2decc3c049da2adad9023a9cef6b2"
+    },
+    "invite-member": {
+      "hasChanged": false,
+      "hash": "d4e5eb4028583a3e155e79ef76291a80aca539bc921b43eb11fc5244056a9c0e"
+    },
+    "send-email": {
+      "hasChanged": false,
+      "hash": "d3d3b212a97ef4913f97f0a14e8a845982b6588fd23ed6cdd51b38e3cfcf6820"
+    },
+    "send-reminder": {
+      "hasChanged": false,
+      "hash": "baa091ed46d27e1d606d708af4f68259576b423a3dea9817eeab1c813bf4d3b9"
+    },
+    "send-reset-email": {
+      "hasChanged": false,
+      "hash": "885fc9c1df7d281cf28dfcec1e9666ffaf43d83d185cf24351c2522777188cd9"
+    },
+    "send-sms": {
+      "hasChanged": false,
+      "hash": "0ed500c98dcdfab6feb30d38f2923ae81bb889100746727f12eadd760c6e96f3"
+    },
+    "send-sms-campaign": {
+      "hasChanged": false,
+      "hash": "ffcac52d662b2fbf9f403e67639c6d27a0e53f5ede26c2ce3acf26eeb35e310d"
+    },
+    "send-whatsapp": {
+      "hasChanged": false,
+      "hash": "2509431a05c160b7c0e91eb643356c73212462b005b347dc0315c8c191758786"
+    },
+    "sitemap": {
+      "hasChanged": false,
+      "hash": "bf55eec5799f0d175d6a7703418de50de9a9cc3a4f70e7d15d648dfe387db4e1"
+    },
+    "weekly-digest": {
+      "hasChanged": false,
+      "hash": "821cb32105b7b27d3784033850958e0b52d5c0395fcbddf29c2a091fd1907593"
+    }
+  }
+}

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Users, CircleCheck as CheckCircle, Circle as XCircle, LogIn, Loader as Loader2 } from "lucide-react";
+import { safeErrorMessage } from "@/lib/error-utils";
 
 interface InvitationPreview {
   invitee_name: string;
@@ -32,33 +33,37 @@ export default function AcceptFamilyInvite() {
     if (authLoading) return;
 
     async function loadInvitation() {
-      const { data, error } = await supabase
-        .from("family_invitations")
-        .select("invitee_name, relation, status, inviter_member_id")
-        .eq("acceptance_token", token!)
-        .maybeSingle();
+      const { data, error } = await supabase.rpc("get_family_invitation_preview", {
+        p_token: token!,
+      });
 
-      if (error || !data) {
+      const preview = data as {
+        found?: boolean;
+        status?: string;
+        invitee_name?: string;
+        relation?: string;
+        inviter_first_name?: string;
+        inviter_last_name?: string;
+      } | null;
+
+      if (error || !preview?.found) {
         setState("error");
         setErrorMsg("This invitation link is invalid or has expired.");
         return;
       }
 
-      if (data.status !== "pending") {
+      if (preview.status !== "pending") {
         setState("already_used");
         return;
       }
 
-      const { data: inviterData } = await supabase
-        .from("members")
-        .select("first_name, last_name")
-        .eq("id", data.inviter_member_id)
-        .maybeSingle();
-
       setInvitation({
-        invitee_name: data.invitee_name,
-        relation: data.relation,
-        inviter: inviterData as { first_name: string; last_name: string } | null,
+        invitee_name: preview.invitee_name ?? "",
+        relation: preview.relation ?? "",
+        inviter: {
+          first_name: preview.inviter_first_name ?? "",
+          last_name: preview.inviter_last_name ?? "",
+        },
       });
       setState("preview");
     }
@@ -89,7 +94,10 @@ export default function AcceptFamilyInvite() {
 
     if (error || (data as { error?: string })?.error) {
       setState("error");
-      setErrorMsg((data as { error?: string })?.error ?? error?.message ?? "Something went wrong.");
+      setErrorMsg(
+        (data as { error?: string })?.error ??
+          safeErrorMessage(error, "We could not accept this invitation. Please try again."),
+      );
       return;
     }
 

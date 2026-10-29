@@ -8,6 +8,7 @@ const corsHeaders = {
 };
 
 const EMAILIT_API = "https://api.emailit.com/v2/emails";
+const MAX_RECIPIENTS_FOR_USER_CALLERS = 1;
 const FROM_NAME = "KhadayataOnline";
 const FROM_EMAIL = "noreply@khadayataonline.com";
 const REPLY_TO = "support@khadayataonline.com";
@@ -26,6 +27,33 @@ Deno.serve(async (req: Request) => {
         JSON.stringify({ error: errMsg }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
+    }
+
+    // Authorization: the caller is either another edge function presenting the
+    // service-role key (trusted, internal), or a signed-in user. Anything else
+    // is rejected. verify_jwt alone only proves *a* JWT was supplied.
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const bearer = authHeader.replace(/^Bearer\s+/i, "").trim();
+    const isInternalCaller = serviceRoleKey.length > 0 && bearer === serviceRoleKey;
+
+    if (!isInternalCaller) {
+      if (!bearer) {
+        return new Response(
+          JSON.stringify({ error: "Unauthorized" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      const userRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
+        headers: { Authorization: `Bearer ${bearer}`, Apikey: serviceRoleKey },
+      });
+      if (!userRes.ok) {
+        return new Response(
+          JSON.stringify({ error: "Unauthorized" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
     }
 
     const body = await req.json();
@@ -50,13 +78,24 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    const recipients = Array.isArray(to) ? to : [to];
+
+    // Non-internal callers may not fan out, and may not supply raw subject/HTML:
+    // that would bypass the escaping model enforced by templates.ts.
+    if (!isInternalCaller && recipients.length > MAX_RECIPIENTS_FOR_USER_CALLERS) {
+      return new Response(
+        JSON.stringify({ error: "Only one recipient is allowed per request" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     const { subject, html } = buildEmailHtml(template, vars);
 
     const payload = {
       from: FROM_NAME + " <" + FROM_EMAIL + ">",
-      to: Array.isArray(to) ? to : [to],
-      subject: override_subject ?? subject,
-      html: override_html ?? html,
+      to: recipients,
+      subject: (isInternalCaller ? override_subject : undefined) ?? subject,
+      html: (isInternalCaller ? override_html : undefined) ?? html,
       reply_to: REPLY_TO,
     };
 

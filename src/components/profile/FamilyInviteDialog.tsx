@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { UserPlus, Trash2, Clock, Mail, Phone, Pencil, Check, X } from "lucide-react";
+import { safeErrorMessage } from "@/lib/error-utils";
 
 const RELATIONS = ["Spouse", "Son", "Daughter", "Father", "Mother", "Brother", "Sister"];
 const COUNTRY_CODES = [
@@ -121,7 +122,7 @@ export function FamilyInviteDialog({ memberId }: FamilyInviteDialogProps) {
           });
         } catch (emailErr) {
           console.error("Failed to send family invitation email:", emailErr);
-          throw new Error(`Invitation created but email send failed: ${(emailErr as Error).message}`);
+          throw new Error("Invitation created, but we could not send the email. You can resend it from the list below.");
         }
       }
     },
@@ -132,7 +133,7 @@ export function FamilyInviteDialog({ memberId }: FamilyInviteDialogProps) {
       queryClient.invalidateQueries({ queryKey: ["family-invitations", memberId] });
       queryClient.invalidateQueries({ queryKey: ["my-family-links"] });
     },
-    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+    onError: (err: Error) => toast({ title: "Error", description: safeErrorMessage(err, "We could not send that invitation. Please try again."), variant: "destructive" }),
   });
 
   const isValid = form.relation && form.name.trim() && (form.email.trim() || form.phone.trim());
@@ -244,7 +245,7 @@ export function PendingInvitationsList({ memberId }: PendingInvitationsListProps
       queryClient.invalidateQueries({ queryKey: ["family-invitations", memberId] });
       toast({ title: "Invitation updated" });
     },
-    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+    onError: (err: Error) => toast({ title: "Error", description: safeErrorMessage(err, "We could not update that invitation. Please try again."), variant: "destructive" }),
   });
 
   const startEdit = (inv: FamilyInvitation) => {

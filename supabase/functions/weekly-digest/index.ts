@@ -23,6 +23,32 @@ Deno.serve(async (req: Request) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
+    // Authorization: this mails the whole community, so it is restricted to the
+    // scheduler (service-role key) and to Global Admins. verify_jwt alone only
+    // proves the caller is signed in.
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const bearer = authHeader.replace(/^Bearer\s+/i, "").trim();
+
+    if (bearer !== serviceRoleKey) {
+      const { data: userData, error: userErr } = await supabase.auth.getUser(bearer);
+      if (userErr || !userData?.user) {
+        return new Response(
+          JSON.stringify({ error: "Unauthorized" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      const { data: isAdmin } = await supabase.rpc("has_role", {
+        _user_id: userData.user.id,
+        _role: "Global Admin",
+      });
+      if (!isAdmin) {
+        return new Response(
+          JSON.stringify({ error: "Forbidden" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    }
+
     const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
     const [newsRes, eventsRes, campaignsRes] = await Promise.all([

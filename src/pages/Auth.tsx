@@ -12,6 +12,7 @@ import diyaLamp from "@/assets/diya-lamp.png";
 import PublicLayout from "@/components/PublicLayout";
 import SEOMeta from "@/components/SEOMeta";
 import { useTotalMemberCount, useTotalChapterCount, useTotalCountryCount } from "@/hooks/useChapter";
+import { safeErrorMessage } from "@/lib/error-utils";
 
 const LOGO = "/Screenshot_2026-03-16_at_9.18.14_AM.png";
 
@@ -82,7 +83,7 @@ export default function Auth() {
     setSubmitting(true);
     const { error } = isSignUp ? await signUp(email, password) : await signIn(email, password);
     setSubmitting(false);
-    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); }
+    if (error) { toast({ title: "Error", description: safeErrorMessage(error, isSignUp ? "We could not create your account. Please try again." : "The email or password you entered is incorrect."), variant: "destructive" }); }
     else if (isSignUp) { toast({ title: "Check your email", description: "We've sent you a verification link." }); }
   };
 

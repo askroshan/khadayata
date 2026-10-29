@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { ChevronRight, Star, UserCheck } from "lucide-react";
+import { safeErrorMessage } from "@/lib/error-utils";
 import {
   MatrimonialProfile, MARITAL_STATUS, DIETS, COMPLEXIONS, MANGLIK, BLOOD_GROUPS,
   FAMILY_TYPES, FAMILY_STATUS, RASHIS, NAKSHATRAS, HOBBIES, GLASSES_OPTIONS,
@@ -160,7 +161,7 @@ export function ProfileForm({
 
     setSaving(false);
     if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Error", description: safeErrorMessage(error, "We could not save your profile. Please try again."), variant: "destructive" });
     } else {
       toast({ title: isEdit ? "Profile updated!" : "Profile created!" });
       queryClient.invalidateQueries({ queryKey: ["my-matrimonial"] });

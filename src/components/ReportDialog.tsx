@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Flag, TriangleAlert as AlertTriangle } from "lucide-react";
+import { safeErrorMessage } from "@/lib/error-utils";
 
 const REPORT_CATEGORIES = [
   { value: "fake", label: "Fake / Fraudulent" },
@@ -60,7 +61,7 @@ export function ReportDialog({ entityType, entityId, entityName, variant = "icon
       queryClient.invalidateQueries({ queryKey: ["reports"] });
     },
     onError: (err: Error) => {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "Error", description: safeErrorMessage(err, "We could not submit your report. Please try again."), variant: "destructive" });
     },
   });
 
