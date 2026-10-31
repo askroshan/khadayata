@@ -22,6 +22,7 @@ import { FamilyInviteDialog, PendingInvitationsList } from "@/components/profile
 import { User, Briefcase, GraduationCap, Users, Shield, QrCode, CreditCard as Edit, Check, X, Plus, Trash2, MapPin, Award, Heart, ArrowRight } from "lucide-react";
 import { format } from "date-fns";
 import { resolveChapterSlug } from "@/lib/chapter-nav-utils";
+import { isGlobalIdGenerationEnabled } from "@/lib/global-id";
 
 const GENDERS = ["Male", "Female", "Other", "Prefer not to say"];
 
@@ -86,6 +87,11 @@ export default function Profile() {
   const [editing, setEditing] = useState(false);
   const [editData, setEditData] = useState<Record<string, string>>({});
   const [generatingId, setGeneratingId] = useState(false);
+  const { data: globalIdEnabled = true } = useQuery({
+    queryKey: ["settings", "global_id_enabled"],
+    queryFn: isGlobalIdGenerationEnabled,
+    staleTime: 60_000,
+  });
   const [newSkill, setNewSkill] = useState("");
   const [newLanguage, setNewLanguage] = useState("");
   const [newEducation, setNewEducation] = useState({ degree: "", institution: "", year: "" });
@@ -391,6 +397,11 @@ export default function Profile() {
                   <div className="mt-2 inline-flex items-center gap-2 rounded-lg bg-primary/10 px-3 py-1.5">
                     <Shield className="w-4 h-4 text-primary" />
                     <span className="font-mono text-sm font-semibold tracking-wide text-primary">{member.global_id}</span>
+                  </div>
+                ) : !globalIdEnabled ? (
+                  <div className="mt-2 inline-flex items-center gap-2 rounded-lg bg-muted px-3 py-1.5">
+                    <Shield className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Global ID generation is temporarily disabled</span>
                   </div>
                 ) : member?.chapter_id ? (
                   <Button

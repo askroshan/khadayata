@@ -56,15 +56,15 @@ Authorization: Bearer <JWT_TOKEN>
 **Error Responses:**
 
 - `401 Unauthorized` - No authorization header or invalid token
-- `403 Forbidden` - Not authorized to generate ID for this member
+- `403 Forbidden` - Not authorized, or `settings.global_id_enabled` is false
 - `404 Not Found` - Member not found
-- `400 Bad Request` - Member has no chapter assigned
+- `400 Bad Request` - No chapter, incomplete chapter geography (`CHGEO`), or missing `city_codes` entry
 
 **ID Format:**
 - `KHD` - Organization prefix
 - `CC` - Country code (2 chars)
-- `SS` - State code (2 chars)
-- `CTY` - City code (3 chars)
+- `SS` - State code (2 chars; longer codes truncated to 2)
+- `CTY` - City code (3 chars from `city_codes`)
 - `YY` - Year (2 digits)
 - `XXXXXX` - Sequence number (6 digits)
 - `Z` - Checksum digit (ISO 7064 Mod 37,36)
@@ -72,6 +72,7 @@ Authorization: Bearer <JWT_TOKEN>
 **Access Control:**
 - Members can generate their own global ID
 - Global Admins can generate for any member
+- Honors `settings.global_id_enabled`; sends `global_id_assigned` email after mint (best-effort)
 
 ---
 
@@ -168,33 +169,31 @@ const { data: isAdmin } = await supabase.rpc('has_role', {
 
 ---
 
-### 2. generate_global_id
+### 2. generate_global_id (internal RPC)
 
-**Purpose:** Generate unique global ID with atomic sequence increment
+**Purpose:** Atomic sequence + checksum. Returns a **raw** (undashed) ID string.
 
 **Signature:**
 ```sql
 generate_global_id(
-  p_country_code text,
-  p_state_code text,
-  p_city_code text
+  p_country_code text,  -- exactly 2 chars
+  p_state_code text,    -- exactly 2 chars
+  p_city_code text      -- exactly 3 chars
 ) RETURNS text
 ```
 
-**Usage:**
+**Security:** SECURITY DEFINER. `EXECUTE` is **revoked from `anon` and `authenticated`**. Browser/apps must **not** call this RPC directly.
+
+**Canonical client usage** — Edge Function only:
+
 ```typescript
-const { data: globalId } = await supabase.rpc('generate_global_id', {
-  p_country_code: 'IN',
-  p_state_code: 'GJ',
-  p_city_code: 'AHM'
+const { data, error } = await supabase.functions.invoke("generate-global-id", {
+  body: { member_id: member.id },
 });
+// data.global_id → dashed form KHD-INGJAHM-25-000001-Z
 ```
 
-**Returns:** Raw global ID string (e.g., `KHDINGJAHM25000001Z`)
-
-**Security:** SECURITY DEFINER (runs with elevated privileges)
-
-**Note:** This function is typically called through the Edge Function wrapper for proper authorization checks.
+The edge function calls this RPC with the service role after authZ and chapter geography checks.
 
 ---
 

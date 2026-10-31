@@ -30,8 +30,20 @@ describe("generate-global-id hardening", () => {
     expect(source).toContain("CHGEO");
   });
 
-  it("still mints IDs when geography is complete (keeps city_codes fallback)", () => {
+  it("still mints IDs when geography is complete (keeps city_codes lookup)", () => {
     expect(source).toContain("generate_global_id");
     expect(source).toContain("city_codes");
+    expect(source).toContain("resolveCityCode");
+  });
+
+  it("honors global_id_enabled and sends assignment email", () => {
+    expect(source).toContain("global_id_enabled");
+    expect(source).toContain("global_id_assigned");
+  });
+
+  it("does not blindly substring(0, 3) non-code city names as the only path", () => {
+    // Prefer city_codes match; 3-char fallback only for /^[A-Za-z0-9]{3}$/
+    expect(source).toContain("/^[A-Za-z0-9]{3}$/");
+    expect(source).toContain("cities(code, name)");
   });
 });

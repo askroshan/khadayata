@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { ChevronLeft, ChevronRight, Check, User, MapPin, Briefcase, Shield, Phone } from "lucide-react";
+import { isGlobalIdGenerationEnabled } from "@/lib/global-id";
 
 const COUNTRY_CODES = [
   { code: "+91", label: "🇮🇳 +91" },
@@ -114,14 +115,15 @@ export default function Onboarding() {
         onboarding_completed: true,
       });
 
-      // Auto-generate Global ID
-      if (member?.id && chapterId) {
+      // Auto-generate Global ID when feature enabled
+      if (member?.id && chapterId && (await isGlobalIdGenerationEnabled())) {
         try {
-          await supabase.functions.invoke("generate-global-id", {
+          const { error: gidError } = await supabase.functions.invoke("generate-global-id", {
             body: { member_id: member.id },
           });
+          if (gidError) console.warn("Global ID generation deferred", gidError.message);
         } catch {
-          // Non-critical - ID can be generated later
+          // Non-critical - ID can be generated later from Profile
           console.warn("Global ID generation deferred");
         }
       }
