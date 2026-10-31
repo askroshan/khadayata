@@ -58,7 +58,7 @@ Singapore, Bahrain, Malta, Luxembourg, Monaco, Liechtenstein, Andorra, Vatican, 
 - `seed_geography` — original 19 city codes
 - `seed_world_geography_cities_and_codes` — ~176 additional codes
 
-Used by `generate_global_id()` function. Format: `KHD + CC(2) + SS(2-3) + CTY(3) + YY(2) + SEQ(6) + CHECKSUM(1)`
+Used by `generate_global_id()` function. Format: `KHD + CC(2) + SS(2) + CTY(3) + YY(2) + SEQ(6) + CHECKSUM(1)` (state codes longer than 2 chars are truncated to 2 by the edge function before minting).
 
 For stateless countries, `state_code` uses the country's ISO2 code (e.g., Singapore → `SG`).
 
