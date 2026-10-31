@@ -402,11 +402,12 @@ describe("US-007: Admin Dashboard Role-Based Access", () => {
     expect(canAccessTab(chapterAdmin, "bulk-content")).toBe(false);
   });
 
-  it("AC: Moderator can access moderator and reports", () => {
+  it("AC: Moderator can access moderator, reports, members, and news", () => {
     expect(canAccessTab(moderator, "moderator")).toBe(true);
     expect(canAccessTab(moderator, "reports")).toBe(true);
     expect(canAccessTab(moderator, "banned-keywords")).toBe(true);
-    expect(canAccessTab(moderator, "members")).toBe(false);
+    expect(canAccessTab(moderator, "members")).toBe(true);
+    expect(canAccessTab(moderator, "news-publisher")).toBe(true);
     expect(canAccessTab(moderator, "finance")).toBe(false);
   });
 
