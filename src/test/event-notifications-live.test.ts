@@ -52,12 +52,12 @@ describe("event-notifications (real API)", () => {
   it("runs cancel/update against a real event id if any published event exists", async () => {
     const { data: event } = await supabase
       .from("events")
-      .select("id, title, chapter_id")
+      .select("id, name, chapter_id")
       .eq("status", "published")
       .limit(1)
       .maybeSingle();
     if (!event) return;
-    const info = { id: event.id, name: event.title ?? "Event", chapter_id: event.chapter_id };
+    const info = { id: event.id, name: event.name ?? "Event", chapter_id: event.chapter_id };
     await notifyEventCancelled(info).catch(() => undefined);
     await notifyEventUpdated(info).catch(() => undefined);
   });
