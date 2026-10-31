@@ -45,6 +45,45 @@ describe("Admin / signed-in page mounts with real role sessions", () => {
     );
   });
 
+  it("Global Admin opens chapters + analytics + roles tabs", async () => {
+    await signIn(E2E_ACCOUNTS.globalAdmin.email);
+    for (const tab of ["chapters", "analytics", "roles", "events", "directory"] as const) {
+      const { unmount } = renderApp(<Admin />, { route: `/admin?tab=${tab}` });
+      await waitFor(
+        () => {
+          expect(document.body.textContent).toMatch(/Admin Dashboard/);
+          expect(document.body.textContent).not.toMatch(/Access Denied/i);
+        },
+        { timeout: 25_000 },
+      );
+      unmount();
+    }
+  });
+
+  it("Data Steward verification tab mounts", async () => {
+    await signIn(E2E_ACCOUNTS.dataSteward.email);
+    renderApp(<Admin />, { route: "/admin?tab=verification" });
+    await waitFor(
+      () => {
+        expect(document.body.textContent).toMatch(/Admin Dashboard/);
+        expect(document.body.textContent?.toLowerCase()).toMatch(/verif|steward|member/);
+      },
+      { timeout: 25_000 },
+    );
+  });
+
+  it("Publisher news-publisher tab mounts", async () => {
+    await signIn(E2E_ACCOUNTS.publisher.email);
+    renderApp(<Admin />, { route: "/admin?tab=news-publisher" });
+    await waitFor(
+      () => {
+        expect(document.body.textContent).toMatch(/Admin Dashboard/);
+        expect(document.body.textContent?.toLowerCase()).toMatch(/news|publish|article/);
+      },
+      { timeout: 25_000 },
+    );
+  });
+
   it("Regular member is denied Admin", async () => {
     await signIn(E2E_ACCOUNTS.member.email);
     renderApp(<Admin />, { route: "/admin" });

@@ -1,6 +1,6 @@
 import { type ReactElement, type ReactNode } from "react";
 import { render, type RenderOptions } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
@@ -39,14 +39,30 @@ export async function signInIsolated(email: string, password = E2E_PASSWORD) {
   return { client, session: data.session, user: data.user };
 }
 
-function AllProviders({ children, route = "/" }: { children: ReactNode; route?: string }) {
+function AllProviders({
+  children,
+  route = "/",
+  pathPattern,
+}: {
+  children: ReactNode;
+  route?: string;
+  /** When set, wraps `children` in `<Routes><Route path={pathPattern} /></Routes>` so useParams works. */
+  pathPattern?: string;
+}) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
+  const routed = pathPattern ? (
+    <Routes>
+      <Route path={pathPattern} element={children} />
+    </Routes>
+  ) : (
+    children
+  );
   return (
     <QueryClientProvider client={qc}>
       <AuthProvider>
-        <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>
+        <MemoryRouter initialEntries={[route]}>{routed}</MemoryRouter>
       </AuthProvider>
     </QueryClientProvider>
   );
@@ -54,11 +70,17 @@ function AllProviders({ children, route = "/" }: { children: ReactNode; route?: 
 
 export function renderApp(
   ui: ReactElement,
-  options?: Omit<RenderOptions, "wrapper"> & { route?: string },
+  options?: Omit<RenderOptions, "wrapper"> & { route?: string; pathPattern?: string },
 ) {
   const route = options?.route ?? "/";
+  const pathPattern = options?.pathPattern;
+  const { route: _r, pathPattern: _p, ...rest } = options ?? {};
   return render(ui, {
-    ...options,
-    wrapper: ({ children }) => <AllProviders route={route}>{children}</AllProviders>,
+    ...rest,
+    wrapper: ({ children }) => (
+      <AllProviders route={route} pathPattern={pathPattern}>
+        {children}
+      </AllProviders>
+    ),
   });
 }
