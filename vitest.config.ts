@@ -11,6 +11,8 @@ export default defineConfig({
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
     testTimeout: 30_000,
     hookTimeout: 30_000,
+    // Live auth suites share the singleton supabase client; parallel files race sessions.
+    fileParallelism: false,
     coverage: {
       provider: "v8",
       reporter: ["text", "text-summary", "json-summary", "html"],

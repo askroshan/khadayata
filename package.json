@@ -14,7 +14,9 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:e2e:public": "playwright test e2e/public-routes.spec.ts e2e/homepage-latest-members.spec.ts",
-    "test:db": "vitest run src/test/local-db"
+    "test:e2e:roles": "playwright test e2e/role-authenticated.spec.ts",
+    "test:db": "vitest run src/test/local-db",
+    "seed:e2e-users": "node scripts/seed-e2e-role-users.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

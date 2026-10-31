@@ -212,8 +212,8 @@ describe("chapter transfer approvals (live DB, behavioral)", () => {
 describe("moderator verification rights (live DB, behavioral)", () => {
   let moderator: SupabaseClient;
   let member: SupabaseClient;
-  let seed1MemberId = "";
-  let seed1Level = 0;
+  let targetMemberId = "";
+  let targetLevel = 0;
   let shouldSkip = false;
 
   beforeAll(async () => {
@@ -222,18 +222,19 @@ describe("moderator verification rights (live DB, behavioral)", () => {
       return;
     }
     moderator = (await signInAs(MODERATOR_EMAIL)).client;
-    member = (await signInAs(MEMBER_EMAIL)).client;
-    const seed1 = await signInAs(SEED1_EMAIL);
-    seed1MemberId = await getOwnMemberId(seed1.client, seed1.userId);
+    const m = await signInAs(MEMBER_EMAIL);
+    member = m.client;
+    // Use E2E regular member as the target (seed1@test.local was purged).
+    targetMemberId = await getOwnMemberId(member, m.userId);
     const { data, error } = await moderator
       .from("members")
       .select("id, verification_level")
-      .eq("id", seed1MemberId)
+      .eq("id", targetMemberId)
       .maybeSingle();
     if (error || !data) {
-      throw new Error(`Test setup: cannot read seed1 member: ${error?.message}`);
+      throw new Error(`Test setup: cannot read target member: ${error?.message}`);
     }
-    seed1Level = data.verification_level;
+    targetLevel = data.verification_level;
   });
 
   it("Moderator can update another member's verification_level (the fix)", async ({ skip }) => {
@@ -242,8 +243,8 @@ describe("moderator verification rights (live DB, behavioral)", () => {
     // changing any real data.
     const { data, error } = await moderator
       .from("members")
-      .update({ verification_level: seed1Level })
-      .eq("id", seed1MemberId)
+      .update({ verification_level: targetLevel })
+      .eq("id", targetMemberId)
       .select("id");
     expect(error).toBeNull();
     expect(data?.length).toBe(1);
@@ -254,20 +255,19 @@ describe("moderator verification rights (live DB, behavioral)", () => {
     const { error } = await moderator
       .from("members")
       .update({ blocked: true })
-      .eq("id", seed1MemberId);
+      .eq("id", targetMemberId);
     expect(error).not.toBeNull();
   });
 
   it("regular member cannot change their own verification_level (column guard)", async ({ skip }) => {
     if (shouldSkip) return skip();
-    const { data } = await member
+    const { data, error: readErr } = await member
       .from("members")
       .select("id, verification_level")
-      .eq("user_id", (await member.auth.getUser()).data.user?.id ?? "")
-      .limit(1)
+      .eq("id", targetMemberId)
       .maybeSingle();
-    if (!data) {
-      throw new Error("Test setup: member account has no member row");
+    if (readErr || !data) {
+      throw new Error(`Test setup: member account has no member row: ${readErr?.message}`);
     }
     const { error } = await member
       .from("members")

@@ -20,9 +20,20 @@ BEGIN
   ) INTO is_privileged;
 
   IF NOT is_privileged THEN
+    -- Moderators may change verification_level only (todo-moderator US-002).
     IF NEW.verification_level IS DISTINCT FROM OLD.verification_level THEN
-      RAISE EXCEPTION 'Only Global Admin or Data Steward can change verification_level'
-        USING ERRCODE = 'check_violation';
+      IF NOT EXISTS (
+        SELECT 1
+        FROM role_assignments ra
+        JOIN roles r ON r.id = ra.role_id
+        JOIN members m ON m.id = ra.member_id
+        WHERE m.user_id = auth.uid()
+          AND r.name = 'Moderator'
+          AND (ra.end_date IS NULL OR ra.end_date >= CURRENT_DATE)
+      ) THEN
+        RAISE EXCEPTION 'Only Global Admin, Data Steward, or Moderator can change verification_level'
+          USING ERRCODE = 'check_violation';
+      END IF;
     END IF;
     IF NEW.blocked IS DISTINCT FROM OLD.blocked OR NEW.suspended IS DISTINCT FROM OLD.suspended THEN
       RAISE EXCEPTION 'Only Global Admin or Data Steward can block or suspend members'
