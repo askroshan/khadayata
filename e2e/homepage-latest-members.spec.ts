@@ -60,19 +60,22 @@ test.describe("Homepage Latest Members block", () => {
     }
   });
 
-  test("View All Members link navigates to /directory", async ({ page }) => {
+  test("View All Members link targets directory (auth gate may redirect)", async ({ page }) => {
     const link = page.getByRole("link", { name: /View All Members/ });
     await expect(link).toBeVisible();
+    await expect(link).toHaveAttribute("href", /\/directory/);
     await link.click();
-    await expect(page).toHaveURL(/\/directory$/);
+    // /directory is signed-in — anonymous users land on /auth
+    await expect(page).toHaveURL(/\/(directory|auth)/);
   });
 
-  test("member card click navigates to member profile", async ({ page }) => {
+  test("member card click goes to profile route (auth gate may redirect)", async ({ page }) => {
     const firstCard = page.locator('a[href^="/member/"]').first();
     await expect(firstCard).toBeVisible({ timeout: 15000 });
     const href = await firstCard.getAttribute("href");
+    expect(href).toMatch(/^\/member\/[a-f0-9-]{36}$/);
     await firstCard.click();
-    await expect(page).toHaveURL(href!);
+    await expect(page).toHaveURL(new RegExp(`(${href}|/auth)`));
   });
 
   test("renders avatar image or initials fallback", async ({ page }) => {
@@ -101,14 +104,9 @@ test.describe("Homepage Latest Members block", () => {
     await expect(page.getByText("Newest Members")).toBeVisible();
   });
 
-  test("empty state shows join CTA when no members", async ({ page }) => {
-    // This test only applies if the DB has no qualifying members.
-    // We verify the join link exists somewhere in the section when cards are absent.
-    // Skip if member cards are present (normal case).
+  test("with real data, newest members section is non-empty", async ({ page }) => {
     const memberLinks = page.locator('a[href^="/member/"]');
-    const count = await memberLinks.count();
-    if (count === 0) {
-      await expect(page.getByRole("link", { name: /Join Now/ })).toBeVisible();
-    }
+    await expect(memberLinks.first()).toBeVisible({ timeout: 15000 });
+    expect(await memberLinks.count()).toBeGreaterThan(0);
   });
 });

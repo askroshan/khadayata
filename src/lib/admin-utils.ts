@@ -77,14 +77,14 @@ export function filterMembers(
   if (filterStatus === "suspended") list = list.filter((m) => memberStatuses?.[m.id]?.suspended);
   if (filterStatus === "blocked") list = list.filter((m) => memberStatuses?.[m.id]?.blocked);
 
+  // Parse YYYY-MM-DD as UTC calendar bounds so same-day filters work in all timezones.
   if (dateFrom) {
-    const fromDate = new Date(dateFrom);
+    const fromDate = new Date(`${dateFrom}T00:00:00.000Z`);
     list = list.filter((m) => m.created_at && new Date(m.created_at) >= fromDate);
   }
 
   if (dateTo) {
-    const toDate = new Date(dateTo);
-    toDate.setHours(23, 59, 59, 999);
+    const toDate = new Date(`${dateTo}T23:59:59.999Z`);
     list = list.filter((m) => m.created_at && new Date(m.created_at) <= toDate);
   }
 
