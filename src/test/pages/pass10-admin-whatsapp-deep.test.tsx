@@ -298,8 +298,19 @@ describe("Pass 10 admin / WhatsApp / moderator deep trees", () => {
 
   it("edge send-whatsapp: OPTIONS + missing fields + unknown template + config gate", async () => {
     expect(gaJwt.length).toBeGreaterThan(20);
-    const opt = await fetch(`${url}/functions/v1/send-whatsapp`, { method: "OPTIONS" });
-    expect([200, 204].includes(opt.status)).toBe(true);
+    // Retry OPTIONS — edge runtime / Kong can briefly refuse during cold start under full suite.
+    let optStatus = 0;
+    for (let i = 0; i < 5; i++) {
+      try {
+        const opt = await fetch(`${url}/functions/v1/send-whatsapp`, { method: "OPTIONS" });
+        optStatus = opt.status;
+        if ([200, 204].includes(optStatus)) break;
+      } catch {
+        /* ECONNREFUSED while edge isolate boots */
+      }
+      await new Promise((r) => setTimeout(r, 1500 * (i + 1)));
+    }
+    expect([200, 204].includes(optStatus)).toBe(true);
 
     const missing = await fetch(`${url}/functions/v1/send-whatsapp`, {
       method: "POST",
@@ -330,7 +341,7 @@ describe("Pass 10 admin / WhatsApp / moderator deep trees", () => {
     const text = await res.text();
     expect(text.length).toBeGreaterThan(2);
     expect(text.toLowerCase()).toMatch(/whatsapp|template|configur|token|required|forbidden|unauthorized|not found/);
-  }, 45_000);
+  }, 60_000);
 
   it("ModeratorDashboard: tabs + CSV/export controls when present", async () => {
     await signIn(E2E_ACCOUNTS.moderator.email);

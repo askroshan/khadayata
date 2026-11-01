@@ -206,10 +206,14 @@ export default function WhatsAppTab() {
 
   const handleSendSingle = async () => {
     if (!recipientPhone.trim() || !selectedTemplate) return;
-    await sendMessage.mutateAsync(recipientPhone.trim());
-    setSendOpen(false);
-    setRecipientPhone("");
-    setParams({});
+    try {
+      await sendMessage.mutateAsync(recipientPhone.trim());
+      setSendOpen(false);
+      setRecipientPhone("");
+      setParams({});
+    } catch {
+      // onError toast already surfaced; keep dialog open for retry
+    }
   };
 
   const handleSendBlast = async () => {

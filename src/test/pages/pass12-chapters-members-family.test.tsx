@@ -805,17 +805,31 @@ describe("Pass 12 chapters + members + family invite (real Kong)", () => {
 
     // Suspend → unsuspend → block → unblock → delete
     async function openActionsForDisposable() {
-      await closeDialogs(user);
-      await clickSafe(user, screen.queryByRole("button", { name: /Clear/i }));
-      fireEvent.change(screen.getByPlaceholderText(/Search by name/i), {
-        target: { value: seeded.disposableFirst },
-      });
-      await waitFor(() => expect(screen.queryAllByLabelText(/Member admin actions/i).length).toBeGreaterThan(0), {
-        timeout: 15_000,
-      });
-      await clickSafe(user, screen.getAllByLabelText(/Member admin actions/i)[0]);
-      await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument(), { timeout: 8_000 });
-      return screen.getByRole("dialog");
+      let lastErr: unknown;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          await closeDialogs(user);
+          // Reset status filter to All so suspended/blocked rows remain searchable
+          const statusSelects = screen.queryAllByRole("combobox");
+          if (statusSelects[1]) await pickSelectOption(user, statusSelects[1], /All|Any|Status/i).catch(() => undefined);
+          await clickSafe(user, screen.queryByRole("button", { name: /Clear/i }));
+          const search = screen.getByPlaceholderText(/Search by name/i);
+          fireEvent.change(search, { target: { value: "" } });
+          fireEvent.change(search, { target: { value: seeded.disposableFirst } });
+          await waitFor(
+            () => expect(screen.queryAllByLabelText(/Member admin actions/i).length).toBeGreaterThan(0),
+            { timeout: 15_000 },
+          );
+          await clickSafe(user, screen.getAllByLabelText(/Member admin actions/i)[0]);
+          await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument(), { timeout: 10_000 });
+          return screen.getByRole("dialog");
+        } catch (err) {
+          lastErr = err;
+          await closeDialogs(user);
+          await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+        }
+      }
+      throw lastErr ?? new Error("openActionsForDisposable failed");
     }
 
     let actions = await openActionsForDisposable();
