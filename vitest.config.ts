@@ -17,6 +17,8 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "text-summary", "json-summary", "html"],
       reportsDirectory: "./coverage",
+      // Still emit reports when a live-Kong suite flakes so integrators can read honest %.
+      reportOnFailure: true,
       include: ["src/**/*.{ts,tsx}"],
       exclude: [
         "src/test/**",

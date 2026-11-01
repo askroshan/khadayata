@@ -158,6 +158,7 @@ const seeded = {
   rishtaFamilyId: null as string | null,
   rishtaApprovedId: null as string | null,
   settingsTouched: false,
+  priorOtherMentorOpen: [] as { id: string; status: string }[],
 };
 
 describe("Pass 13 — Business / Mentorship / Temple / Rishta (real Kong)", () => {
@@ -326,7 +327,23 @@ describe("Pass 13 — Business / Mentorship / Temple / Rishta (real Kong)", () =
     seeded.jobNoSalaryId = job2.id;
 
     // Mentorship offer from a different real member so E2E member can see it as available.
+    // Partial unique index mentorships_one_open_per_mentor_idx allows only one available/pending per mentor.
     const OTHER_MENTOR = "f86b8859-707c-4fc1-8e1d-d6f186d683b4";
+    const { data: priorOpen } = await admin
+      .from("mentorships")
+      .select("id, status, skills, description, mode, availability")
+      .eq("mentor_member_id", OTHER_MENTOR)
+      .in("status", ["available", "pending"]);
+    seeded.priorOtherMentorOpen = priorOpen ?? [];
+    if ((priorOpen ?? []).length) {
+      await admin
+        .from("mentorships")
+        .update({ status: "completed" })
+        .in(
+          "id",
+          priorOpen!.map((r) => r.id),
+        );
+    }
     const { data: mOffer, error: mOfferErr } = await admin
       .from("mentorships")
       .insert({
@@ -395,22 +412,32 @@ describe("Pass 13 — Business / Mentorship / Temple / Rishta (real Kong)", () =
       seeded.profileCreated = true;
     }
 
-    // Clean any prior Pass13 rishta rows for this pair
-    await admin
-      .from("rishta_requests")
-      .delete()
-      .eq("from_profile_id", seeded.profileId!)
-      .eq("to_profile_id", OTHER_PROFILE_ID);
+    // Resolve live counterpart profiles (hardcoded IDs drift across local restores).
+    const { data: otherProfiles } = await admin
+      .from("matrimonial_profiles")
+      .select("id")
+      .neq("id", seeded.profileId!)
+      .neq("member_id", memberId)
+      .limit(8);
+    const counterpartIds = (otherProfiles ?? [])
+      .map((p) => p.id)
+      .filter((id) => id && id !== seeded.profileId);
+    const prefer = [OTHER_PROFILE_ID, "b9aa2b08-107a-4568-9de2-fb0d463ff61b", "ccb4e230-108c-45d6-a460-d884211fa584"];
+    const ordered = [
+      ...prefer.filter((id) => counterpartIds.includes(id)),
+      ...counterpartIds.filter((id) => !prefer.includes(id)),
+    ];
+    if (ordered.length < 3) {
+      throw new Error(`Need ≥3 other matrimonial profiles for rishta seeds; found ${ordered.length}`);
+    }
+    const [introTo, familyTo, approvedFrom] = ordered;
 
-    // Use a third profile for family_review / family_approved so intro_sent stays unique for send dialog tests
-    const THIRD_PROFILE = "b9aa2b08-107a-4568-9de2-fb0d463ff61b";
-    const FOURTH_PROFILE = "ccb4e230-108c-45d6-a460-d884211fa584";
-
+    await admin.from("rishta_requests").delete().eq("from_profile_id", seeded.profileId!).eq("to_profile_id", introTo);
     const { data: rIntro, error: rIntroErr } = await admin
       .from("rishta_requests")
       .insert({
         from_profile_id: seeded.profileId!,
-        to_profile_id: OTHER_PROFILE_ID,
+        to_profile_id: introTo,
         status: "intro_sent",
         intro_message: `${MARKER} introduction to family`,
       })
@@ -419,12 +446,12 @@ describe("Pass 13 — Business / Mentorship / Temple / Rishta (real Kong)", () =
     if (rIntroErr) throw rIntroErr;
     seeded.rishtaIntroId = rIntro.id;
 
-    await admin.from("rishta_requests").delete().eq("from_profile_id", seeded.profileId!).eq("to_profile_id", THIRD_PROFILE);
+    await admin.from("rishta_requests").delete().eq("from_profile_id", seeded.profileId!).eq("to_profile_id", familyTo);
     const { data: rFam, error: rFamErr } = await admin
       .from("rishta_requests")
       .insert({
         from_profile_id: seeded.profileId!,
-        to_profile_id: THIRD_PROFILE,
+        to_profile_id: familyTo,
         status: "family_review",
         intro_message: `${MARKER} in family review`,
         from_family_ok: null,
@@ -435,11 +462,11 @@ describe("Pass 13 — Business / Mentorship / Temple / Rishta (real Kong)", () =
     if (rFamErr) throw rFamErr;
     seeded.rishtaFamilyId = rFam.id;
 
-    await admin.from("rishta_requests").delete().eq("from_profile_id", seeded.profileId!).eq("to_profile_id", FOURTH_PROFILE);
+    await admin.from("rishta_requests").delete().eq("from_profile_id", approvedFrom).eq("to_profile_id", seeded.profileId!);
     const { data: rOk, error: rOkErr } = await admin
       .from("rishta_requests")
       .insert({
-        from_profile_id: FOURTH_PROFILE,
+        from_profile_id: approvedFrom,
         to_profile_id: seeded.profileId!,
         status: "family_approved",
         intro_message: `${MARKER} ready to accept`,
@@ -470,6 +497,10 @@ describe("Pass 13 — Business / Mentorship / Temple / Rishta (real Kong)", () =
     }
     if (seeded.mentorshipOfferId) await admin.from("mentorships").delete().eq("id", seeded.mentorshipOfferId);
     await admin.from("mentorships").delete().contains("skills", [`${MARKER} Leadership`]);
+    // Restore any pre-existing available/pending mentorships we parked as completed.
+    for (const row of seeded.priorOtherMentorOpen) {
+      await admin.from("mentorships").update({ status: row.status }).eq("id", row.id);
+    }
     if (seeded.jobId) {
       await admin.from("job_applications").delete().eq("job_id", seeded.jobId);
       await admin.from("jobs").delete().eq("id", seeded.jobId);

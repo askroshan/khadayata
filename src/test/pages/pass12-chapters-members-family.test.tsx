@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 import { screen, waitFor, fireEvent, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { renderApp } from "@/test/helpers/render-app";
 import { supabase } from "@/integrations/supabase/client";
@@ -55,6 +56,27 @@ function adminClient(): SupabaseClient {
   return createClient(url, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+}
+
+/** Service-role REST cannot change verification_level (guard trigger uses auth.uid()). */
+function setVerificationLevelSql(memberId: string, level: number) {
+  execFileSync(
+    "docker",
+    [
+      "exec",
+      "supabase_db_khadayata-local",
+      "psql",
+      "-U",
+      "postgres",
+      "-v",
+      "ON_ERROR_STOP=1",
+      "-c",
+      `ALTER TABLE members DISABLE TRIGGER trg_guard_privileged_member_columns;
+       UPDATE members SET verification_level = ${Number(level)} WHERE id = '${memberId}';
+       ALTER TABLE members ENABLE TRIGGER trg_guard_privileged_member_columns;`,
+    ],
+    { stdio: ["ignore", "pipe", "pipe"] },
+  );
 }
 
 let lastSignInAt = 0;
@@ -229,22 +251,45 @@ describe("Pass 12 chapters + members + family invite (real Kong)", () => {
     if (cuErr || !cu.user) throw cuErr ?? new Error("create disposable user failed");
     seeded.disposableUserId = cu.user.id;
 
-    const { data: mem, error: memErr } = await admin
+    // Auth trigger may already insert a members row for the new user_id.
+    const { data: existingMem } = await admin
       .from("members")
-      .insert({
-        user_id: cu.user.id,
-        first_name: seeded.disposableFirst,
-        last_name: seeded.disposableLast,
-        chapter_id: seeded.chapterId,
-        verification_level: 2,
-        onboarding_completed: false,
-        suspended: false,
-        blocked: false,
-      })
       .select("id")
-      .single();
-    if (memErr || !mem) throw memErr ?? new Error("seed disposable member failed");
-    seeded.disposableMemberId = mem.id;
+      .eq("user_id", cu.user.id)
+      .maybeSingle();
+    if (existingMem?.id) {
+      const { error: upErr } = await admin
+        .from("members")
+        .update({
+          first_name: seeded.disposableFirst,
+          last_name: seeded.disposableLast,
+          chapter_id: seeded.chapterId,
+          onboarding_completed: false,
+          suspended: false,
+          blocked: false,
+        })
+        .eq("id", existingMem.id);
+      if (upErr) throw upErr;
+      seeded.disposableMemberId = existingMem.id;
+    } else {
+      const { data: mem, error: memErr } = await admin
+        .from("members")
+        .insert({
+          user_id: cu.user.id,
+          first_name: seeded.disposableFirst,
+          last_name: seeded.disposableLast,
+          chapter_id: seeded.chapterId,
+          verification_level: 0,
+          onboarding_completed: false,
+          suspended: false,
+          blocked: false,
+        })
+        .select("id")
+        .single();
+      if (memErr || !mem) throw memErr ?? new Error("seed disposable member failed");
+      seeded.disposableMemberId = mem.id;
+    }
+    setVerificationLevelSql(seeded.disposableMemberId, 2);
   }, 90_000);
 
   afterAll(async () => {
