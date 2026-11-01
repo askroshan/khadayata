@@ -39,13 +39,21 @@ interface MembersTabProps {
   members: Member[] | undefined;
   myChapterId: string | null;
   canInvite?: boolean;
+  /** Matches send-reminder edge ALLOWED_ROLES (Global Admin | Chapter Admin). */
+  canSendReminders?: boolean;
   isGlobalAdmin?: boolean;
 }
 
 const LEVEL_LABELS = SHARED_LEVEL_LABELS;
 const PAGE_SIZE = 25;
 
-export default function MembersTab({ members, myChapterId, canInvite = false, isGlobalAdmin = false }: MembersTabProps) {
+export default function MembersTab({
+  members,
+  myChapterId,
+  canInvite = false,
+  canSendReminders = false,
+  isGlobalAdmin = false,
+}: MembersTabProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
@@ -924,7 +932,7 @@ export default function MembersTab({ members, myChapterId, canInvite = false, is
                                 <ExternalLink className="w-4 h-4" />
                               </Link>
                             </Button>
-                            {isGlobalAdmin && !m.onboarding_completed && memberEmails?.[m.id] && (
+                            {canSendReminders && !m.onboarding_completed && (isGlobalAdmin ? !!memberEmails?.[m.id] : true) && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button

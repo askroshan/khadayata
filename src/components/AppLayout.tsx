@@ -19,6 +19,7 @@ type NavItem = {
   label: string;
   path: string;
   adminOnly?: boolean;
+  globalAdminOnly?: boolean;
   memberChapterOnly?: boolean;
 };
 
@@ -80,7 +81,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Admin Management",
     items: [
       { icon: Users, label: "Members", path: "/admin?tab=members", adminOnly: true },
-      { icon: Building2, label: "Chapters", path: "/admin?tab=chapters", adminOnly: true },
+      { icon: Building2, label: "Chapters", path: "/admin?tab=chapters", adminOnly: true, globalAdminOnly: true },
       { icon: Flag, label: "Moderation", path: "/moderation", adminOnly: true },
       { icon: Shield, label: "Admin Dashboard", path: "/admin", adminOnly: true },
     ],
@@ -96,7 +97,7 @@ const NAV_GROUPS: NavGroup[] = [
 
 function NavLinks({ onClick }: { onClick?: () => void }) {
   const location = useLocation();
-  const { isAnyAdmin, isLoading: rolesLoading } = useRoles();
+  const { isAnyAdmin, isGlobalAdmin, isLoading: rolesLoading } = useRoles();
   const { member } = useMember();
   const currentPath = location.pathname + location.hash;
 
@@ -117,6 +118,7 @@ function NavLinks({ onClick }: { onClick?: () => void }) {
       {NAV_GROUPS.map((group) => {
         const visibleItems = group.items.filter((item) => {
           if (item.adminOnly && (rolesLoading || !isAnyAdmin)) return false;
+          if (item.globalAdminOnly && (rolesLoading || !isGlobalAdmin)) return false;
           if (item.memberChapterOnly && !myChapterPath) return false;
           return true;
         });

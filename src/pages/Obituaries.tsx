@@ -13,11 +13,11 @@ import { usePermissions } from "@/hooks/useRoles";
 
 export default function Obituaries() {
   const { user } = useAuth();
-  const { canManageChapter } = usePermissions();
+  const { canPostObituaries } = usePermissions();
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
 
-  const canPost = canManageChapter;
+  const canPost = canPostObituaries;
 
   const { data: obituaries, isLoading, refetch } = useQuery({
     queryKey: ["obituaries", search],
