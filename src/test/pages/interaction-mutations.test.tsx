@@ -140,10 +140,12 @@ describe("Interaction / mutation branches (real sessions + data)", () => {
       screen.queryByPlaceholderText(/search/i) ||
       document.querySelector('input[type="search"], input[type="text"]');
     if (search) {
-      await user.type(search as HTMLElement, "a");
+      // Use a real community surname — never assert on E2E first_name dummies publicly
+      await user.type(search as HTMLElement, "Shah");
       await waitFor(() => {
         expect((search as HTMLInputElement).value.length).toBeGreaterThan(0);
-      });
+        expect(document.body.textContent).toMatch(/Shah/i);
+      }, { timeout: 20_000 });
     }
   }, 60_000);
 

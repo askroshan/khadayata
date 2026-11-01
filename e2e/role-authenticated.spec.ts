@@ -69,5 +69,28 @@ test.describe("Role-authenticated feature routes", () => {
     await page.goto("/directory");
     await expect(page).toHaveURL(/\/directory/);
     await expect(page.locator("body")).not.toContainText(/Access Denied/i);
+    // Public directory assertions must not rely on E2E dummy first_name rows
+    await expect(page.getByPlaceholder(/Search by name/i)).toBeVisible({ timeout: 20_000 });
+    await page.getByPlaceholder(/Search by name/i).fill("Shah");
+    await expect(page.locator("body")).toContainText(/Shah/i, { timeout: 20_000 });
+    const body = await page.locator("body").innerText();
+    // Filtered "Shah" results should not be E2E-prefixed seed members
+    expect(body.split("\n").filter((l) => /\bE2E\b/.test(l) && /Shah/i.test(l)).length).toBe(0);
+  });
+
+  test("member feature routes: events/news/obituaries/matrimonial/chapters/profile", async ({ page }) => {
+    await signInAs(page, E2E_ACCOUNTS.member.email);
+    for (const [path, smoke] of [
+      ["/events", /event/i],
+      ["/news", /news|article/i],
+      ["/obituaries", /obituar|memoriam|remembrance/i],
+      ["/matrimonial", /matrimonial|match|rishta/i],
+      ["/chapters", /chapter/i],
+      ["/profile", /profile|completeness|member/i],
+    ] as const) {
+      await page.goto(path);
+      await expect(page.locator("body")).toContainText(smoke, { timeout: 20_000 });
+      await expect(page.locator("body")).not.toContainText(/Something went wrong/i);
+    }
   });
 });
