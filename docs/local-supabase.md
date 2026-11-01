@@ -50,15 +50,18 @@ npx supabase@2.122.0 status -o env   # copy ANON_KEY / SERVICE_ROLE_KEY / API_UR
 
 `[db.migrations] enabled = false` and seed disabled so start does not replay project migrations that assume a different Auth/DB layout. Schema for SQL work remains on `khadayata_local` via `local-install/` (see `local-install/README.md`).
 
-### Sync password hashes into GoTrue
+### Sync Auth users + public master data into the CLI DB
 
-GoTrue does **not** read Postgres.app `:5438` directly. After start (or whenever hashes change on `:5438`):
+Kong/PostgREST and GoTrue use the **CLI Postgres container**, not Postgres.app `:5438`. After start (and whenever `:5438` changes):
 
 ```bash
-./scripts/sync-local-auth-hashes.sh
+./scripts/sync-local-auth-hashes.sh          # upsert auth.users + email identities (no CASCADE wipe)
+./scripts/sync-local-public-from-5438.sh     # replace public schema (countries/states/cities/chapters/…)
 ```
 
-This copies `auth.users.encrypted_password` from `khadayata_local` into the CLI Auth DB and creates `email` identities.
+Without the public sync, Vite calls to `:54331` return `PGRST205` / empty dropdowns even though `:5438` has seed data.
+
+Expected geography counts after sync (from current `khadayata_local`): countries **197**, states **325**, cities **163**, chapters **42**. Gender on Onboarding/Profile is a **hardcoded** `GENDERS` list (not a DB table).
 
 ### Verify login against local hashes
 
