@@ -13,6 +13,7 @@ import {
   buildCsvContent,
   canAccessAdmin,
   canAccessTab,
+  firstAccessibleAdminTab,
   VALID_ADMIN_TABS,
   LEVEL_LABELS,
   type AdminMember,
@@ -119,6 +120,12 @@ describe("US-002: Navigate Admin Sections via URL Parameters", () => {
     for (const tab of VALID_ADMIN_TABS) {
       expect(resolveAdminTab(tab)).toBe(tab);
     }
+  });
+
+  it("AC: legacy Admin tab aliases map to canonical ids", () => {
+    expect(resolveAdminTab("publisher")).toBe("news-publisher");
+    expect(resolveAdminTab("tags")).toBe("tag-requests");
+    expect(resolveAdminTab("keywords")).toBe("banned-keywords");
   });
 
   it("AC: other URL parameters preserved when building URL", () => {
@@ -413,6 +420,27 @@ describe("US-007: Admin Dashboard Role-Based Access", () => {
 
   it("AC: unauthorized access returns false for invalid tab", () => {
     expect(canAccessTab(globalAdmin, "nonexistent" as AdminTab)).toBe(false);
+  });
+
+  it("AC: unauthorized ?tab= falls back to first accessible tab", () => {
+    const finance: UserRoles = {
+      ...regularMember,
+      isFinanceAdmin: true,
+    };
+    expect(canAccessTab(finance, "chapters")).toBe(false);
+    expect(firstAccessibleAdminTab(finance, "chapters")).toBe("finance");
+    // Chapter Admin preference lands on verification before events
+    expect(firstAccessibleAdminTab(chapterAdmin, "analytics")).toBe("verification");
+    // Moderator preference lands on news-publisher before reports
+    expect(firstAccessibleAdminTab(moderator, "chapters")).toBe("news-publisher");
+  });
+
+  it("AC: Data Steward can open audits; Chapter Admin cannot open WhatsApp/SMS", () => {
+    const dataSteward: UserRoles = { ...regularMember, isDataSteward: true };
+    expect(canAccessTab(dataSteward, "audits")).toBe(true);
+    expect(canAccessTab(chapterAdmin, "whatsapp")).toBe(false);
+    expect(canAccessTab(chapterAdmin, "sms")).toBe(false);
+    expect(canAccessTab(chapterAdmin, "verification")).toBe(true);
   });
 
   it("AC: role changes take effect (roles object changes)", () => {

@@ -306,12 +306,22 @@ export default function Admin() {
 
           {canAccessTab(userRoles, "verification") && (
             <TabsContent value="verification" className="mt-4">
-              <VerificationDashboard myChapterId={myChapterId} isGlobalAdmin={isGlobalAdmin} />
+              <VerificationDashboard
+                myChapterId={myChapterId}
+                isGlobalAdmin={isGlobalAdmin}
+                canSendReminders={isGlobalAdmin || isChapterAdmin}
+              />
             </TabsContent>
           )}
           {canAccessTab(userRoles, "members") && (
             <TabsContent value="members" className="mt-4">
-              <MembersTab members={allMembers} myChapterId={myChapterId} canInvite={canInviteMembers} isGlobalAdmin={isGlobalAdmin} />
+              <MembersTab
+                members={allMembers}
+                myChapterId={myChapterId}
+                canInvite={canInviteMembers}
+                canSendReminders={isGlobalAdmin || isChapterAdmin}
+                isGlobalAdmin={isGlobalAdmin}
+              />
             </TabsContent>
           )}
           {canAccessTab(userRoles, "roles") && (

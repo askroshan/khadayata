@@ -94,3 +94,53 @@ test.describe("Role-authenticated feature routes", () => {
     }
   });
 });
+
+test.describe("Role ACL deep links and forbidden tabs", () => {
+  test("legacy ?tab=publisher alias opens My Content for publisher", async ({ page }) => {
+    await signInAs(page, E2E_ACCOUNTS.publisher.email);
+    await page.goto("/admin?tab=publisher");
+    await expect(page.getByRole("heading", { name: /Admin Dashboard/i })).toBeVisible({
+      timeout: 20_000,
+    });
+    await expect(page.getByRole("tab", { name: /My Content|News/i }).first()).toBeVisible();
+  });
+
+  test("finance admin forbidden analytics tab does not show Analytics trigger", async ({ page }) => {
+    await signInAs(page, E2E_ACCOUNTS.financeAdmin.email);
+    await page.goto("/admin?tab=analytics");
+    await expect(page.getByRole("heading", { name: /Admin Dashboard/i })).toBeVisible({
+      timeout: 20_000,
+    });
+    await expect(page.getByRole("tab", { name: /^Analytics$/i })).toHaveCount(0);
+    await expect(page.getByRole("tab", { name: /^Finance$/i })).toBeVisible();
+  });
+
+  test("chapter admin sees Events + Verification, not WhatsApp/Analytics", async ({ page }) => {
+    await signInAs(page, E2E_ACCOUNTS.chapterAdmin.email);
+    await page.goto("/admin?tab=events");
+    await expect(page.getByRole("heading", { name: /Admin Dashboard/i })).toBeVisible({
+      timeout: 20_000,
+    });
+    await expect(page.getByRole("tab", { name: /^Events$/i })).toBeVisible();
+    await page.goto("/admin?tab=verification");
+    await expect(page.getByRole("tab", { name: /^Verification$/i })).toBeVisible();
+    await expect(page.getByRole("tab", { name: /^WhatsApp$/i })).toHaveCount(0);
+    await expect(page.getByRole("tab", { name: /^Analytics$/i })).toHaveCount(0);
+  });
+
+  test("moderator ?tab=moderator redirects to /moderation", async ({ page }) => {
+    await signInAs(page, E2E_ACCOUNTS.moderator.email);
+    await page.goto("/admin?tab=moderator");
+    await expect(page).toHaveURL(/\/moderation/, { timeout: 20_000 });
+    await expect(page.locator("body")).not.toContainText(/Access Denied/i);
+  });
+
+  test("data steward can open audits", async ({ page }) => {
+    await signInAs(page, E2E_ACCOUNTS.dataSteward.email);
+    await page.goto("/admin?tab=audits");
+    await expect(page.getByRole("heading", { name: /Admin Dashboard/i })).toBeVisible({
+      timeout: 20_000,
+    });
+    await expect(page.getByRole("tab", { name: /Audit/i })).toBeVisible();
+  });
+});
