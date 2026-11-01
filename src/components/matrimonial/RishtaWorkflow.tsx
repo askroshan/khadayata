@@ -203,10 +203,10 @@ export function RishtaWorkflow({ myProfileId, targetProfileId, introMessage, onR
           id, from_profile_id, to_profile_id, status, intro_message,
           from_family_ok, to_family_ok, admin_notes, created_at, updated_at,
           from_profile:matrimonial_profiles!rishta_requests_from_profile_id_fkey(
-            id, member:members(first_name, last_name)
+            id, member:members!matrimonial_profiles_member_id_fkey(first_name, last_name)
           ),
           to_profile:matrimonial_profiles!rishta_requests_to_profile_id_fkey(
-            id, member:members(first_name, last_name)
+            id, member:members!matrimonial_profiles_member_id_fkey(first_name, last_name)
           )
         `)
         .or(`from_profile_id.eq.${myProfileId},to_profile_id.eq.${myProfileId}`)
