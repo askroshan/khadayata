@@ -127,3 +127,11 @@ Object.defineProperty(window, "localStorage", {
   writable: true,
   value: memoryStorage,
 });
+
+// CSV / file download helpers (jsdom)
+if (typeof URL.createObjectURL !== "function") {
+  URL.createObjectURL = (() => "blob:vitest") as typeof URL.createObjectURL;
+}
+if (typeof URL.revokeObjectURL !== "function") {
+  URL.revokeObjectURL = (() => {}) as typeof URL.revokeObjectURL;
+}
