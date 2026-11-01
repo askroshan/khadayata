@@ -232,18 +232,6 @@ export default function MemberProfile() {
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
-  const suspendMutation = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.from("members").update({ onboarding_completed: false }).eq("id", id!);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast({ title: "Member suspended" });
-      queryClient.invalidateQueries({ queryKey: ["member-profile", id] });
-    },
-    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
-  });
-
   const editMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("members").update({
