@@ -606,6 +606,8 @@ describe("Pass 13 — Business / Mentorship / Temple / Rishta (real Kong)", () =
   }, 60_000);
 
   it("Business manage: filters, list/post dialogs, apply job", async () => {
+    // Re-assert L2 — other suites may restore verification_level on the E2E member.
+    if (seeded.memberId) setVerificationLevelSql(seeded.memberId, 2);
     await signIn(E2E_ACCOUNTS.member.email);
     const user = userEvent.setup();
     renderApp(<Business />, { route: "/business/manage" });
@@ -626,9 +628,12 @@ describe("Pass 13 — Business / Mentorship / Temple / Rishta (real Kong)", () =
     await pickSelect(user, /sector/i, /Technology/i);
     await pickSelect(user, /verification|listing/i, /Verified Only/i);
 
+    await waitFor(() => {
+      const listBizBtn = screen.queryByRole("button", { name: /^List Business$/i });
+      expect(listBizBtn).toBeTruthy();
+      expect((listBizBtn as HTMLButtonElement).disabled).toBe(false);
+    }, { timeout: 20_000 });
     const listBiz = screen.queryByRole("button", { name: /^List Business$/i });
-    expect(listBiz).toBeTruthy();
-    expect((listBiz as HTMLButtonElement).disabled).toBe(false);
     await clickSafe(user, listBiz);
     await waitFor(() => {
       expect(document.body.textContent).toMatch(/List Your Business|Business Name/i);
