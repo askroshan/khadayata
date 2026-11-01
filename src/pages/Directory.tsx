@@ -12,6 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, MapPin, Shield, Users, Heart } from "lucide-react";
 import { defaultChapterFilter } from "@/lib/chapter-nav-utils";
+import { E2E_MEMBER_FIRST_NAME } from "@/lib/test-members";
 
 const VERIFICATION_LABELS: Record<number, string> = { 0: "L0", 1: "L1", 2: "L2" };
 const VERIFICATION_COLORS: Record<number, string> = { 0: "bg-muted text-muted-foreground", 1: "bg-gold/20 text-gold-foreground", 2: "bg-success/20 text-success" };
@@ -33,7 +34,7 @@ export default function Directory() {
   const { data: members, isLoading } = useQuery({
     queryKey: ["directory", search, chapterFilter],
     queryFn: async () => {
-      let q = supabase.from("members").select("*, chapters(name)").eq("onboarding_completed", true).order("last_name");
+      let q = supabase.from("members").select("*, chapters(name)").eq("onboarding_completed", true).neq("first_name", E2E_MEMBER_FIRST_NAME).order("last_name");
       if (search.trim()) q = q.or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%`);
       if (chapterFilter !== "all") q = q.eq("chapter_id", chapterFilter);
       const { data, error } = await q.limit(50);
