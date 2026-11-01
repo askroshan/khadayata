@@ -21,6 +21,11 @@ This document describes all test accounts, demo data, and fixtures for the Khada
 
 All accounts below are seeded in **local development only**. Password for all accounts: **`TestPass123!`**
 
+Sign-in for local app/dev goes through **self-hosted** Supabase Auth on
+`http://127.0.0.1:54331` (see [`local-supabase.md`](local-supabase.md)). Sync
+hashes from `khadayata_local:5438` with `./scripts/sync-local-auth-hashes.sh`
+before expecting these passwords to work against GoTrue.
+
 ### Role-Based Accounts
 
 | Email | Role | Chapter | Notes |

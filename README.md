@@ -32,9 +32,17 @@ cd <YOUR_PROJECT_NAME>
 # Step 3: Install the necessary dependencies.
 npm i
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Step 4: Local Auth + SQL (not hosted Auth)
+#   - Start self-hosted Supabase: see docs/local-supabase.md
+#   - Point .env VITE_SUPABASE_URL at http://127.0.0.1:54331
+#   - Keep DATABASE_URL on Postgres.app khadayata_local:5438
+#   - Sync auth hashes: ./scripts/sync-local-auth-hashes.sh
+
+# Step 5: Start the development server with auto-reloading and an instant preview.
 npm run dev
 ```
+
+Local Auth/API setup: [`docs/local-supabase.md`](docs/local-supabase.md). SQL snapshot install: [`local-install/README.md`](local-install/README.md).
 
 **Edit a file directly in GitHub**
 

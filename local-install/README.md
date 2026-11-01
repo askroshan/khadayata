@@ -3,6 +3,11 @@
 Full SQL dump to reproduce the Khadayata database on a localhost Postgres
 (v15+) instance so you can debug and fix the invite-member flow locally.
 
+**Auth for the Vite app** uses the self-hosted Supabase CLI stack (Kong/GoTrue on
+`127.0.0.1:54331`), not hosted Auth. Keep this database on Postgres.app
+**`:5438`** as `DATABASE_URL`, then sync password hashes into GoTrue with
+`../scripts/sync-local-auth-hashes.sh`. Full start guide: [`../docs/local-supabase.md`](../docs/local-supabase.md).
+
 ## Files
 
 | File | Purpose |
