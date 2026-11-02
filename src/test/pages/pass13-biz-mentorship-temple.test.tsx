@@ -159,6 +159,10 @@ const seeded = {
   rishtaApprovedId: null as string | null,
   settingsTouched: false,
   priorOtherMentorOpen: [] as { id: string; status: string }[],
+  /** Disposable peer profiles/members/users created when local DB is sparse. */
+  peerProfileIds: [] as string[],
+  peerMemberIds: [] as string[],
+  peerUserIds: [] as string[],
 };
 
 describe("Pass 13 — Business / Mentorship / Temple / Rishta (real Kong)", () => {
@@ -427,8 +431,54 @@ describe("Pass 13 — Business / Mentorship / Temple / Rishta (real Kong)", () =
       ...prefer.filter((id) => counterpartIds.includes(id)),
       ...counterpartIds.filter((id) => !prefer.includes(id)),
     ];
-    if (ordered.length < 3) {
-      throw new Error(`Need ≥3 other matrimonial profiles for rishta seeds; found ${ordered.length}`);
+    // Local restores often have <3 peers — create disposable auth/member/profile rows.
+    let peerN = 0;
+    while (ordered.length < 3) {
+      peerN += 1;
+      const email = `pass13-peer-${Date.now().toString(36)}-${peerN}@example.invalid`;
+      const { data: authUser, error: authErr } = await admin.auth.admin.createUser({
+        email,
+        password: E2E_PASSWORD,
+        email_confirm: true,
+      });
+      if (authErr) throw authErr;
+      seeded.peerUserIds.push(authUser.user!.id);
+      const { data: peerMem, error: peerMemErr } = await admin
+        .from("members")
+        .insert({
+          user_id: authUser.user!.id,
+          first_name: `${MARKER}Peer${peerN}`,
+          last_name: "Rishta",
+          chapter_id: AHMEDABAD,
+          onboarding_completed: true,
+          verification_level: 2,
+          overseas_verified: false,
+          suspended: false,
+          blocked: false,
+          gender: peerN % 2 === 0 ? "Female" : "Male",
+          dob: "1995-06-15",
+          birth_place: "Ahmedabad",
+          privacy: { dob: "members", birth_place: "chapter", employment: "members" },
+        })
+        .select("id")
+        .single();
+      if (peerMemErr) throw peerMemErr;
+      seeded.peerMemberIds.push(peerMem!.id);
+      const { data: peerProf, error: peerProfErr } = await admin
+        .from("matrimonial_profiles")
+        .insert({
+          member_id: peerMem!.id,
+          visibility: "members",
+          about: `${MARKER} disposable peer ${peerN}`,
+          current_city: "Surat",
+          verified: true,
+          suspended: false,
+        })
+        .select("id")
+        .single();
+      if (peerProfErr) throw peerProfErr;
+      seeded.peerProfileIds.push(peerProf!.id);
+      ordered.push(peerProf!.id);
     }
     const [introTo, familyTo, approvedFrom] = ordered;
 
@@ -489,6 +539,18 @@ describe("Pass 13 — Business / Mentorship / Temple / Rishta (real Kong)", () =
     }
     if (seeded.profileCreated && seeded.profileId) {
       await admin.from("matrimonial_profiles").delete().eq("id", seeded.profileId);
+    }
+    for (const pid of seeded.peerProfileIds) {
+      await admin.from("rishta_requests").delete().or(`from_profile_id.eq.${pid},to_profile_id.eq.${pid}`);
+    }
+    if (seeded.peerProfileIds.length) {
+      await admin.from("matrimonial_profiles").delete().in("id", seeded.peerProfileIds);
+    }
+    if (seeded.peerMemberIds.length) {
+      await admin.from("members").delete().in("id", seeded.peerMemberIds);
+    }
+    for (const uid of seeded.peerUserIds) {
+      await admin.auth.admin.deleteUser(uid);
     }
     if (seeded.sessionId) await admin.from("mentorship_sessions").delete().eq("id", seeded.sessionId);
     if (seeded.mentorshipActiveId) {
