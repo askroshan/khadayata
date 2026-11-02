@@ -483,9 +483,7 @@ describe("Pass 12 chapters + members + family invite (real Kong)", () => {
       }, { timeout: 20_000 });
     }
 
-    // Re-assign without email (covers assign success without invite email branch).
-    // Soft-assert like the first assign: dialog/select flakes must not hard-fail the suite
-    // when toast or DB eventually reflects success (deep assign coverage is in pass16).
+    // Re-assign without email (deep coverage lives in pass16-chapters-tab; keep this soft)
     const reAssignBtn = findCardAction(/Assign chapter admin/i, cardNeedle);
     if (reAssignBtn) {
       fireEvent.click(reAssignBtn);
