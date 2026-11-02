@@ -1097,6 +1097,14 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
     await waitFor(() => expect(screen.getByText(/Complete Your Profile/i)).toBeInTheDocument(), {
       timeout: 25_000,
     });
+    // Chapters select only mounts after useChapters finishes (Loading chapters… otherwise).
+    await waitFor(
+      () => {
+        expect(document.body.textContent).not.toMatch(/Loading chapters/i);
+        expect(screen.getByRole("combobox")).toBeInTheDocument();
+      },
+      { timeout: 30_000 },
+    );
 
     await pickSelectOption(user, screen.getByRole("combobox"), /Ahmedabad|Chapter/i);
     await clickSafe(user, screen.getByRole("button", { name: /Next/i }));
