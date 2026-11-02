@@ -896,17 +896,22 @@ describe("Pass 12 chapters + members + family invite (real Kong)", () => {
       const { data } = await admin.from("members").select("suspended").eq("id", seeded.disposableMemberId!).maybeSingle();
       expect(data?.suspended).toBe(true);
     }, { timeout: 20_000 });
+    await waitFor(() => expect(document.body.textContent).toMatch(/Member suspended/i), { timeout: 15_000 });
 
-    // status filter suspended
-    const statusSelects = screen.getAllByRole("combobox");
-    if (statusSelects[1]) await pickSelectOption(user, statusSelects[1], /Suspended/i);
-
-    actions = await openActionsForDisposable();
+    // Wait until actions dialog reflects admin-member-statuses refetch (Unsuspend, not Suspend)
+    await waitFor(
+      async () => {
+        actions = await openActionsForDisposable();
+        expect(within(actions).getByRole("button", { name: /Unsuspend Member/i })).toBeTruthy();
+      },
+      { timeout: 30_000 },
+    );
     await clickSafe(user, within(actions).getByRole("button", { name: /Unsuspend Member/i }));
     await waitFor(async () => {
       const { data } = await admin.from("members").select("suspended").eq("id", seeded.disposableMemberId!).maybeSingle();
       expect(data?.suspended).toBe(false);
     }, { timeout: 20_000 });
+    await waitFor(() => expect(document.body.textContent).toMatch(/Member unsuspended/i), { timeout: 15_000 });
 
     actions = await openActionsForDisposable();
     await clickSafe(user, within(actions).getByRole("button", { name: /Block Member/i }));
@@ -916,14 +921,21 @@ describe("Pass 12 chapters + members + family invite (real Kong)", () => {
       const { data } = await admin.from("members").select("blocked").eq("id", seeded.disposableMemberId!).maybeSingle();
       expect(data?.blocked).toBe(true);
     }, { timeout: 20_000 });
+    await waitFor(() => expect(document.body.textContent).toMatch(/Member blocked/i), { timeout: 15_000 });
 
-    if (statusSelects[1]) await pickSelectOption(user, screen.getAllByRole("combobox")[1], /Blocked/i);
-    actions = await openActionsForDisposable();
+    await waitFor(
+      async () => {
+        actions = await openActionsForDisposable();
+        expect(within(actions).getByRole("button", { name: /Unblock Member/i })).toBeTruthy();
+      },
+      { timeout: 30_000 },
+    );
     await clickSafe(user, within(actions).getByRole("button", { name: /Unblock Member/i }));
     await waitFor(async () => {
       const { data } = await admin.from("members").select("blocked").eq("id", seeded.disposableMemberId!).maybeSingle();
       expect(data?.blocked).toBe(false);
     }, { timeout: 20_000 });
+    await waitFor(() => expect(document.body.textContent).toMatch(/Member unblocked/i), { timeout: 15_000 });
 
     // Delete permanently (disposable only)
     const doomedMemberId = seeded.disposableMemberId!;
@@ -1133,21 +1145,22 @@ describe("Pass 12 chapters + members + family invite (real Kong)", () => {
       { timeout: 15_000 },
     );
 
-    // Cancel edit path (covers cancelEdit)
-    const editBtns2 = screen.queryAllByTitle(/Edit/i);
-    if (editBtns2[0]) {
-      fireEvent.click(editBtns2[0]);
-      const editCancel = await waitFor(
-        () => within(screen.getByRole("table")).getAllByRole("button", { name: /^Cancel$/i })[0],
-        { timeout: 8_000 },
-      ).catch(() => null);
-      if (editCancel) {
-        fireEvent.click(editCancel);
-        await waitFor(() => expect(screen.queryByRole("button", { name: /^Save$/i })).toBeNull(), {
-          timeout: 5_000,
-        }).catch(() => undefined);
-      }
-    }
+    // Cancel edit path (covers cancelEdit — FamilyInviteDialog.tsx:262–264)
+    const editBtns2 = await screen.findAllByTitle(/Edit/i, {}, { timeout: 10_000 });
+    expect(editBtns2.length).toBeGreaterThan(0);
+    fireEvent.click(editBtns2[0]);
+    const saveBtn = await waitFor(
+      () => within(screen.getByRole("table")).getByRole("button", { name: /^Save$/i }),
+      { timeout: 10_000 },
+    );
+    // Edit-row Cancel sits next to Save (trash uses title="Cancel", not this sibling)
+    const editCancel = saveBtn.parentElement?.querySelector("button:last-child") as HTMLButtonElement | null;
+    expect(editCancel).toBeTruthy();
+    expect(editCancel!.textContent).toMatch(/Cancel/i);
+    fireEvent.click(editCancel!);
+    await waitFor(() => expect(screen.queryByRole("button", { name: /^Save$/i })).toBeNull(), {
+      timeout: 8_000,
+    });
 
     const trashCancel = screen.queryAllByTitle(/^Cancel$/i);
     const beforeCancel = (await admin.from("family_invitations").select("id").eq("inviter_member_id", memberId).like("invitee_name", "CovCM%")).data?.length ?? 0;

@@ -524,8 +524,12 @@ export default function VerificationDashboard({
             <AlertDialogAction
               className="min-h-[44px]"
               disabled={sendMassReminders.isPending}
-              onClick={() => {
-                sendMassReminders.mutate();
+              onClick={(e) => {
+                // Keep dialog open until mutate is queued — jsdom can otherwise drop the call.
+                e.preventDefault();
+                sendMassReminders.mutate(undefined, {
+                  onSettled: () => setShowMassReminderDialog(false),
+                });
               }}
             >
               {sendMassReminders.isPending ? "Sending..." : "Send to All"}
