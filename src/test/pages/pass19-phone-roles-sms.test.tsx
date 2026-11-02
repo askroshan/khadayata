@@ -627,19 +627,50 @@ describe("Pass 19 — PhoneField / RolesTab / SMSTab (real Kong)", () => {
     await waitFor(() => expect(document.body.textContent).toMatch(new RegExp(PREFIX)), { timeout: 20_000 });
     expect(document.body.textContent).toMatch(/provider rejected/);
 
-    // Delete without policy → onError
+    // Delete cancel
     fireEvent.click(screen.getAllByRole("button", { name: /Delete message/i })[0]);
     let delAlert = await screen.findByRole("alertdialog", {}, { timeout: 8_000 });
     fireEvent.click(within(delAlert).getByRole("button", { name: /Cancel/i }));
     await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument(), { timeout: 5_000 });
 
+    // Delete onError — PostgREST RLS deny is often a silent 0-row success, so force a real error
+    // via a targeted supabase.from spy (not view-domain fixtures).
+    const realFrom = supabase.from.bind(supabase);
+    const denyDelete = vi.spyOn(supabase, "from").mockImplementation(((relation: string) => {
+      const builder = realFrom(relation);
+      if (relation !== "sms_messages") return builder;
+      return new Proxy(builder as object, {
+        get(target, prop, receiver) {
+          if (prop === "delete") {
+            return () => ({
+              eq: async () => ({
+                data: null,
+                error: {
+                  message: "covprs sms delete deny",
+                  code: "42501",
+                  details: null,
+                  hint: null,
+                  name: "PostgrestError",
+                },
+              }),
+            });
+          }
+          const val = Reflect.get(target, prop, receiver);
+          return typeof val === "function" ? (val as (...a: unknown[]) => unknown).bind(target) : val;
+        },
+      });
+    }) as typeof supabase.from);
+
     fireEvent.click(screen.getAllByRole("button", { name: /Delete message/i })[0]);
     delAlert = await screen.findByRole("alertdialog", {}, { timeout: 8_000 });
     fireEvent.click(within(delAlert).getByRole("button", { name: /^Remove$/i }));
-    await waitFor(() => expect(document.body.textContent).toMatch(/Error/i), { timeout: 15_000 });
+    await waitFor(() => expect(document.body.textContent).toMatch(/Error|covprs sms delete deny/i), {
+      timeout: 15_000,
+    });
     await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument(), { timeout: 5_000 });
+    denyDelete.mockRestore();
 
-    // Rows should still exist (RLS blocked delete)
+    // Rows should still exist
     const { count: stillThere } = await admin
       .from("sms_messages")
       .select("id", { count: "exact", head: true })
@@ -678,83 +709,140 @@ CREATE POLICY covprs_sms_delete ON sms_messages
     view.unmount();
     cleanup();
 
-    // Empty history
+    // Empty history — stash ALL rows (limit(50) query is global; PREFIX-only delete is not enough
+    // under a polluted local DB / full-suite leftovers), then restore after the empty arm.
     await admin.from("sms_messages").delete().like("body", `${PREFIX}%`);
     seeded.smsIds = [];
-    view = renderApp(withToaster(<SMSTab />), { route: "/admin?tab=sms" });
-    await clickSafe(user, screen.getByRole("tab", { name: /History/i }));
-    await waitFor(() => expect(document.body.textContent).toMatch(/No SMS messages sent yet/i), { timeout: 15_000 });
+    const { data: smsStash } = await admin.from("sms_messages").select("*");
+    const stashedSms = smsStash ?? [];
+    if (stashedSms.length) {
+      // Service-role wipe; restore after empty + send success arms.
+      await admin.from("sms_messages").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    }
+    try {
+      view = renderApp(withToaster(<SMSTab />), { route: "/admin?tab=sms" });
+      await clickSafe(user, screen.getByRole("tab", { name: /History/i }));
+      // Require settled empty (not the initial undefined→empty flash before query resolves).
+      await waitFor(
+        () => {
+          expect(document.body.textContent).toMatch(/No SMS messages sent yet/i);
+          expect(screen.queryAllByRole("button", { name: /Delete message/i })).toHaveLength(0);
+        },
+        { timeout: 20_000 },
+      );
+      await new Promise((r) => setTimeout(r, 500));
+      expect(document.body.textContent).toMatch(/No SMS messages sent yet/i);
+      expect(screen.queryAllByRole("button", { name: /Delete message/i })).toHaveLength(0);
 
-    // Edge success via fetch spy (not domain fixtures)
-    const origFetch = globalThis.fetch.bind(globalThis);
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
-      const url = String(typeof input === "string" ? input : (input as Request).url);
-      if (url.includes("/functions/v1/send-sms-campaign")) {
-        return new Response(JSON.stringify({ ok: true, sent: 0 }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
+      // Edge success via fetch spy (not domain fixtures)
+      const origFetch = globalThis.fetch.bind(globalThis);
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+        const url = String(typeof input === "string" ? input : (input as Request).url);
+        if (url.includes("/functions/v1/send-sms-campaign")) {
+          return new Response(JSON.stringify({ ok: true, sent: 0 }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        if (url.includes("/functions/v1/send-sms")) {
+          return new Response(JSON.stringify({ ok: true, sid: "covprs" }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        return origFetch(input as RequestInfo, init);
+      });
+
+      await clickSafe(user, screen.getByRole("tab", { name: /Single Message/i }));
+      // Whitespace country code → `|| "1"` branch
+      fireEvent.change(document.querySelector("#single-cc") as HTMLInputElement, { target: { value: "   " } });
+      fireEvent.change(document.querySelector("#single-phone") as HTMLInputElement, { target: { value: "0000000000" } });
+      fireEvent.change(document.querySelector("#single-body") as HTMLTextAreaElement, {
+        target: { value: `${PREFIX} single ok` },
+      });
+      fireEvent.click(screen.getByRole("button", { name: /Send SMS/i }));
+      await waitFor(() => expect(document.body.textContent).toMatch(/SMS sent successfully/i), { timeout: 15_000 });
+
+      await clickSafe(user, screen.getByRole("tab", { name: /Campaign Blast/i }));
+      // Campaign validation (empty)
+      forceReactClick(screen.getByRole("button", { name: /Send Campaign/i }));
+      await waitFor(() => expect(document.body.textContent).toMatch(/Group ID and message are required/i), {
+        timeout: 10_000,
+      });
+
+      fireEvent.change(document.querySelector("#blast-group") as HTMLInputElement, { target: { value: "999999" } });
+      fireEvent.change(document.querySelector("#blast-name") as HTMLInputElement, { target: { value: `${PREFIX} camp` } });
+      fireEvent.change(document.querySelector("#blast-body") as HTMLTextAreaElement, {
+        target: { value: `${PREFIX} blast ok` },
+      });
+      fireEvent.click(screen.getByRole("button", { name: /Send Campaign/i }));
+      await waitFor(() => expect(document.body.textContent).toMatch(/Campaign sent via Easify/i), { timeout: 15_000 });
+
+      fetchSpy.mockRestore();
+
+      // Real edge !res.ok arms (provider/validation errors) — include empty json.error fallbacks
+      const failSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+        const url = String(typeof input === "string" ? input : (input as Request).url);
+        if (url.includes("/functions/v1/send-sms-campaign")) {
+          return new Response(JSON.stringify({}), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        if (url.includes("/functions/v1/send-sms")) {
+          return new Response(JSON.stringify({}), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        return origFetch(input as RequestInfo, init);
+      });
+
+      await clickSafe(user, screen.getByRole("tab", { name: /Single Message/i }));
+      await waitFor(() => expect(document.querySelector("#single-phone")).toBeTruthy(), { timeout: 5_000 });
+      fireEvent.change(document.querySelector("#single-phone") as HTMLInputElement, { target: { value: "0000000000" } });
+      fireEvent.change(document.querySelector("#single-body") as HTMLTextAreaElement, {
+        target: { value: `${PREFIX} real fail` },
+      });
+      fireEvent.click(screen.getByRole("button", { name: /Send SMS/i }));
+      await waitFor(() => expect(document.body.textContent).toMatch(/Failed to send/i), {
+        timeout: 15_000,
+      });
+
+      await clickSafe(user, screen.getByRole("tab", { name: /Campaign Blast/i }));
+      await waitFor(() => expect(document.querySelector("#blast-group")).toBeTruthy(), { timeout: 5_000 });
+      fireEvent.change(document.querySelector("#blast-group") as HTMLInputElement, { target: { value: "999999999" } });
+      fireEvent.change(document.querySelector("#blast-name") as HTMLInputElement, { target: { value: "" } });
+      fireEvent.change(document.querySelector("#blast-body") as HTMLTextAreaElement, {
+        target: { value: `${PREFIX} camp fail` },
+      });
+      fireEvent.click(screen.getByRole("button", { name: /Send Campaign/i }));
+      await waitFor(() => expect(document.body.textContent).toMatch(/Campaign failed|Failed to send campaign/i), {
+        timeout: 15_000,
+      });
+      failSpy.mockRestore();
+
+      view.unmount();
+      cleanup();
+    } finally {
+      // Drop any rows created during the empty window, then restore stash.
+      await admin.from("sms_messages").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      if (stashedSms.length) {
+        const chunk = 100;
+        for (let i = 0; i < stashedSms.length; i += chunk) {
+          const slice = stashedSms.slice(i, i + chunk);
+          const { error: restErr } = await admin.from("sms_messages").insert(slice);
+          if (restErr) {
+            // Retry without generated columns if the API rejects full-row round-trip.
+            const slim = slice.map((r) => {
+              const row = { ...r } as Record<string, unknown>;
+              delete row.updated_at;
+              return row;
+            });
+            await admin.from("sms_messages").insert(slim);
+          }
+        }
       }
-      if (url.includes("/functions/v1/send-sms")) {
-        return new Response(JSON.stringify({ ok: true, sid: "covprs" }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-      return origFetch(input as RequestInfo, init);
-    });
-
-    await clickSafe(user, screen.getByRole("tab", { name: /Single Message/i }));
-    fireEvent.change(document.querySelector("#single-cc") as HTMLInputElement, { target: { value: "1" } });
-    fireEvent.change(document.querySelector("#single-phone") as HTMLInputElement, { target: { value: "0000000000" } });
-    fireEvent.change(document.querySelector("#single-body") as HTMLTextAreaElement, {
-      target: { value: `${PREFIX} single ok` },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /Send SMS/i }));
-    await waitFor(() => expect(document.body.textContent).toMatch(/SMS sent successfully/i), { timeout: 15_000 });
-
-    await clickSafe(user, screen.getByRole("tab", { name: /Campaign Blast/i }));
-    // Campaign validation (empty)
-    forceReactClick(screen.getByRole("button", { name: /Send Campaign/i }));
-    await waitFor(() => expect(document.body.textContent).toMatch(/Group ID and message are required/i), {
-      timeout: 10_000,
-    });
-
-    fireEvent.change(document.querySelector("#blast-group") as HTMLInputElement, { target: { value: "999999" } });
-    fireEvent.change(document.querySelector("#blast-name") as HTMLInputElement, { target: { value: `${PREFIX} camp` } });
-    fireEvent.change(document.querySelector("#blast-body") as HTMLTextAreaElement, {
-      target: { value: `${PREFIX} blast ok` },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /Send Campaign/i }));
-    await waitFor(() => expect(document.body.textContent).toMatch(/Campaign sent via Easify/i), { timeout: 15_000 });
-
-    fetchSpy.mockRestore();
-
-    // Real edge !res.ok arms (provider/validation errors)
-    await clickSafe(user, screen.getByRole("tab", { name: /Single Message/i }));
-    await waitFor(() => expect(document.querySelector("#single-phone")).toBeTruthy(), { timeout: 5_000 });
-    fireEvent.change(document.querySelector("#single-phone") as HTMLInputElement, { target: { value: "0000000000" } });
-    fireEvent.change(document.querySelector("#single-body") as HTMLTextAreaElement, {
-      target: { value: `${PREFIX} real fail` },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /Send SMS/i }));
-    await waitFor(() => expect(document.body.textContent).toMatch(/Failed to send|invalid|easify|Error/i), {
-      timeout: 30_000,
-    });
-
-    await clickSafe(user, screen.getByRole("tab", { name: /Campaign Blast/i }));
-    await waitFor(() => expect(document.querySelector("#blast-group")).toBeTruthy(), { timeout: 5_000 });
-    fireEvent.change(document.querySelector("#blast-group") as HTMLInputElement, { target: { value: "999999999" } });
-    fireEvent.change(document.querySelector("#blast-name") as HTMLInputElement, { target: { value: "" } });
-    fireEvent.change(document.querySelector("#blast-body") as HTMLTextAreaElement, {
-      target: { value: `${PREFIX} camp fail` },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /Send Campaign/i }));
-    await waitFor(() => expect(document.body.textContent).toMatch(/Campaign failed|Failed|invalid|easify|Error/i), {
-      timeout: 30_000,
-    });
-
-    view.unmount();
-    cleanup();
+    }
   }, 240_000);
 });
