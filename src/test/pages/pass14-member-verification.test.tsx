@@ -730,9 +730,11 @@ describe("Pass 14 MemberProfile + Verification* (real Kong)", () => {
     const admin = adminClient();
 
     await signIn(E2E_ACCOUNTS.globalAdmin.email);
+    // Chapter-scoped mount for mass reminders — global send_to_all hits 50–300+
+    // pending rows and Emailit rate limits (~74s), flaking the 45s toast wait.
     let view = renderApp(
       withToaster(
-        <VerificationDashboard myChapterId={null} isGlobalAdmin canSendReminders />,
+        <VerificationDashboard myChapterId={AHMEDABAD} isGlobalAdmin canSendReminders />,
       ),
       { route: "/admin?tab=verification" },
     );
@@ -761,7 +763,7 @@ describe("Pass 14 MemberProfile + Verification* (real Kong)", () => {
 
     const massBtn =
       screen.queryByLabelText(/Send reminder emails to all/i) ||
-      screen.queryByRole("button", { name: /Send to All Pending/i });
+      screen.queryByRole("button", { name: /Send reminder emails to all|Send to All Pending/i });
     expect(massBtn).toBeTruthy();
     await user.click(massBtn!);
     await waitFor(() => expect(document.body.textContent).toMatch(/Send Reminders to All Pending/i), {
@@ -774,7 +776,7 @@ describe("Pass 14 MemberProfile + Verification* (real Kong)", () => {
     await user.click(screen.getByRole("button", { name: /Send to All$/i }));
     await waitFor(
       () => expect(document.body.textContent).toMatch(/Mass reminders|No reminders|Error|sent/i),
-      { timeout: 45_000 },
+      { timeout: 60_000 },
     );
 
     // Re-select so bulk Send Reminder is available (mass send clears selection)
