@@ -1133,21 +1133,22 @@ describe("Pass 12 chapters + members + family invite (real Kong)", () => {
       { timeout: 15_000 },
     );
 
-    // Cancel edit path (covers cancelEdit)
-    const editBtns2 = screen.queryAllByTitle(/Edit/i);
-    if (editBtns2[0]) {
-      fireEvent.click(editBtns2[0]);
-      const editCancel = await waitFor(
-        () => within(screen.getByRole("table")).getAllByRole("button", { name: /^Cancel$/i })[0],
-        { timeout: 8_000 },
-      ).catch(() => null);
-      if (editCancel) {
-        fireEvent.click(editCancel);
-        await waitFor(() => expect(screen.queryByRole("button", { name: /^Save$/i })).toBeNull(), {
-          timeout: 5_000,
-        }).catch(() => undefined);
-      }
-    }
+    // Cancel edit path (covers cancelEdit — FamilyInviteDialog.tsx:262–264)
+    const editBtns2 = await screen.findAllByTitle(/Edit/i, {}, { timeout: 10_000 });
+    expect(editBtns2.length).toBeGreaterThan(0);
+    fireEvent.click(editBtns2[0]);
+    const saveBtn = await waitFor(
+      () => within(screen.getByRole("table")).getByRole("button", { name: /^Save$/i }),
+      { timeout: 10_000 },
+    );
+    // Edit-row Cancel sits next to Save (trash uses title="Cancel", not this sibling)
+    const editCancel = saveBtn.parentElement?.querySelector("button:last-child") as HTMLButtonElement | null;
+    expect(editCancel).toBeTruthy();
+    expect(editCancel!.textContent).toMatch(/Cancel/i);
+    fireEvent.click(editCancel!);
+    await waitFor(() => expect(screen.queryByRole("button", { name: /^Save$/i })).toBeNull(), {
+      timeout: 8_000,
+    });
 
     const trashCancel = screen.queryAllByTitle(/^Cancel$/i);
     const beforeCancel = (await admin.from("family_invitations").select("id").eq("inviter_member_id", memberId).like("invitee_name", "CovCM%")).data?.length ?? 0;
