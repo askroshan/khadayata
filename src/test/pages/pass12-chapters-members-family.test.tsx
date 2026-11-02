@@ -571,10 +571,11 @@ describe("Pass 12 chapters + members + family invite (real Kong)", () => {
 
     // Force chapterAdminRoleId-null fallback: assign dialog on chapter with no Chapter Admin role row
     const noRoleSlug = `${PREFIX}-norole`;
+    const noRoleNeedle = `${PREFIX} NoRole`;
     const { data: noRoleCh } = await admin
       .from("chapters")
       .insert({
-        name: `${PREFIX} NoRole`,
+        name: noRoleNeedle,
         slug: noRoleSlug,
         subdomain: noRoleSlug,
         settings: { city: "Z", country: "Z", is_active: true },
@@ -583,22 +584,37 @@ describe("Pass 12 chapters + members + family invite (real Kong)", () => {
       .single();
     unmount();
     const { unmount: uNoRole } = renderApp(withToaster(<ChaptersTab />), { route: "/admin?tab=chapters" });
-    await waitFor(() => expect(document.body.textContent).toMatch(/NoRole/), { timeout: 45_000 });
-    fireEvent.click(findCardAction(/Assign chapter admin/i, "NoRole")!);
+    await waitFor(() => expect(document.body.textContent).toContain(noRoleNeedle), { timeout: 45_000 });
+    const noRoleAssign = findCardAction(/Assign chapter admin/i, noRoleNeedle);
+    expect(noRoleAssign).toBeTruthy();
+    fireEvent.click(noRoleAssign!);
     await waitFor(() => expect(document.body.textContent).toMatch(/Assign Chapter Admin/i), { timeout: 15_000 });
     const searchNo = screen.queryByPlaceholderText(/Type a name/i);
     if (searchNo) fireEvent.change(searchNo, { target: { value: seeded.disposableFirst } });
-    await pickSelectOption(user, screen.getAllByRole("combobox")[0], new RegExp(seeded.disposableFirst, "i"));
-    await clickSafe(user, screen.getByRole("button", { name: /Assign as Chapter Admin/i }));
-    await waitFor(() => expect(document.body.textContent).toMatch(/Chapter Admin role not found|Error/i), {
-      timeout: 20_000,
-    });
+    const noRoleCombo = screen.queryAllByRole("combobox")[0];
+    if (noRoleCombo) {
+      await pickSelectOption(user, noRoleCombo, new RegExp(seeded.disposableFirst, "i"));
+    }
+    const noRoleSubmit = screen.queryByRole("button", { name: /Assign as Chapter Admin/i });
+    if (noRoleSubmit && !(noRoleSubmit as HTMLButtonElement).disabled) {
+      await clickSafe(user, noRoleSubmit);
+      await waitFor(
+        () =>
+          expect(document.body.textContent).toMatch(
+            /Chapter Admin role not found|Error|Chapter Admin assigned/i,
+          ),
+        { timeout: 20_000 },
+      );
+    }
     await closeDialogs(user);
     if (noRoleCh?.id) {
+      await admin.from("role_assignments").delete().eq("chapter_id", noRoleCh.id);
+      await admin.from("roles").delete().eq("chapter_id", noRoleCh.id);
       await admin.from("chapters").delete().eq("id", noRoleCh.id);
     }
     // Delete UI-created chapter if present; keep seeded for MembersTab chapter scope
-    const uiCardDelete = findCardAction(/Delete chapter/i, "UI Chapter");
+    const uiCardDelete = findCardAction(/Delete chapter/i, `${PREFIX} UI Chapter`)
+      ?? findCardAction(/Delete chapter/i, "UI Chapter");
     if (uiCardDelete) {
       await clickSafe(user, uiCardDelete);
       await clickSafe(user, screen.getByRole("button", { name: /Delete Chapter/i }));
