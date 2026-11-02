@@ -79,7 +79,7 @@ function SectionHeading({ icon: Icon, title, color }: { icon: React.ElementType;
   );
 }
 
-function DrillDownDialog({ drillKey, myChapterId, onClose }: { drillKey: DrillKey | null; myChapterId?: string | null; onClose: () => void }) {
+export function DrillDownDialog({ drillKey, myChapterId, onClose }: { drillKey: DrillKey | null; myChapterId?: string | null; onClose: () => void }) {
   const { data: records, isLoading } = useQuery({
     queryKey: ["drill-down", drillKey, myChapterId],
     queryFn: async (): Promise<DrillRecord[]> => {
