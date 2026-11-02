@@ -55,23 +55,23 @@ const ALL_ROLES: Array<{ name: string; roles: UserRoles }> = [
 // Each entry: tab -> roles that CAN access it
 const EXPECTED_ACCESS: Record<AdminTab, string[]> = {
   stats: ["Global Admin", "Chapter Admin", "Data Steward", "Directory Manager", "Event Manager", "Finance Admin", "Publisher", "Moderator", "Chapter Admin + Event Manager"],
-  members: ["Global Admin", "Chapter Admin", "Data Steward", "Chapter Admin + Event Manager"],
+  members: ["Global Admin", "Chapter Admin", "Data Steward", "Moderator", "Chapter Admin + Event Manager"],
   chapters: ["Global Admin"],
   roles: ["Global Admin", "Chapter Admin", "Data Steward", "Chapter Admin + Event Manager"],
   events: ["Global Admin", "Chapter Admin", "Event Manager", "Chapter Admin + Event Manager"],
-  "news-publisher": ["Global Admin", "Publisher"],
+  "news-publisher": ["Global Admin", "Publisher", "Moderator"],
   moderator: ["Global Admin", "Moderator"],
   announcements: ["Global Admin", "Chapter Admin", "Chapter Admin + Event Manager"],
   finance: ["Global Admin", "Finance Admin"],
   verification: ["Global Admin", "Chapter Admin", "Data Steward", "Chapter Admin + Event Manager"],
   reports: ["Global Admin", "Moderator"],
   transfers: ["Global Admin", "Chapter Admin", "Chapter Admin + Event Manager"],
-  audits: ["Global Admin"],
+  audits: ["Global Admin", "Data Steward"],
   "tag-requests": ["Global Admin", "Chapter Admin", "Data Steward", "Chapter Admin + Event Manager"],
   directory: ["Global Admin", "Directory Manager"],
   samiti: ["Global Admin", "Chapter Admin", "Chapter Admin + Event Manager"],
-  whatsapp: ["Global Admin", "Chapter Admin", "Chapter Admin + Event Manager"],
-  sms: ["Global Admin", "Chapter Admin", "Chapter Admin + Event Manager"],
+  whatsapp: ["Global Admin"],
+  sms: ["Global Admin"],
   "bulk-content": ["Global Admin"],
   "banned-keywords": ["Global Admin", "Moderator"],
   analytics: ["Global Admin"],
@@ -225,7 +225,7 @@ describe("getAdminShortcuts — sidebar per role", () => {
 });
 
 describe("Tab isolation — privileged tabs restricted to Global Admin only", () => {
-  const globalOnlyTabs: AdminTab[] = ["chapters", "audits", "bulk-content", "analytics"];
+  const globalOnlyTabs: AdminTab[] = ["chapters", "bulk-content", "analytics", "whatsapp", "sms"];
 
   for (const tab of globalOnlyTabs) {
     it(`${tab} denied for all non-Global-Admin roles`, () => {

@@ -64,6 +64,7 @@ export type Database = {
           ends_at: string | null
           created_by: string | null
           created_at: string
+          chapter_id: string | null
         }
         Insert: {
           id?: string
@@ -73,6 +74,7 @@ export type Database = {
           ends_at?: string | null
           created_by?: string | null
           created_at?: string
+          chapter_id?: string | null
         }
         Update: {
           id?: string | null
@@ -82,8 +84,16 @@ export type Database = {
           ends_at?: string | null
           created_by?: string | null
           created_at?: string | null
+          chapter_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "announcements_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "chapters"
+            referencedColumns: ["id"]
+          },
         ]
       }
       audits: {

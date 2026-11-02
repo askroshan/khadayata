@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Search as SearchIcon, Users, Calendar, Briefcase, BookOpen, Newspaper, Sparkles, Building2, GraduationCap, Handshake, MapPin, ChevronDown, HeartPulse, IndianRupee, Mic, Heart, Filter, CircleCheck as CheckCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { E2E_MEMBER_FIRST_NAME } from "@/lib/test-members";
 import { format } from "date-fns";
 
 type SearchCategory = "all" | "people" | "events" | "businesses" | "jobs" | "news" | "scholarships" | "mentorships" | "archives" | "donations";
@@ -54,7 +55,7 @@ export default function GlobalSearch() {
     queryKey: ["search-members", query, dobFilter, countryId, stateId, cityId],
     queryFn: async () => {
       if (!query.trim() && !dobFilter && !countryId) return [];
-      let q = supabase.from("members").select("id, first_name, last_name, photo_url, gender, dob, chapters(name, country_id, state_id, city_id), verification_level, global_id").eq("onboarding_completed", true);
+      let q = supabase.from("members").select("id, first_name, last_name, photo_url, gender, dob, chapters(name, country_id, state_id, city_id), verification_level, global_id").eq("onboarding_completed", true).neq("first_name", E2E_MEMBER_FIRST_NAME);
       if (query.trim()) q = q.or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,global_id.ilike.%${query}%`);
       if (dobFilter) q = q.eq("dob", dobFilter);
       if (countryId) q = q.eq("chapters.country_id", countryId);

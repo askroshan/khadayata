@@ -9,6 +9,7 @@ import {
 import { useTotalMemberCount, useTotalChapterCount, useTotalBusinessCount, useTotalCountryCount } from "@/hooks/useChapter";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { E2E_MEMBER_FIRST_NAME } from "@/lib/test-members";
 import SEOMeta from "@/components/SEOMeta";
 
 const LOGO = "/Screenshot_2026-03-16_at_9.18.14_AM.png";
@@ -171,6 +172,7 @@ export default function Index() {
         .select("id, first_name, last_name, global_id, photo_url, verification_level, created_at, chapters(name)")
         .eq("onboarding_completed", true)
         .gte("verification_level", 1)
+        .neq("first_name", E2E_MEMBER_FIRST_NAME)
         .order("created_at", { ascending: false })
         .limit(5);
       if (error) throw error;

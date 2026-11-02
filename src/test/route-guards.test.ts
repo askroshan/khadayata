@@ -68,6 +68,7 @@ const ROUTES: Array<{
   { path: "/terms", component: "Terms", category: "public" },
   { path: "/privacy", component: "PrivacyPolicy", category: "public" },
   { path: "/accessibility", component: "Accessibility", category: "public" },
+  { path: "*", component: "NotFound", category: "public" },
 ];
 
 describe("Route guard classification — every route has correct auth guard", () => {
@@ -116,6 +117,10 @@ describe("Route completeness — every App.tsx route is classified", () => {
 
   for (const route of ROUTES) {
     it(`${route.path} is declared in App.tsx`, () => {
+      if (route.path === "*") {
+        expect(appSource).toMatch(/path=["']\*["']/);
+        return;
+      }
       // Check the path appears in a Route element
       expect(appSource).toContain(`path="${route.path}"`);
     });

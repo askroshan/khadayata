@@ -7,7 +7,8 @@ const corsHeaders = {
 };
 
 const EASIFY_BASE = "https://backend.easify.app/api/v2";
-const EASIFY_FROM = "19723710001";
+/** Override via EASIFY_FROM_NUMBER secret (E.164 or digits). Default legacy DID. */
+const EASIFY_FROM = (Deno.env.get("EASIFY_FROM_NUMBER") ?? "19723710001").replace(/^\+/, "");
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -93,7 +94,19 @@ Deno.serve(async (req: Request) => {
       signal: controller.signal,
     }).finally(() => clearTimeout(timeout));
 
-    const easifyResult = await easifyResponse.json();
+    const easifyText = await easifyResponse.text();
+    let easifyResult: Record<string, unknown> = {};
+    try {
+      easifyResult = easifyText ? JSON.parse(easifyText) : {};
+    } catch {
+      return new Response(
+        JSON.stringify({
+          error: "Easify campaign error",
+          details: { status: easifyResponse.status, body: easifyText.slice(0, 500) },
+        }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
     const success = easifyResponse.ok;
 
     await adminClient.from("sms_messages").insert({

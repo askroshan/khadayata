@@ -114,12 +114,13 @@ describe("Authorization — admin section access", () => {
     expect(canAccessTab(chapterAdminRoles, "audits")).toBe(false);
   });
 
-  it("Moderator can view stats, moderator, reports, banned-keywords but NOT members, finance", () => {
+  it("Moderator can view stats, moderator, reports, keywords, members, news but NOT finance", () => {
     expect(canAccessTab(moderatorRoles, "stats")).toBe(true);
     expect(canAccessTab(moderatorRoles, "moderator")).toBe(true);
     expect(canAccessTab(moderatorRoles, "reports")).toBe(true);
     expect(canAccessTab(moderatorRoles, "banned-keywords")).toBe(true);
-    expect(canAccessTab(moderatorRoles, "members")).toBe(false);
+    expect(canAccessTab(moderatorRoles, "members")).toBe(true);
+    expect(canAccessTab(moderatorRoles, "news-publisher")).toBe(true);
     expect(canAccessTab(moderatorRoles, "finance")).toBe(false);
   });
 

@@ -3,10 +3,16 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRoles, usePermissions } from "@/hooks/useRoles";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { resolveAdminTab, type AdminTab } from "@/lib/admin-utils";
+import {
+  resolveAdminTab,
+  canAccessTab,
+  canAccessAdmin,
+  firstAccessibleAdminTab,
+  type AdminTab,
+  type UserRoles,
+} from "@/lib/admin-utils";
 import AppLayout from "@/components/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -34,9 +40,50 @@ import BulkContentTab from "@/components/admin/BulkContentTab";
 
 export default function Admin() {
   const { user, loading } = useAuth();
-  const { isAnyAdmin, isModerator, roles, isLoading: rolesLoading, isGlobalAdmin, isChapterAdmin, myChapterId, isDataSteward, isDirectoryManager, isEventManager, isFinanceAdmin, isPublisher } = useRoles();
-  const { canVerifyMembers, canManageTransfers, canViewAudits, canManageAnnouncements, canManageDirectory, canManageEvents, canManageFunds, canPublishNews, canInviteMembers } = usePermissions();
+  const {
+    isAnyAdmin,
+    roles,
+    isLoading: rolesLoading,
+    isGlobalAdmin,
+    isChapterAdmin,
+    myChapterId,
+    isDataSteward,
+    isDirectoryManager,
+    isEventManager,
+    isFinanceAdmin,
+    isPublisher,
+    isModerator,
+  } = useRoles();
+  const { canVerifyMembers, canInviteMembers } = usePermissions();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  const userRoles: UserRoles = {
+    isGlobalAdmin,
+    isChapterAdmin,
+    isDataSteward,
+    isDirectoryManager,
+    isEventManager,
+    isFinanceAdmin,
+    isPublisher,
+    isModerator,
+  };
+
+  const rawTab = searchParams.get("tab");
+  const requestedTab = resolveAdminTab(rawTab);
+  // Bare /admin lands on a role-appropriate tab (not empty "stats").
+  const activeTab: AdminTab =
+    rawTab === null || rawTab === ""
+      ? firstAccessibleAdminTab(userRoles)
+      : canAccessTab(userRoles, requestedTab)
+        ? requestedTab
+        : firstAccessibleAdminTab(userRoles);
+
+  const setTab = (tab: string) => {
+    const next = resolveAdminTab(tab);
+    if (canAccessTab(userRoles, next)) {
+      setSearchParams({ tab: next });
+    }
+  };
 
   const { data: allMembers } = useQuery({
     queryKey: ["admin-members", myChapterId],
@@ -47,7 +94,7 @@ export default function Admin() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user && canVerifyMembers,
+    enabled: !!user && canAccessTab(userRoles, "members"),
   });
 
   const { data: roleAssignments } = useQuery({
@@ -61,7 +108,7 @@ export default function Admin() {
       const { data } = await q;
       return data ?? [];
     },
-    enabled: !!user && (isGlobalAdmin || isChapterAdmin || isDataSteward),
+    enabled: !!user && canAccessTab(userRoles, "roles"),
   });
 
   const { data: audits } = useQuery({
@@ -70,7 +117,7 @@ export default function Admin() {
       const { data } = await supabase.from("audits").select("*").order("created_at", { ascending: false }).limit(50);
       return data ?? [];
     },
-    enabled: !!user && canViewAudits,
+    enabled: !!user && canAccessTab(userRoles, "audits"),
   });
 
   const { data: tagRequests } = useQuery({
@@ -79,23 +126,29 @@ export default function Admin() {
       const { data } = await supabase.from("tag_requests").select("*").order("created_at", { ascending: false });
       return data ?? [];
     },
-    enabled: !!user && (isGlobalAdmin || isChapterAdmin || isDataSteward),
+    enabled: !!user && canAccessTab(userRoles, "tag-requests"),
   });
 
   const { data: announcements } = useQuery({
-    queryKey: ["admin-announcements"],
+    queryKey: ["admin-announcements", myChapterId],
     queryFn: async () => {
-      const { data } = await supabase.from("announcements").select("*").order("created_at", { ascending: false });
+      let q = supabase
+        .from("announcements")
+        .select("id, title, body, created_at, chapter_id")
+        .order("created_at", { ascending: false });
+      if (myChapterId) {
+        q = q.or(`chapter_id.eq.${myChapterId},chapter_id.is.null`);
+      }
+      const { data } = await q;
       return data ?? [];
     },
-    enabled: !!user && canManageAnnouncements,
+    enabled: !!user && canAccessTab(userRoles, "announcements"),
   });
 
   if (loading || rolesLoading) return <div className="flex min-h-screen items-center justify-center"><div className="animate-pulse text-muted-foreground">Loading...</div></div>;
   if (!user) return <Navigate to="/auth" replace />;
 
-  // Access denied for non-admins
-  if (!isAnyAdmin) {
+  if (!isAnyAdmin || !canAccessAdmin(userRoles)) {
     return (
       <AppLayout title="Admin">
         <div className="flex flex-col items-center justify-center min-h-[60vh] p-6">
@@ -104,7 +157,7 @@ export default function Admin() {
           </div>
           <h1 className="text-2xl font-display font-bold text-center">Access Denied</h1>
           <p className="text-muted-foreground text-center mt-2 max-w-md">
-            You don't have permission to access the Admin Dashboard. 
+            You don't have permission to access the Admin Dashboard.
             Contact a Global Admin if you believe this is an error.
           </p>
           <div className="mt-4 p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
@@ -113,6 +166,16 @@ export default function Admin() {
         </div>
       </AppLayout>
     );
+  }
+
+  // Dedicated moderation surface lives at /moderation
+  if (activeTab === "moderator") {
+    return <Navigate to="/moderation" replace />;
+  }
+
+  // Normalize legacy aliases / unauthorized tabs into the URL
+  if (searchParams.get("tab") !== activeTab) {
+    return <Navigate to={`/admin?tab=${activeTab}`} replace />;
   }
 
   return (
@@ -152,63 +215,63 @@ export default function Admin() {
           </CollapsibleTrigger>
           <CollapsibleContent className="mt-2 space-y-2 pt-2 border-t border-border">
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-              {canVerifyMembers && (
-                <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => searchParams.get('tab') !== 'members' && setSearchParams({ tab: 'members' })}>
+              {canAccessTab(userRoles, "members") && (
+                <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => setTab("members")}>
                   <Users className="w-3 h-3 mr-1" /> Members
                 </Button>
               )}
-              {isGlobalAdmin && (
-                <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => setSearchParams({ tab: 'chapters' })}>
+              {canAccessTab(userRoles, "chapters") && (
+                <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => setTab("chapters")}>
                   <Building2 className="w-3 h-3 mr-1" /> Chapters
                 </Button>
               )}
-              {canManageEvents && (
-                <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => setSearchParams({ tab: 'events' })}>
+              {canAccessTab(userRoles, "events") && (
+                <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => setTab("events")}>
                   <Calendar className="w-3 h-3 mr-1" /> Events
                 </Button>
               )}
-              {(isGlobalAdmin || isChapterAdmin || isDataSteward) && (
-                <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => setSearchParams({ tab: 'roles' })}>
+              {canAccessTab(userRoles, "roles") && (
+                <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => setTab("roles")}>
                   <Shield className="w-3 h-3 mr-1" /> Roles
                 </Button>
               )}
-              {canManageDirectory && (
-                <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => setSearchParams({ tab: 'directory' })}>
+              {canAccessTab(userRoles, "directory") && (
+                <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => setTab("directory")}>
                   <Building2 className="w-3 h-3 mr-1" /> Directory
                 </Button>
               )}
-              {canManageFunds && (
-                <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => setSearchParams({ tab: 'finance' })}>
+              {canAccessTab(userRoles, "finance") && (
+                <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => setTab("finance")}>
                   <DollarSign className="w-3 h-3 mr-1" /> Finance
                 </Button>
               )}
-              {canPublishNews && (
-                <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => setSearchParams({ tab: 'publisher' })}>
+              {canAccessTab(userRoles, "news-publisher") && (
+                <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => setTab("news-publisher")}>
                   <Newspaper className="w-3 h-3 mr-1" /> News
                 </Button>
               )}
-              {(isAnyAdmin || isModerator) && (
-                <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => setSearchParams({ tab: 'reports' })}>
+              {canAccessTab(userRoles, "reports") && (
+                <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => setTab("reports")}>
                   <Flag className="w-3 h-3 mr-1" /> Reports
                 </Button>
               )}
-              {canManageAnnouncements && (
-                <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => setSearchParams({ tab: 'announcements' })}>
+              {canAccessTab(userRoles, "announcements") && (
+                <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => setTab("announcements")}>
                   <BookOpen className="w-3 h-3 mr-1" /> Announce
                 </Button>
               )}
-              {isGlobalAdmin && (
-                <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => setSearchParams({ tab: 'bulk-content' })}>
+              {canAccessTab(userRoles, "bulk-content") && (
+                <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => setTab("bulk-content")}>
                   <Trash2 className="w-3 h-3 mr-1" /> Bulk Delete
                 </Button>
               )}
-              {canViewAudits && (
-                <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => setSearchParams({ tab: 'audits' })}>
+              {canAccessTab(userRoles, "audits") && (
+                <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => setTab("audits")}>
                   <LayoutDashboard className="w-3 h-3 mr-1" /> Audits
                 </Button>
               )}
-              {(isGlobalAdmin || isChapterAdmin) && (
-                <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => setSearchParams({ tab: 'analytics' })}>
+              {canAccessTab(userRoles, "analytics") && (
+                <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => setTab("analytics")}>
                   <BarChart2 className="w-3 h-3 mr-1" /> Analytics
                 </Button>
               )}
@@ -216,122 +279,132 @@ export default function Admin() {
           </CollapsibleContent>
         </Collapsible>
 
-        <Tabs value={searchParams.get('tab') || (isDataSteward && !isGlobalAdmin ? "verification" : isDirectoryManager && !isGlobalAdmin ? "directory" : isEventManager && !isGlobalAdmin ? "events" : isFinanceAdmin && !isGlobalAdmin ? "finance" : isPublisher && !isGlobalAdmin ? "publisher" : isModerator && !isGlobalAdmin ? "reports" : "members")} onValueChange={(tab) => setSearchParams({ tab })}>
+        <Tabs value={activeTab} onValueChange={setTab}>
           <div className="overflow-x-auto pb-1 -mb-1">
             <TabsList className="flex w-max min-w-full h-auto gap-1">
-              {isDataSteward && <TabsTrigger value="verification" className="gap-1 text-xs sm:text-sm"><LayoutDashboard className="w-3.5 h-3.5" />Verification</TabsTrigger>}
-              {canVerifyMembers && <TabsTrigger value="members" className="text-xs sm:text-sm">Members</TabsTrigger>}
-              {(isGlobalAdmin || isChapterAdmin || isDataSteward) && <TabsTrigger value="roles" className="text-xs sm:text-sm">Roles</TabsTrigger>}
-              {(isAnyAdmin || isModerator) && <TabsTrigger value="reports" className="gap-1 text-xs sm:text-sm"><Flag className="w-3.5 h-3.5" />Reports</TabsTrigger>}
-              {canManageTransfers && <TabsTrigger value="transfers" className="text-xs sm:text-sm">Transfers</TabsTrigger>}
-              {canViewAudits && <TabsTrigger value="audits" className="text-xs sm:text-sm">Audit Log</TabsTrigger>}
-              {(isGlobalAdmin || isChapterAdmin || isDataSteward) && <TabsTrigger value="tags" className="text-xs sm:text-sm">Tags</TabsTrigger>}
-              {canManageAnnouncements && <TabsTrigger value="announcements" className="text-xs sm:text-sm">Announcements</TabsTrigger>}
-              {canManageDirectory && <TabsTrigger value="directory" className="gap-1 text-xs sm:text-sm"><Building2 className="w-3.5 h-3.5" />Directory</TabsTrigger>}
-              {canManageEvents && <TabsTrigger value="events" className="gap-1 text-xs sm:text-sm"><Calendar className="w-3.5 h-3.5" />Events</TabsTrigger>}
-              {canManageFunds && <TabsTrigger value="finance" className="gap-1 text-xs sm:text-sm"><DollarSign className="w-3.5 h-3.5" />Finance</TabsTrigger>}
-              {canPublishNews && <TabsTrigger value="publisher" className="gap-1 text-xs sm:text-sm"><Newspaper className="w-3.5 h-3.5" />My Content</TabsTrigger>}
-              {isGlobalAdmin && <TabsTrigger value="chapters" className="gap-1 text-xs sm:text-sm"><Building2 className="w-3.5 h-3.5" />Chapters</TabsTrigger>}
-              {(isGlobalAdmin || isChapterAdmin) && <TabsTrigger value="samiti" className="text-xs sm:text-sm">Samiti</TabsTrigger>}
-              {isGlobalAdmin && <TabsTrigger value="whatsapp" className="text-xs sm:text-sm">WhatsApp</TabsTrigger>}
-              {isGlobalAdmin && <TabsTrigger value="sms" className="text-xs sm:text-sm">SMS</TabsTrigger>}
-              {isGlobalAdmin && <TabsTrigger value="bulk-content" className="gap-1 text-xs sm:text-sm"><Trash2 className="w-3.5 h-3.5" />Bulk Delete</TabsTrigger>}
-              {(isGlobalAdmin || isModerator) && <TabsTrigger value="keywords" className="text-xs sm:text-sm">Keywords</TabsTrigger>}
-              {(isGlobalAdmin || isChapterAdmin) && <TabsTrigger value="analytics" className="gap-1 text-xs sm:text-sm"><BarChart2 className="w-3.5 h-3.5" />Analytics</TabsTrigger>}
+              {canAccessTab(userRoles, "verification") && <TabsTrigger value="verification" className="gap-1 text-xs sm:text-sm"><LayoutDashboard className="w-3.5 h-3.5" />Verification</TabsTrigger>}
+              {canAccessTab(userRoles, "members") && <TabsTrigger value="members" className="text-xs sm:text-sm">Members</TabsTrigger>}
+              {canAccessTab(userRoles, "roles") && <TabsTrigger value="roles" className="text-xs sm:text-sm">Roles</TabsTrigger>}
+              {canAccessTab(userRoles, "reports") && <TabsTrigger value="reports" className="gap-1 text-xs sm:text-sm"><Flag className="w-3.5 h-3.5" />Reports</TabsTrigger>}
+              {canAccessTab(userRoles, "transfers") && <TabsTrigger value="transfers" className="text-xs sm:text-sm">Transfers</TabsTrigger>}
+              {canAccessTab(userRoles, "audits") && <TabsTrigger value="audits" className="text-xs sm:text-sm">Audit Log</TabsTrigger>}
+              {canAccessTab(userRoles, "tag-requests") && <TabsTrigger value="tag-requests" className="text-xs sm:text-sm">Tags</TabsTrigger>}
+              {canAccessTab(userRoles, "announcements") && <TabsTrigger value="announcements" className="text-xs sm:text-sm">Announcements</TabsTrigger>}
+              {canAccessTab(userRoles, "directory") && <TabsTrigger value="directory" className="gap-1 text-xs sm:text-sm"><Building2 className="w-3.5 h-3.5" />Directory</TabsTrigger>}
+              {canAccessTab(userRoles, "events") && <TabsTrigger value="events" className="gap-1 text-xs sm:text-sm"><Calendar className="w-3.5 h-3.5" />Events</TabsTrigger>}
+              {canAccessTab(userRoles, "finance") && <TabsTrigger value="finance" className="gap-1 text-xs sm:text-sm"><DollarSign className="w-3.5 h-3.5" />Finance</TabsTrigger>}
+              {canAccessTab(userRoles, "news-publisher") && <TabsTrigger value="news-publisher" className="gap-1 text-xs sm:text-sm"><Newspaper className="w-3.5 h-3.5" />My Content</TabsTrigger>}
+              {canAccessTab(userRoles, "chapters") && <TabsTrigger value="chapters" className="gap-1 text-xs sm:text-sm"><Building2 className="w-3.5 h-3.5" />Chapters</TabsTrigger>}
+              {canAccessTab(userRoles, "samiti") && <TabsTrigger value="samiti" className="text-xs sm:text-sm">Samiti</TabsTrigger>}
+              {canAccessTab(userRoles, "whatsapp") && <TabsTrigger value="whatsapp" className="text-xs sm:text-sm">WhatsApp</TabsTrigger>}
+              {canAccessTab(userRoles, "sms") && <TabsTrigger value="sms" className="text-xs sm:text-sm">SMS</TabsTrigger>}
+              {canAccessTab(userRoles, "bulk-content") && <TabsTrigger value="bulk-content" className="gap-1 text-xs sm:text-sm"><Trash2 className="w-3.5 h-3.5" />Bulk Delete</TabsTrigger>}
+              {canAccessTab(userRoles, "banned-keywords") && <TabsTrigger value="banned-keywords" className="text-xs sm:text-sm">Keywords</TabsTrigger>}
+              {canAccessTab(userRoles, "analytics") && <TabsTrigger value="analytics" className="gap-1 text-xs sm:text-sm"><BarChart2 className="w-3.5 h-3.5" />Analytics</TabsTrigger>}
             </TabsList>
           </div>
 
-          {isDataSteward && (
+          {canAccessTab(userRoles, "verification") && (
             <TabsContent value="verification" className="mt-4">
-              <VerificationDashboard myChapterId={myChapterId} isGlobalAdmin={isGlobalAdmin} />
+              <VerificationDashboard
+                myChapterId={myChapterId}
+                isGlobalAdmin={isGlobalAdmin}
+                canSendReminders={isGlobalAdmin || isChapterAdmin}
+              />
             </TabsContent>
           )}
-          {canVerifyMembers && (
+          {canAccessTab(userRoles, "members") && (
             <TabsContent value="members" className="mt-4">
-              <MembersTab members={allMembers} myChapterId={myChapterId} canInvite={canInviteMembers} isGlobalAdmin={isGlobalAdmin} />
+              <MembersTab
+                members={allMembers}
+                myChapterId={myChapterId}
+                canInvite={canInviteMembers}
+                canSendReminders={isGlobalAdmin || isChapterAdmin}
+                isGlobalAdmin={isGlobalAdmin}
+              />
             </TabsContent>
           )}
-          {(isGlobalAdmin || isChapterAdmin || isDataSteward) && (
+          {canAccessTab(userRoles, "roles") && (
             <TabsContent value="roles" className="mt-4">
               <RolesTab roleAssignments={roleAssignments} myChapterId={myChapterId} />
             </TabsContent>
           )}
-          {(isAnyAdmin || isModerator) && (
+          {canAccessTab(userRoles, "reports") && (
             <TabsContent value="reports" className="mt-4">
               <ReportsTab />
             </TabsContent>
           )}
-          {canManageTransfers && (
+          {canAccessTab(userRoles, "transfers") && (
             <TabsContent value="transfers" className="mt-4">
               <ChapterTransfersTab />
             </TabsContent>
           )}
-          {canViewAudits && (
+          {canAccessTab(userRoles, "audits") && (
             <TabsContent value="audits" className="mt-4">
               <AuditsTab audits={audits} />
             </TabsContent>
           )}
-          {(isGlobalAdmin || isChapterAdmin || isDataSteward) && (
-            <TabsContent value="tags" className="mt-4">
+          {canAccessTab(userRoles, "tag-requests") && (
+            <TabsContent value="tag-requests" className="mt-4">
               <TagRequestsTab tagRequests={tagRequests} />
             </TabsContent>
           )}
-          {canManageAnnouncements && (
+          {canAccessTab(userRoles, "announcements") && (
             <TabsContent value="announcements" className="mt-4">
-              <AnnouncementsTab announcements={announcements} />
+              <AnnouncementsTab announcements={announcements} myChapterId={myChapterId} />
             </TabsContent>
           )}
-          {canManageDirectory && (
+          {canAccessTab(userRoles, "directory") && (
             <TabsContent value="directory" className="mt-4">
               <DirectoryTab myChapterId={myChapterId} />
             </TabsContent>
           )}
-          {canManageEvents && (
+          {canAccessTab(userRoles, "events") && (
             <TabsContent value="events" className="mt-4">
               <EventsTab myChapterId={myChapterId} />
             </TabsContent>
           )}
-          {canManageFunds && (
+          {canAccessTab(userRoles, "finance") && (
             <TabsContent value="finance" className="mt-4">
               <FinanceTab myChapterId={myChapterId} />
             </TabsContent>
           )}
-          {canPublishNews && (
-            <TabsContent value="publisher" className="mt-4">
+          {canAccessTab(userRoles, "news-publisher") && (
+            <TabsContent value="news-publisher" className="mt-4">
               <NewsPublisherTab myChapterId={myChapterId} />
             </TabsContent>
           )}
-          {isGlobalAdmin && (
+          {canAccessTab(userRoles, "chapters") && (
             <TabsContent value="chapters" className="mt-4">
               <ChaptersTab />
             </TabsContent>
           )}
-          {(isGlobalAdmin || isChapterAdmin) && (
+          {canAccessTab(userRoles, "samiti") && (
             <TabsContent value="samiti" className="mt-4">
               <SamitiTab />
             </TabsContent>
           )}
-          {isGlobalAdmin && (
+          {canAccessTab(userRoles, "whatsapp") && (
             <TabsContent value="whatsapp" className="mt-4">
               <WhatsAppTab />
             </TabsContent>
           )}
-          {isGlobalAdmin && (
+          {canAccessTab(userRoles, "sms") && (
             <TabsContent value="sms" className="mt-4">
               <SMSTab />
             </TabsContent>
           )}
-          {isGlobalAdmin && (
+          {canAccessTab(userRoles, "bulk-content") && (
             <TabsContent value="bulk-content" className="mt-4">
               <BulkContentTab />
             </TabsContent>
           )}
-          {(isGlobalAdmin || isModerator) && (
-            <TabsContent value="keywords" className="mt-4">
+          {canAccessTab(userRoles, "banned-keywords") && (
+            <TabsContent value="banned-keywords" className="mt-4">
               <BannedKeywordsTab />
             </TabsContent>
           )}
-          {(isGlobalAdmin || isChapterAdmin) && (
+          {canAccessTab(userRoles, "analytics") && (
             <TabsContent value="analytics" className="mt-4">
               <AnalyticsTab myChapterId={myChapterId} />
             </TabsContent>

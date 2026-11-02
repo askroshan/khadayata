@@ -13,6 +13,55 @@ const FROM_NAME = "KhadayataOnline";
 const FROM_EMAIL = "noreply@khadayataonline.com";
 const REPLY_TO = "support@khadayataonline.com";
 
+/** True when DISABLE_OUTBOUND_EMAIL is 1/true/yes/on. */
+function outboundEmailDisabled(): boolean {
+  const raw = (Deno.env.get("DISABLE_OUTBOUND_EMAIL") ?? "").trim().toLowerCase();
+  return raw === "1" || raw === "true" || raw === "yes" || raw === "on";
+}
+
+/**
+ * EMAIL_ALLOWLIST: comma-separated exact emails, @domains, or substrings (e.g. cov).
+ * When outbound is disabled OR an allowlist is set, every recipient must match.
+ */
+function emailAllowlist(): string[] {
+  return (Deno.env.get("EMAIL_ALLOWLIST") ?? "")
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function recipientAllowed(email: string, allow: string[]): boolean {
+  const e = email.trim().toLowerCase();
+  if (!e) return false;
+  if (allow.length === 0) return !outboundEmailDisabled();
+  return allow.some((rule) => {
+    if (rule.startsWith("@")) return e.endsWith(rule) || e.endsWith(rule.slice(1));
+    if (rule.includes("@")) return e === rule;
+    return e.includes(rule);
+  });
+}
+
+function assertRecipientsAllowed(recipients: string[]): Response | null {
+  const disabled = outboundEmailDisabled();
+  const allow = emailAllowlist();
+  // Hard stop: disabled with no allowlist → block all. Disabled/allowlist set → require match.
+  if (!disabled && allow.length === 0) return null;
+  const blocked = recipients.filter((r) => !recipientAllowed(r, allow));
+  if (blocked.length === 0) return null;
+  const errMsg = disabled
+    ? "Outbound email disabled (DISABLE_OUTBOUND_EMAIL). Recipient not on EMAIL_ALLOWLIST."
+    : "Recipient not on EMAIL_ALLOWLIST.";
+  console.error("[send-email] blocked outbound", {
+    disabled,
+    blocked_count: blocked.length,
+    sample: blocked.slice(0, 3),
+  });
+  return new Response(
+    JSON.stringify({ error: errMsg, blocked_count: blocked.length }),
+    { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+  );
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
@@ -79,6 +128,9 @@ Deno.serve(async (req: Request) => {
     }
 
     const recipients = Array.isArray(to) ? to : [to];
+
+    const allowResp = assertRecipientsAllowed(recipients);
+    if (allowResp) return allowResp;
 
     // Non-internal callers may not fan out, and may not supply raw subject/HTML:
     // that would bypass the escaping model enforced by templates.ts.

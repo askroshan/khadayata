@@ -37,13 +37,12 @@ function filterMembers(
   if (filterStatus === "pending") list = list.filter((m) => !m.onboarding_completed);
 
   if (dateFrom) {
-    const fromDate = new Date(dateFrom);
+    const fromDate = new Date(`${dateFrom}T00:00:00.000Z`);
     list = list.filter((m) => m.created_at && new Date(m.created_at) >= fromDate);
   }
 
   if (dateTo) {
-    const toDate = new Date(dateTo);
-    toDate.setHours(23, 59, 59, 999);
+    const toDate = new Date(`${dateTo}T23:59:59.999Z`);
     list = list.filter((m) => m.created_at && new Date(m.created_at) <= toDate);
   }
 

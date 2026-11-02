@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { E2E_MEMBER_FIRST_NAME, isE2ETestMember } from "@/lib/test-members";
 
 /** Fetch a single chapter by slug with location data */
 export function useChapterBySlug(slug?: string) {
@@ -26,7 +27,8 @@ export function useChapterMemberCount(chapterId?: string) {
       const { count, error } = await supabase
         .from("members")
         .select("id", { count: "exact", head: true })
-        .eq("chapter_id", chapterId!);
+        .eq("chapter_id", chapterId!)
+        .neq("first_name", E2E_MEMBER_FIRST_NAME);
       if (error) throw error;
       return count ?? 0;
     },
@@ -44,6 +46,7 @@ export function useChapterMembers(chapterId?: string) {
         .select("id, first_name, last_name, photo_url, global_id, verification_level, onboarding_completed")
         .eq("chapter_id", chapterId!)
         .eq("deceased", false)
+        .neq("first_name", E2E_MEMBER_FIRST_NAME)
         .order("first_name");
       if (error) throw error;
       return data ?? [];
@@ -63,7 +66,10 @@ export function useChapterCommittee(chapterId?: string) {
         .eq("roles.chapter_id", chapterId!)
         .or("end_date.is.null,end_date.gte." + new Date().toISOString().split("T")[0]);
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []).filter((row) => {
+        const m = row.members as { first_name?: string | null } | null;
+        return !isE2ETestMember(m ?? {});
+      });
     },
     enabled: !!chapterId,
   });
@@ -81,7 +87,10 @@ export function useChapterPastCommittee(chapterId?: string) {
         .lt("end_date", new Date().toISOString().split("T")[0])
         .order("end_date", { ascending: false });
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []).filter((row) => {
+        const m = row.members as { first_name?: string | null } | null;
+        return !isE2ETestMember(m ?? {});
+      });
     },
     enabled: !!chapterId,
   });
@@ -191,7 +200,8 @@ export function useTotalMemberCount() {
     queryFn: async () => {
       const { count, error } = await supabase
         .from("members")
-        .select("id", { count: "exact", head: true });
+        .select("id", { count: "exact", head: true })
+        .neq("first_name", E2E_MEMBER_FIRST_NAME);
       if (error) throw error;
       return count ?? 0;
     },

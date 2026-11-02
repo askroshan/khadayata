@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/contexts/AuthContext";
+import { useMember } from "@/hooks/useMember";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +30,7 @@ interface CampaignsPanelProps {
 }
 
 export function CampaignsPanel({ myChapterId }: CampaignsPanelProps) {
-  const { user } = useAuth();
+  const { member } = useMember();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
@@ -64,6 +64,7 @@ export function CampaignsPanel({ myChapterId }: CampaignsPanelProps) {
       if (!form.title.trim() || !form.goal_amount || !form.start_date || !form.end_date) {
         throw new Error("Fill in all required fields");
       }
+      if (!member?.id) throw new Error("Member profile required to create a campaign");
       const { error } = await supabase.from("fundraising_campaigns").insert({
         title: form.title.trim(),
         description: form.description.trim(),
@@ -73,7 +74,7 @@ export function CampaignsPanel({ myChapterId }: CampaignsPanelProps) {
         end_date: form.end_date,
         campaign_type: form.campaign_type,
         chapter_id: myChapterId || null,
-        created_by: user!.id,
+        created_by: member.id,
         cover_image_url: form.cover_image_url.trim() || null,
         status: "draft",
       });

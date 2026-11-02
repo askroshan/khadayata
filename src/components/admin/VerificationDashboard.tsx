@@ -17,9 +17,15 @@ import { useToast } from "@/hooks/use-toast";
 interface VerificationDashboardProps {
   myChapterId: string | null;
   isGlobalAdmin?: boolean;
+  /** Matches send-reminder edge ALLOWED_ROLES (Global Admin | Chapter Admin). */
+  canSendReminders?: boolean;
 }
 
-export default function VerificationDashboard({ myChapterId, isGlobalAdmin = false }: VerificationDashboardProps) {
+export default function VerificationDashboard({
+  myChapterId,
+  isGlobalAdmin = false,
+  canSendReminders = false,
+}: VerificationDashboardProps) {
   const { user } = useAuth();
   const { member } = useMember();
   const { toast } = useToast();
@@ -233,7 +239,7 @@ export default function VerificationDashboard({ myChapterId, isGlobalAdmin = fal
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            {isGlobalAdmin && (
+            {canSendReminders && (
               <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 pb-2 border-b border-border gap-2">
                 <div className="flex items-center gap-2">
                   <Checkbox
@@ -279,7 +285,7 @@ export default function VerificationDashboard({ myChapterId, isGlobalAdmin = fal
                 return (
                   <div key={m.id} className={`flex items-center justify-between py-1.5 border-b border-border last:border-0 gap-2 ${isSelected ? "bg-amber-50/50 rounded" : ""}`}>
                     <div className="flex items-center gap-2 min-w-0">
-                      {isGlobalAdmin && (
+                      {canSendReminders && (
                         <Checkbox
                           checked={isSelected}
                           onCheckedChange={(checked) => {
@@ -307,7 +313,7 @@ export default function VerificationDashboard({ myChapterId, isGlobalAdmin = fal
                       </div>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
-                      {isGlobalAdmin && emailInfo && (
+                      {canSendReminders && (isGlobalAdmin ? !!emailInfo : true) && (
                         <Button
                           size="sm"
                           variant="ghost"
@@ -315,6 +321,7 @@ export default function VerificationDashboard({ myChapterId, isGlobalAdmin = fal
                           disabled={sendReminder.isPending}
                           onClick={() => sendReminder.mutate([m.id])}
                           title="Send reminder email"
+                          aria-label="Send reminder email"
                         >
                           <Send className="w-3 h-3" />
                         </Button>

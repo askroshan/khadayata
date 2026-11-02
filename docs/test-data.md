@@ -23,6 +23,11 @@ All accounts below are seeded in **local development only**. Password for all ac
 
 ### Role-Based Accounts
 
+These rows use `first_name = "E2E"` so public chapter rosters, directory, and
+search hide them (`src/lib/test-members.ts`) while Auth/login and admin tools
+still use the accounts for E2E. Do **not** delete them from local DB unless you
+intentionally retire the local test suite.
+
 | Email | Role | Chapter | Notes |
 |---|---|---|---|
 | `global-admin@khadayataonline.com` | Global Admin | Global | Full platform access, can manage all data |

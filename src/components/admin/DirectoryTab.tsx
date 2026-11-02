@@ -14,12 +14,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Building2, Briefcase, Search, CircleCheck as CheckCircle, CircleX, Clock, MapPin, Phone, ExternalLink, Pencil, Trash2, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useMember } from "@/hooks/useMember";
 
 interface DirectoryTabProps {
   myChapterId: string | null;
 }
 
 export default function DirectoryTab({ myChapterId }: DirectoryTabProps) {
+  const { member } = useMember();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [bizSearch, setBizSearch] = useState("");
@@ -140,13 +142,15 @@ export default function DirectoryTab({ myChapterId }: DirectoryTabProps) {
   const createBizMutation = useMutation({
     mutationFn: async () => {
       if (!newBiz.name.trim()) throw new Error("Business name is required");
+      if (!member?.id) throw new Error("Not a member");
       const { error } = await supabase.from("businesses").insert({
         name: newBiz.name.trim(),
         sector: newBiz.sector.trim() || null,
         description: newBiz.description.trim() || null,
         phone: newBiz.phone.trim() || null,
         website: newBiz.website.trim() || null,
-        chapter_id: myChapterId,
+        chapter_id: myChapterId || member.chapter_id,
+        owner_member_id: member.id,
         verified: false,
       } as never);
       if (error) throw error;
@@ -163,12 +167,14 @@ export default function DirectoryTab({ myChapterId }: DirectoryTabProps) {
   const createJobMutation = useMutation({
     mutationFn: async () => {
       if (!newJob.title.trim()) throw new Error("Job title is required");
+      if (!member?.id) throw new Error("Not a member");
       const { error } = await supabase.from("jobs").insert({
         title: newJob.title.trim(),
         description: newJob.description.trim() || null,
         location: newJob.location.trim() || null,
         employment_type: newJob.employment_type,
-        chapter_id: myChapterId || null,
+        chapter_id: myChapterId || member.chapter_id || null,
+        employer_member_id: member.id,
         status: "open",
       });
       if (error) throw error;
