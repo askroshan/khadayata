@@ -1,4 +1,7 @@
-import { describe, it, expect, afterAll } from "vitest";
+import { describe, it, expect, afterAll, beforeAll } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { createClient } from "@supabase/supabase-js";
 import { screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderApp } from "@/test/helpers/render-app";
@@ -9,6 +12,21 @@ import { FamilyTree } from "@/components/profile/FamilyTree";
 import { QRCodeDisplay } from "@/components/QRCodeDisplay";
 import { RishtaWorkflow } from "@/components/matrimonial/RishtaWorkflow";
 import { render } from "@testing-library/react";
+
+function envFromDotenv(name: string): string | undefined {
+  if (process.env[name]) return process.env[name];
+  try {
+    const raw = readFileSync(resolve(__dirname, "../../../.env"), "utf8");
+    const line = raw.split("\n").find((l) => l.startsWith(`${name}=`));
+    return line?.slice(name.length + 1)?.trim();
+  } catch {
+    return undefined;
+  }
+}
+
+const url = process.env.VITE_SUPABASE_URL ?? import.meta.env.VITE_SUPABASE_URL;
+const serviceKey = envFromDotenv("SUPABASE_SERVICE_ROLE_KEY");
+const disposableProfileIds: string[] = [];
 
 let lastSignInAt = 0;
 async function signIn(email: string) {
@@ -30,7 +48,81 @@ async function signIn(email: string) {
 }
 
 describe("ChapterContact + FamilyTree + QR deep", () => {
+  beforeAll(async () => {
+    if (!serviceKey) throw new Error("SUPABASE_SERVICE_ROLE_KEY required for Rishta seed");
+    const admin = createClient(url, serviceKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    // Ensure member@ has a matrimonial profile + at least one other profile for send dialog.
+    const { data: authUsers } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
+    const memberUser = authUsers?.users?.find(
+      (u) => u.email?.toLowerCase() === E2E_ACCOUNTS.member.email.toLowerCase(),
+    );
+    if (!memberUser) throw new Error("E2E member auth user missing");
+    const { data: memberRow } = await admin
+      .from("members")
+      .select("id")
+      .eq("user_id", memberUser.id)
+      .maybeSingle();
+    if (!memberRow?.id) throw new Error("E2E member row missing");
+
+    const { data: existing } = await admin
+      .from("matrimonial_profiles")
+      .select("id")
+      .eq("member_id", memberRow.id)
+      .maybeSingle();
+    if (!existing?.id) {
+      const { data: created, error } = await admin
+        .from("matrimonial_profiles")
+        .insert({
+          member_id: memberRow.id,
+          about: "CovFailFixes disposable member profile",
+          current_city: "Ahmedabad",
+          visibility: "members",
+        })
+        .select("id")
+        .single();
+      if (error) throw error;
+      disposableProfileIds.push(created!.id);
+    }
+
+    const { data: others } = await admin
+      .from("matrimonial_profiles")
+      .select("id")
+      .neq("member_id", memberRow.id)
+      .limit(1);
+    if (!others?.length) {
+      const { data: gaUser } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
+      const ga = gaUser?.users?.find(
+        (u) => u.email?.toLowerCase() === E2E_ACCOUNTS.globalAdmin.email.toLowerCase(),
+      );
+      const { data: gaMember } = await admin
+        .from("members")
+        .select("id")
+        .eq("user_id", ga!.id)
+        .maybeSingle();
+      const { data: created, error } = await admin
+        .from("matrimonial_profiles")
+        .insert({
+          member_id: gaMember!.id,
+          about: "CovFailFixes disposable target profile",
+          current_city: "Surat",
+          visibility: "members",
+        })
+        .select("id")
+        .single();
+      if (error) throw error;
+      disposableProfileIds.push(created!.id);
+    }
+  });
+
   afterAll(async () => {
+    if (serviceKey && disposableProfileIds.length) {
+      const admin = createClient(url, serviceKey, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+      await admin.from("matrimonial_profiles").delete().in("id", disposableProfileIds);
+    }
     await supabase.auth.signOut();
   });
 
