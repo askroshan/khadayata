@@ -201,7 +201,11 @@ const seeded = {
   memberLast: null as string | null,
   campaignId: null as string | null,
   donationId: null as string | null,
+  donationOkId: null as string | null,
+  donationLedgerId: null as string | null,
   campaignDonationId: null as string | null,
+  campaignDonationOkId: null as string | null,
+  fundUniqueId: null as string | null,
   announcementId: null as string | null,
   obituaryIds: [] as string[],
   newsId: null as string | null,
@@ -314,6 +318,20 @@ describe("Pass 21 — Wave 10 chapters/temple remainder (real Kong)", () => {
     seeded.campaignId = camp?.id ?? null;
 
     const { data: fund } = await admin.from("funds").select("id").eq("active", true).limit(1).maybeSingle();
+    // Unique fund name so Temple ledger search hits fund-name arm (line 509) without
+    // short-circuiting on donor_name / member name.
+    const { data: fundUnique } = await admin
+      .from("funds")
+      .insert({
+        scope: "global",
+        name: `${PREFIX} UniqueFundOnly`,
+        currency: "INR",
+        active: true,
+      })
+      .select("id")
+      .single();
+    seeded.fundUniqueId = fundUnique?.id ?? null;
+
     if (fund && seeded.campaignId) {
       const { data: don } = await admin
         .from("donations")
@@ -338,6 +356,48 @@ describe("Pass 21 — Wave 10 chapters/temple remainder (real Kong)", () => {
           .single();
         seeded.campaignDonationId = cd?.id ?? null;
       }
+      // Succeeded INR donation → getRaised success add (line 113)
+      const { data: donOk } = await admin
+        .from("donations")
+        .insert({
+          fund_id: fund.id,
+          member_id: seeded.memberId,
+          amount: 250,
+          currency: "INR",
+          type: "one_time",
+          provider: "manual",
+          status: "succeeded",
+          donor_name: `${PREFIX} RaisedOk`,
+        })
+        .select("id")
+        .single();
+      seeded.donationOkId = donOk?.id ?? null;
+      if (donOk) {
+        const { data: cdOk } = await admin
+          .from("campaign_donations")
+          .insert({ campaign_id: seeded.campaignId, donation_id: donOk.id })
+          .select("id")
+          .single();
+        seeded.campaignDonationOkId = cdOk?.id ?? null;
+      }
+    }
+
+    if (seeded.fundUniqueId) {
+      const { data: led } = await admin
+        .from("donations")
+        .insert({
+          fund_id: seeded.fundUniqueId,
+          member_id: seeded.memberId,
+          amount: 11,
+          currency: "INR",
+          type: "one_time",
+          provider: "manual",
+          status: "succeeded",
+          donor_name: "ZZZ Unrelated Donor Name",
+        })
+        .select("id")
+        .single();
+      seeded.donationLedgerId = led?.id ?? null;
     }
 
     // Chapter announcement for badge
@@ -437,9 +497,13 @@ describe("Pass 21 — Wave 10 chapters/temple remainder (real Kong)", () => {
     if (seeded.wallClearedIds.length) {
       await admin.from("donations").update({ donor_wall_opt_in: true }).in("id", seeded.wallClearedIds);
     }
+    if (seeded.campaignDonationOkId) await admin.from("campaign_donations").delete().eq("id", seeded.campaignDonationOkId);
     if (seeded.campaignDonationId) await admin.from("campaign_donations").delete().eq("id", seeded.campaignDonationId);
+    if (seeded.donationOkId) await admin.from("donations").delete().eq("id", seeded.donationOkId);
+    if (seeded.donationLedgerId) await admin.from("donations").delete().eq("id", seeded.donationLedgerId);
     if (seeded.donationId) await admin.from("donations").delete().eq("id", seeded.donationId);
     if (seeded.campaignId) await admin.from("fundraising_campaigns").delete().eq("id", seeded.campaignId);
+    if (seeded.fundUniqueId) await admin.from("funds").delete().eq("id", seeded.fundUniqueId);
     if (seeded.voteId) await admin.from("council_votes").delete().eq("id", seeded.voteId);
     if (seeded.threadId) {
       await admin.from("council_votes").delete().eq("thread_id", seeded.threadId);
@@ -554,15 +618,21 @@ describe("Pass 21 — Wave 10 chapters/temple remainder (real Kong)", () => {
     }, { timeout: 10_000 });
     unmount();
 
-    // Finance admin — search by member first name (not MARKER donor_name) for lines 508–509
+    // Finance admin — search by unique fund name (line 509) after donor_name/member miss
     await signIn(E2E_ACCOUNTS.financeAdmin.email);
     renderApp(withToaster(<Temple />), { route: "/temple" });
     await waitFor(() => {
       expect(document.body.textContent).toMatch(/Donation Ledger/i);
     }, { timeout: 30_000 });
     const search = await screen.findByPlaceholderText(/Search donor or fund/i);
-    const nameQ = (seeded.memberFirst || "E2E").slice(0, 12);
-    fireEvent.change(search, { target: { value: nameQ } });
+    // UniqueFundOnly is only in fund.name — donor_name is "ZZZ Unrelated…"
+    fireEvent.change(search, { target: { value: `${PREFIX} UniqueFundOnly` } });
+    await waitFor(() => {
+      expect(document.body.textContent).toMatch(/UniqueFundOnly|ZZZ Unrelated|11/i);
+    }, { timeout: 10_000 });
+    // Also exercise member-name arm (508) with a token absent from donor_name/fund
+    const memQ = `${seeded.memberFirst ?? "E2E"} ${seeded.memberLast ?? ""}`.trim();
+    fireEvent.change(search, { target: { value: memQ } });
     await waitFor(() => {
       expect(document.body.textContent).toMatch(/Donation Ledger|raised|donation/i);
     }, { timeout: 10_000 });
