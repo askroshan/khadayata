@@ -87,7 +87,9 @@ export default function MembersTab({
   const { data: memberStatuses } = useQuery({
     queryKey: ["admin-member-statuses", myChapterId],
     queryFn: async () => {
-      let q = supabase.from("members").select("id, suspended, blocked").limit(500);
+      // No hard limit — a 500-row cap drops newest members (DB has 500+) so
+      // Suspend/Unsuspend UI never flips for disposable/coverage fixtures.
+      let q = supabase.from("members").select("id, suspended, blocked");
       if (myChapterId) q = q.eq("chapter_id", myChapterId);
       const { data } = await q;
       const map: Record<string, { suspended: boolean; blocked: boolean }> = {};

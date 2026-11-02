@@ -896,17 +896,22 @@ describe("Pass 12 chapters + members + family invite (real Kong)", () => {
       const { data } = await admin.from("members").select("suspended").eq("id", seeded.disposableMemberId!).maybeSingle();
       expect(data?.suspended).toBe(true);
     }, { timeout: 20_000 });
+    await waitFor(() => expect(document.body.textContent).toMatch(/Member suspended/i), { timeout: 15_000 });
 
-    // status filter suspended
-    const statusSelects = screen.getAllByRole("combobox");
-    if (statusSelects[1]) await pickSelectOption(user, statusSelects[1], /Suspended/i);
-
-    actions = await openActionsForDisposable();
+    // Wait until actions dialog reflects admin-member-statuses refetch (Unsuspend, not Suspend)
+    await waitFor(
+      async () => {
+        actions = await openActionsForDisposable();
+        expect(within(actions).getByRole("button", { name: /Unsuspend Member/i })).toBeTruthy();
+      },
+      { timeout: 30_000 },
+    );
     await clickSafe(user, within(actions).getByRole("button", { name: /Unsuspend Member/i }));
     await waitFor(async () => {
       const { data } = await admin.from("members").select("suspended").eq("id", seeded.disposableMemberId!).maybeSingle();
       expect(data?.suspended).toBe(false);
     }, { timeout: 20_000 });
+    await waitFor(() => expect(document.body.textContent).toMatch(/Member unsuspended/i), { timeout: 15_000 });
 
     actions = await openActionsForDisposable();
     await clickSafe(user, within(actions).getByRole("button", { name: /Block Member/i }));
@@ -916,14 +921,21 @@ describe("Pass 12 chapters + members + family invite (real Kong)", () => {
       const { data } = await admin.from("members").select("blocked").eq("id", seeded.disposableMemberId!).maybeSingle();
       expect(data?.blocked).toBe(true);
     }, { timeout: 20_000 });
+    await waitFor(() => expect(document.body.textContent).toMatch(/Member blocked/i), { timeout: 15_000 });
 
-    if (statusSelects[1]) await pickSelectOption(user, screen.getAllByRole("combobox")[1], /Blocked/i);
-    actions = await openActionsForDisposable();
+    await waitFor(
+      async () => {
+        actions = await openActionsForDisposable();
+        expect(within(actions).getByRole("button", { name: /Unblock Member/i })).toBeTruthy();
+      },
+      { timeout: 30_000 },
+    );
     await clickSafe(user, within(actions).getByRole("button", { name: /Unblock Member/i }));
     await waitFor(async () => {
       const { data } = await admin.from("members").select("blocked").eq("id", seeded.disposableMemberId!).maybeSingle();
       expect(data?.blocked).toBe(false);
     }, { timeout: 20_000 });
+    await waitFor(() => expect(document.body.textContent).toMatch(/Member unblocked/i), { timeout: 15_000 });
 
     // Delete permanently (disposable only)
     const doomedMemberId = seeded.disposableMemberId!;
