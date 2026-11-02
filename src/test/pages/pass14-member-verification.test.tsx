@@ -67,6 +67,27 @@ function psqlKong(sql: string) {
   );
 }
 
+/** Service-role REST cannot change verification_level (guard trigger uses auth.uid()). */
+function setVerificationLevelSql(memberId: string, level: number) {
+  execFileSync(
+    "docker",
+    [
+      "exec",
+      "supabase_db_khadayata-local",
+      "psql",
+      "-U",
+      "postgres",
+      "-v",
+      "ON_ERROR_STOP=1",
+      "-c",
+      `ALTER TABLE members DISABLE TRIGGER trg_guard_privileged_member_columns;
+       UPDATE members SET verification_level = ${Number(level)} WHERE id = '${memberId}';
+       ALTER TABLE members ENABLE TRIGGER trg_guard_privileged_member_columns;`,
+    ],
+    { stdio: ["ignore", "pipe", "pipe"] },
+  );
+}
+
 const CREATE_NOTIFICATION_SQL = `
 CREATE OR REPLACE FUNCTION public.create_notification(
   p_member_id uuid, p_type text, p_title text,
@@ -168,6 +189,8 @@ const seeded = {
     privacy: unknown;
     overseas_verified: boolean | null;
     chapter_id: string | null;
+    dob: string | null;
+    birth_place: string | null;
   } | null,
   memberOrigLevel: null as number | null,
   unverifiedOrigLevel: null as number | null,
@@ -213,16 +236,16 @@ async function cleanupCovMv() {
         privacy: seeded.targetOrig.privacy as never,
         overseas_verified: seeded.targetOrig.overseas_verified,
         chapter_id: seeded.targetOrig.chapter_id,
+        dob: seeded.targetOrig.dob,
+        birth_place: seeded.targetOrig.birth_place,
       })
       .eq("id", TARGET_MEMBER);
   }
   if (seeded.memberOrigLevel != null) {
-    const { data: m } = await admin
-      .from("members")
-      .select("id")
-      .eq("user_id", (await admin.auth.admin.listUsers({ page: 1, perPage: 1000 })).data.users.find((u) => u.email === E2E_ACCOUNTS.member.email)?.id ?? "")
-      .maybeSingle();
-    if (m) await admin.from("members").update({ verification_level: seeded.memberOrigLevel }).eq("id", m.id);
+    const { data: { users } } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
+    const uid = users.find((u) => u.email === E2E_ACCOUNTS.member.email)?.id ?? "";
+    const { data: m } = await admin.from("members").select("id").eq("user_id", uid).maybeSingle();
+    if (m) setVerificationLevelSql(m.id, seeded.memberOrigLevel);
   }
 }
 
@@ -273,7 +296,9 @@ describe("Pass 14 MemberProfile + Verification* (real Kong)", () => {
 
     const { data: target } = await admin
       .from("members")
-      .select("verification_level, first_name, last_name, gender, privacy, overseas_verified, chapter_id")
+      .select(
+        "verification_level, first_name, last_name, gender, privacy, overseas_verified, chapter_id, dob, birth_place",
+      )
       .eq("id", TARGET_MEMBER)
       .single();
     seeded.targetOrig = target as typeof seeded.targetOrig;
@@ -1054,11 +1079,12 @@ describe("Pass 14 MemberProfile + Verification* (real Kong)", () => {
       timeout: 15_000,
     }).catch(() => undefined);
 
-    await clickSafe(user, screen.queryByRole("button", { name: /^Approve$/i }));
+    // Prefer Directory Manager business Approve (other chrome may also expose Approve).
+    await clickSafe(user, screen.queryAllByRole("button", { name: /^Approve$/i })[0]);
     await waitFor(() => expect(document.body.textContent).toMatch(/Business verified|Error/i), {
       timeout: 15_000,
     }).catch(() => undefined);
-    await clickSafe(user, screen.queryByRole("button", { name: /^Revoke$/i }));
+    await clickSafe(user, screen.queryAllByRole("button", { name: /^Revoke$/i })[0]);
     await waitFor(() => expect(document.body.textContent).toMatch(/Business verification removed|Error/i), {
       timeout: 15_000,
     }).catch(() => undefined);
@@ -1106,10 +1132,21 @@ describe("Pass 14 MemberProfile + Verification* (real Kong)", () => {
     );
     uDm();
 
-    // Member (L0) viewing target — vouch + request vouch nudge
+    // Member (L0) viewing target — vouch + request vouch nudge.
+    // Other suites often leave this seed at L2; vouch-request UI requires level < 2.
     await signIn(E2E_ACCOUNTS.member.email);
-    // clear any prior vouch from member → target
     const myId = await memberIdForSession();
+    const { data: memLevelRow } = await admin
+      .from("members")
+      .select("verification_level")
+      .eq("id", myId)
+      .single();
+    if (seeded.memberOrigLevel == null) {
+      seeded.memberOrigLevel = memLevelRow?.verification_level ?? 2;
+    }
+    setVerificationLevelSql(myId, 0);
+
+    // clear any prior vouch from member → target
     await admin.from("vouches").delete().eq("voucher_member_id", myId).eq("member_id", TARGET_MEMBER);
     await admin.from("vouch_requests").delete().eq("requester_member_id", myId).eq("target_member_id", TARGET_MEMBER);
 
@@ -1160,6 +1197,8 @@ describe("Pass 14 MemberProfile + Verification* (real Kong)", () => {
     await waitFor(() => expect(screen.queryAllByRole("button", { name: /Vouch for/i }).length).toBeGreaterThan(0), {
       timeout: 45_000,
     });
+    // Re-assert L0 — other mounts/hooks may have refreshed a stale level.
+    setVerificationLevelSql(myId, 0);
     const vouchNote = screen.queryByPlaceholderText(/Add a note \(optional\)/i);
     if (vouchNote) fireEvent.change(vouchNote, { target: { value: `${PREFIX} vouch-note` } });
     await clickSafe(user, screen.queryAllByRole("button", { name: /Vouch for/i })[0]);
@@ -1169,9 +1208,13 @@ describe("Pass 14 MemberProfile + Verification* (real Kong)", () => {
 
     // Request vouch: cancel/reopen, onError (duplicate), then success
     await admin.from("vouch_requests").delete().eq("requester_member_id", myId).eq("target_member_id", TARGET_MEMBER);
-    await clickSafe(user, screen.queryByRole("button", { name: /Request .* to vouch for you/i }));
-    await clickSafe(user, screen.queryByRole("button", { name: /^Cancel$/i }));
-    await clickSafe(user, screen.queryByRole("button", { name: /Request .* to vouch for you/i }));
+    await waitFor(
+      () => expect(screen.queryAllByRole("button", { name: /Request .* to vouch for you/i }).length).toBeGreaterThan(0),
+      { timeout: 30_000 },
+    );
+    await clickSafe(user, screen.queryAllByRole("button", { name: /Request .* to vouch for you/i })[0]);
+    await clickSafe(user, screen.queryAllByRole("button", { name: /^Cancel$/i })[0]);
+    await clickSafe(user, screen.queryAllByRole("button", { name: /Request .* to vouch for you/i })[0]);
     const reqMsg2 = screen.queryByPlaceholderText(/Could you vouch for me/i);
     if (reqMsg2) fireEvent.change(reqMsg2, { target: { value: `${PREFIX} please vouch` } });
     await admin.from("vouch_requests").insert({
@@ -1180,19 +1223,42 @@ describe("Pass 14 MemberProfile + Verification* (real Kong)", () => {
       message: `${PREFIX} race-req`,
       status: "pending",
     });
-    await clickSafe(user, screen.queryByRole("button", { name: /Send Request/i }));
+    await clickSafe(user, screen.queryAllByRole("button", { name: /Send Request/i })[0]);
     await waitFor(() => expect(document.body.textContent).toMatch(/Error|duplicate|unique/i), {
       timeout: 15_000,
     }).catch(() => undefined);
     await admin.from("vouch_requests").delete().eq("requester_member_id", myId).eq("target_member_id", TARGET_MEMBER);
-    await clickSafe(user, screen.queryByRole("button", { name: /Request .* to vouch for you/i }));
+    // Remount so request form is clean after race row cleanup
+    uMem2b();
+    const { unmount: uMemReq } = renderApp(withToaster(<MemberProfile />), {
+      route: `/member/${TARGET_MEMBER}`,
+      pathPattern: "/member/:id",
+    });
+    await waitFor(
+      () => expect(screen.queryAllByRole("button", { name: /Request .* to vouch for you/i }).length).toBeGreaterThan(0),
+      { timeout: 45_000 },
+    );
+    await clickSafe(user, screen.queryAllByRole("button", { name: /Request .* to vouch for you/i })[0]);
     const reqMsg3 = screen.queryByPlaceholderText(/Could you vouch for me/i);
     if (reqMsg3) fireEvent.change(reqMsg3, { target: { value: `${PREFIX} please vouch` } });
-    await clickSafe(user, screen.queryByRole("button", { name: /Send Request/i }));
+    await clickSafe(user, screen.queryAllByRole("button", { name: /Send Request/i })[0]);
     await waitFor(() => expect(document.body.textContent).toMatch(/Vouch request sent/i), {
-      timeout: 20_000,
-    }).catch(() => undefined);
-    uMem2b();
+      timeout: 25_000,
+    });
+    // Confirm row landed (status remount depends on it)
+    await waitFor(
+      async () => {
+        const { data: landed } = await admin
+          .from("vouch_requests")
+          .select("id, status")
+          .eq("requester_member_id", myId)
+          .eq("target_member_id", TARGET_MEMBER)
+          .maybeSingle();
+        expect(landed?.id).toBeTruthy();
+      },
+      { timeout: 15_000 },
+    );
+    uMemReq();
 
     // Remount to hit existingVouchRequest status line
     const { unmount: uMem2 } = renderApp(<MemberProfile />, {
@@ -1203,6 +1269,11 @@ describe("Pass 14 MemberProfile + Verification* (real Kong)", () => {
       timeout: 45_000,
     });
     uMem2();
+
+    // Restore E2E member level before remaining arms
+    if (seeded.memberOrigLevel != null) {
+      setVerificationLevelSql(myId, seeded.memberOrigLevel);
+    }
 
     const { data: vrq } = await admin
       .from("vouch_requests")
@@ -1249,7 +1320,7 @@ describe("Pass 14 MemberProfile + Verification* (real Kong)", () => {
     }).catch(() => undefined);
     uAuth();
 
-    // Restore target (incl. original chapter)
+    // Restore target (incl. original chapter / privacy / dob)
     if (seeded.targetOrig) {
       await admin
         .from("members")
@@ -1261,6 +1332,8 @@ describe("Pass 14 MemberProfile + Verification* (real Kong)", () => {
           privacy: seeded.targetOrig.privacy as never,
           overseas_verified: seeded.targetOrig.overseas_verified,
           chapter_id: seeded.targetOrig.chapter_id,
+          dob: seeded.targetOrig.dob,
+          birth_place: seeded.targetOrig.birth_place,
         })
         .eq("id", TARGET_MEMBER);
     }
