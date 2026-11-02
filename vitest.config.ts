@@ -9,6 +9,35 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    testTimeout: 30_000,
+    hookTimeout: 30_000,
+    // Live auth suites share the singleton supabase client; parallel files race sessions.
+    fileParallelism: false,
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "text-summary", "json-summary", "html"],
+      reportsDirectory: "./coverage",
+      // Still emit reports when a live-Kong suite flakes so integrators can read honest %.
+      reportOnFailure: true,
+      include: ["src/**/*.{ts,tsx}"],
+      exclude: [
+        "src/test/**",
+        "src/integrations/supabase/types.ts",
+        "src/vite-env.d.ts",
+        "src/main.tsx",
+        "**/*.d.ts",
+      ],
+      // Gate: pure libs except async supabase-bound event-notifications (~25% until
+      // authenticated notify paths are E2E'd). Raise toward 100% in follow-up PRs.
+      thresholds: {
+        "src/lib/**": {
+          lines: 80,
+          statements: 80,
+          functions: 90,
+          branches: 70,
+        },
+      },
+    },
   },
   resolve: {
     alias: { "@": path.resolve(__dirname, "./src") },

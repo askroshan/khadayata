@@ -37,9 +37,10 @@ export function SakhaEndorsement({
   const { data: endorsements } = useQuery({
     queryKey: ["sakha-endorsements", targetMemberId],
     queryFn: async () => {
+      // reviewer_user_id has no FK to members — embed would 400 and hide all history.
       const { data } = await supabase
         .from("verification_requests")
-        .select("*, reviewer:members!verification_requests_reviewer_user_id_fkey(first_name, last_name, verification_level)")
+        .select("id, status, notes, created_at, reviewer_user_id, member_id, requested_level, reviewed_at")
         .eq("member_id", targetMemberId)
         .eq("requested_level", SAKHA_LEVEL)
         .order("created_at", { ascending: false });

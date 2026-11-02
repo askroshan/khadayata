@@ -11,26 +11,30 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { Megaphone, CreditCard as Edit, Trash2, Globe } from "lucide-react";
+import { Megaphone, CreditCard as Edit, Trash2, Globe, MapPin } from "lucide-react";
 
 interface Announcement {
   id: string;
   title: string;
   body: string | null;
   created_at: string;
+  chapter_id?: string | null;
 }
 
 interface AnnouncementsTabProps {
   announcements: Announcement[] | undefined;
+  myChapterId?: string | null;
 }
 
-export default function AnnouncementsTab({ announcements }: AnnouncementsTabProps) {
+export default function AnnouncementsTab({ announcements, myChapterId }: AnnouncementsTabProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [titleError, setTitleError] = useState("");
+  /** Chapter-scoped admins default to chapter-only; Global Admin (null myChapterId) posts global. */
+  const [audience, setAudience] = useState<"chapter" | "global">(myChapterId ? "chapter" : "global");
   const [editOpen, setEditOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
@@ -38,7 +42,14 @@ export default function AnnouncementsTab({ announcements }: AnnouncementsTabProp
 
   const create = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("announcements").insert({ title: title.trim(), body: body.trim() || null, created_by: user!.id });
+      const chapterId =
+        myChapterId && audience === "chapter" ? myChapterId : null;
+      const { error } = await supabase.from("announcements").insert({
+        title: title.trim(),
+        body: body.trim() || null,
+        created_by: user!.id,
+        chapter_id: chapterId,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -121,6 +132,29 @@ export default function AnnouncementsTab({ announcements }: AnnouncementsTabProp
             {titleError && <p className="text-xs text-destructive mt-1">{titleError}</p>}
           </div>
           <Textarea placeholder="Body (optional)" value={body} onChange={(e) => setBody(e.target.value)} maxLength={1000} />
+          {myChapterId && (
+            <div className="space-y-2">
+              <Label>Audience</Label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={audience === "chapter" ? "default" : "outline"}
+                  onClick={() => setAudience("chapter")}
+                >
+                  <MapPin className="w-3 h-3 mr-1" /> Chapter Only
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={audience === "global" ? "default" : "outline"}
+                  onClick={() => setAudience("global")}
+                >
+                  <Globe className="w-3 h-3 mr-1" /> All Members
+                </Button>
+              </div>
+            </div>
+          )}
           <Button onClick={handlePublish} disabled={create.isPending} className="gradient-hero text-primary-foreground">Publish</Button>
         </CardContent>
       </Card>
@@ -132,7 +166,11 @@ export default function AnnouncementsTab({ announcements }: AnnouncementsTabProp
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="font-semibold">{a.title}</h3>
-                  <Badge variant="secondary" className="text-xs"><Globe className="w-3 h-3 mr-1" />Global</Badge>
+                  {a.chapter_id ? (
+                    <Badge variant="secondary" className="text-xs"><MapPin className="w-3 h-3 mr-1" />Chapter</Badge>
+                  ) : (
+                    <Badge variant="secondary" className="text-xs"><Globe className="w-3 h-3 mr-1" />Global</Badge>
+                  )}
                 </div>
                 {a.body && <p className="text-sm text-muted-foreground mt-1">{a.body}</p>}
                 <p className="text-xs text-muted-foreground mt-2">{new Date(a.created_at).toLocaleString()}</p>

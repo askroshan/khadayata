@@ -29,9 +29,17 @@ export const LEVEL_LABELS: Record<number, string> = {
 export const MIN_LEVEL = 0;
 export const MAX_LEVEL = 5;
 
+/** Legacy Admin.tsx tab ids → canonical VALID_ADMIN_TABS ids */
+export const ADMIN_TAB_ALIASES: Record<string, AdminTab> = {
+  publisher: "news-publisher",
+  tags: "tag-requests",
+  keywords: "banned-keywords",
+};
+
 export function resolveAdminTab(tabParam: string | null): AdminTab {
   if (!tabParam) return "stats";
-  if ((VALID_ADMIN_TABS as readonly string[]).includes(tabParam)) return tabParam as AdminTab;
+  const aliased = ADMIN_TAB_ALIASES[tabParam] ?? tabParam;
+  if ((VALID_ADMIN_TABS as readonly string[]).includes(aliased)) return aliased as AdminTab;
   return "stats";
 }
 
@@ -77,14 +85,14 @@ export function filterMembers(
   if (filterStatus === "suspended") list = list.filter((m) => memberStatuses?.[m.id]?.suspended);
   if (filterStatus === "blocked") list = list.filter((m) => memberStatuses?.[m.id]?.blocked);
 
+  // Parse YYYY-MM-DD as UTC calendar bounds so same-day filters work in all timezones.
   if (dateFrom) {
-    const fromDate = new Date(dateFrom);
+    const fromDate = new Date(`${dateFrom}T00:00:00.000Z`);
     list = list.filter((m) => m.created_at && new Date(m.created_at) >= fromDate);
   }
 
   if (dateTo) {
-    const toDate = new Date(dateTo);
-    toDate.setHours(23, 59, 59, 999);
+    const toDate = new Date(`${dateTo}T23:59:59.999Z`);
     list = list.filter((m) => m.created_at && new Date(m.created_at) <= toDate);
   }
 
@@ -273,7 +281,7 @@ export function canAccessTab(roles: UserRoles, tab: AdminTab): boolean {
     case "stats":
       return canAccessAdmin(roles);
     case "members":
-      return roles.isGlobalAdmin || roles.isChapterAdmin || roles.isDataSteward;
+      return roles.isGlobalAdmin || roles.isChapterAdmin || roles.isDataSteward || roles.isModerator;
     case "chapters":
       return roles.isGlobalAdmin;
     case "roles":
@@ -281,7 +289,7 @@ export function canAccessTab(roles: UserRoles, tab: AdminTab): boolean {
     case "events":
       return roles.isGlobalAdmin || roles.isChapterAdmin || roles.isEventManager;
     case "news-publisher":
-      return roles.isGlobalAdmin || roles.isPublisher;
+      return roles.isGlobalAdmin || roles.isPublisher || roles.isModerator;
     case "moderator":
       return roles.isGlobalAdmin || roles.isModerator;
     case "announcements":
@@ -295,7 +303,7 @@ export function canAccessTab(roles: UserRoles, tab: AdminTab): boolean {
     case "transfers":
       return roles.isGlobalAdmin || roles.isChapterAdmin;
     case "audits":
-      return roles.isGlobalAdmin;
+      return roles.isGlobalAdmin || roles.isDataSteward;
     case "tag-requests":
       return roles.isGlobalAdmin || roles.isChapterAdmin || roles.isDataSteward;
     case "directory":
@@ -303,9 +311,10 @@ export function canAccessTab(roles: UserRoles, tab: AdminTab): boolean {
     case "samiti":
       return roles.isGlobalAdmin || roles.isChapterAdmin;
     case "whatsapp":
-      return roles.isGlobalAdmin || roles.isChapterAdmin;
+      // Edge functions + Admin UI are Global Admin only (send-whatsapp / send-sms).
+      return roles.isGlobalAdmin;
     case "sms":
-      return roles.isGlobalAdmin || roles.isChapterAdmin;
+      return roles.isGlobalAdmin;
     case "bulk-content":
       return roles.isGlobalAdmin;
     case "banned-keywords":
@@ -315,4 +324,24 @@ export function canAccessTab(roles: UserRoles, tab: AdminTab): boolean {
     default:
       return false;
   }
+}
+
+/** Prefer role-specific landings; fall back to first accessible tab. */
+export function firstAccessibleAdminTab(roles: UserRoles, preferred?: AdminTab | null): AdminTab {
+  if (preferred && canAccessTab(roles, preferred)) return preferred;
+  const preferenceOrder: AdminTab[] = [
+    "verification",
+    "directory",
+    "events",
+    "finance",
+    "news-publisher",
+    "reports",
+    "members",
+    "moderator",
+    "stats",
+  ];
+  for (const tab of preferenceOrder) {
+    if (canAccessTab(roles, tab)) return tab;
+  }
+  return "stats";
 }

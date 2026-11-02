@@ -7,7 +7,8 @@ const corsHeaders = {
 };
 
 const EASIFY_BASE = "https://backend.easify.app/api/v2";
-const EASIFY_FROM = "19723710001";
+/** Override via EASIFY_FROM_NUMBER secret (E.164 or digits). Default legacy DID. */
+const EASIFY_FROM = (Deno.env.get("EASIFY_FROM_NUMBER") ?? "19723710001").replace(/^\+/, "");
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {

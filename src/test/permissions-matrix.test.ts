@@ -39,8 +39,8 @@ function derivePermissions(r: RoleFlags) {
     canVerifyMembers: r.isGlobalAdmin || r.isDataSteward || r.isChapterAdmin || r.isModerator,
     canEditAnyMember: r.isGlobalAdmin || r.isDataSteward || r.isChapterAdmin || r.isModerator,
     canInviteMembers: r.isGlobalAdmin || r.isChapterAdmin || r.isDataSteward || r.isModerator,
-    canManageEvents: r.isGlobalAdmin || r.isEventManager || r.isModerator,
-    canDeleteEvents: r.isGlobalAdmin || r.isEventManager || r.isModerator,
+    canManageEvents: r.isGlobalAdmin || r.isChapterAdmin || r.isEventManager || r.isModerator,
+    canDeleteEvents: r.isGlobalAdmin || r.isChapterAdmin || r.isEventManager || r.isModerator,
     canPublishNews: r.isGlobalAdmin || r.isPublisher || r.isModerator,
     canModerateNews: r.isGlobalAdmin || r.isPublisher || r.isModerator,
     canDeleteNews: r.isGlobalAdmin || r.isPublisher || r.isModerator,
@@ -92,8 +92,8 @@ const EXPECTED: Record<PermissionKey, string[]> = {
   canVerifyMembers: ["Global Admin", "Data Steward", "Chapter Admin", "Moderator"],
   canEditAnyMember: ["Global Admin", "Data Steward", "Chapter Admin", "Moderator"],
   canInviteMembers: ["Global Admin", "Chapter Admin", "Data Steward", "Moderator"],
-  canManageEvents: ["Global Admin", "Event Manager", "Moderator"],
-  canDeleteEvents: ["Global Admin", "Event Manager", "Moderator"],
+  canManageEvents: ["Global Admin", "Chapter Admin", "Event Manager", "Moderator"],
+  canDeleteEvents: ["Global Admin", "Chapter Admin", "Event Manager", "Moderator"],
   canPublishNews: ["Global Admin", "Publisher", "Moderator"],
   canModerateNews: ["Global Admin", "Publisher", "Moderator"],
   canDeleteNews: ["Global Admin", "Publisher", "Moderator"],
@@ -191,10 +191,10 @@ describe("Role isolation — specific permissions restricted to specific roles",
     }
   });
 
-  it("canManageEvents allows Event Manager AND Moderator AND Global Admin", () => {
+  it("canManageEvents allows Chapter Admin, Event Manager, Moderator, and Global Admin", () => {
     for (const { name, flags } of ROLES) {
       const has = derivePermissions(flags).canManageEvents;
-      expect(has).toBe(["Global Admin", "Event Manager", "Moderator"].includes(name));
+      expect(has).toBe(["Global Admin", "Chapter Admin", "Event Manager", "Moderator"].includes(name));
     }
   });
 });

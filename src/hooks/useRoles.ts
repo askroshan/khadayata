@@ -109,9 +109,9 @@ export function usePermissions() {
     canEditAnyMember: isGlobalAdmin || isDataSteward || isChapterAdmin || isModerator,
     canInviteMembers: isGlobalAdmin || isChapterAdmin || isDataSteward || isModerator,
     
-    // Events
-    canManageEvents: isGlobalAdmin || isEventManager || isModerator,
-    canDeleteEvents: isGlobalAdmin || isEventManager || isModerator,
+    // Events (Chapter Admin manages chapter events; Event Manager / Moderator platform-wide)
+    canManageEvents: isGlobalAdmin || isChapterAdmin || isEventManager || isModerator,
+    canDeleteEvents: isGlobalAdmin || isChapterAdmin || isEventManager || isModerator,
 
     // News
     canPublishNews: isGlobalAdmin || isPublisher || isModerator,
