@@ -635,8 +635,10 @@ describe("Pass 12 chapters + members + family invite (real Kong)", () => {
       .single();
     uNoRole();
     const { unmount: u2 } = renderApp(withToaster(<ChaptersTab />), { route: "/admin?tab=chapters" });
-    await waitFor(() => expect(document.body.textContent).toMatch(/DeleteMe/), { timeout: 45_000 });
-    const del = findCardAction(/Delete chapter/i, "DeleteMe");
+    await waitFor(() => expect(document.body.textContent).toContain(`${PREFIX} DeleteMe`), {
+      timeout: 45_000,
+    });
+    const del = findCardAction(/Delete chapter/i, `${PREFIX} DeleteMe`);
     expect(del).toBeTruthy();
     await clickSafe(user, del);
     await clickSafe(user, screen.getByRole("button", { name: /Delete Chapter/i }));
