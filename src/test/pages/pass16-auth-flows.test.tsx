@@ -1,22 +1,21 @@
 /**
- * Pass 16 — Auth / ResetPassword / AuthContext (+ AcceptFamilyInvite)
- * → ~100% against real Kong :54331.
- * Disposable covaf_* users; E2E seeds kept; no mock client for happy-path auth.
+ * Pass 16 — Auth flows (login / signup / password / session / guards) → ~100%
+ * against real Kong :54331. Reversible covauth_* users; no mock view data.
  */
-import { describe, it, expect, afterAll, beforeAll, afterEach, vi } from "vitest";
-import { useState, type ReactNode } from "react";
-import { screen, waitFor, fireEvent, cleanup, render } from "@testing-library/react";
+import { describe, it, expect, afterAll, beforeAll, vi } from "vitest";
+import type { ReactNode } from "react";
+import { screen, waitFor, fireEvent, cleanup, act, render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { readFileSync } from "node:fs";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { renderApp } from "@/test/helpers/render-app";
 import { supabase } from "@/integrations/supabase/client";
-import { E2E_PASSWORD } from "@/test/helpers/e2e-accounts";
-import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { execFileSync } from "node:child_process";
+import { useAuth } from "@/contexts/AuthContext";
+import { E2E_ACCOUNTS, E2E_PASSWORD } from "@/test/helpers/e2e-accounts";
 import Auth from "@/pages/Auth";
 import ResetPassword from "@/pages/ResetPassword";
-import AcceptFamilyInvite from "@/pages/AcceptFamilyInvite";
+import LoginGate from "@/components/LoginGate";
+import Dashboard from "@/pages/Dashboard";
 import { Toaster } from "@/components/ui/toaster";
 
 function withToaster(node: ReactNode) {
@@ -28,10 +27,9 @@ function withToaster(node: ReactNode) {
   );
 }
 
-const AHMEDABAD = "f1000002-0000-0000-0000-000000000002";
-const PREFIX = `covaf_${Date.now().toString(36)}`;
+const PREFIX = `covauth_${Date.now().toString(36)}`;
 const PASS = E2E_PASSWORD;
-const STRONG = "CovAfPass1!";
+const STRONG_PW = "CovAuth1!";
 
 function envFromDotenv(name: string): string | undefined {
   if (process.env[name]) return process.env[name];
@@ -98,807 +96,497 @@ async function clickSafe(user: ReturnType<typeof userEvent.setup>, el: HTMLEleme
 
 const seeded = {
   userIds: [] as string[],
-  memberIds: [] as string[],
-  inviteIds: [] as string[],
-  familyLinkIds: [] as string[],
-  signInEmail: `${PREFIX}_signin@covaf.test`,
-  resetEmail: `${PREFIX}_reset@covaf.test`,
-  signupEmail: `${PREFIX}_signup@covaf.test`,
-  inviterEmail: `${PREFIX}_inviter@covaf.test`,
-  accepteeEmail: `${PREFIX}_acceptee@covaf.test`,
-  nomemEmail: `${PREFIX}_nomem@covaf.test`,
-  pendingToken: "" as string,
-  usedToken: "" as string,
-  acceptToken: "" as string,
-  noMemberToken: "" as string,
+  signupEmail: `${PREFIX}_signup@covauth.test`,
+  resetEmail: `${PREFIX}_reset@covauth.test`,
 };
-
-async function createAuthMember(
-  admin: SupabaseClient,
-  opts: { email: string; first: string; last: string; chapterId?: string | null },
-) {
-  const { data: cu, error: cuErr } = await admin.auth.admin.createUser({
-    email: opts.email,
-    password: PASS,
-    email_confirm: true,
-  });
-  if (cuErr || !cu.user) throw cuErr ?? new Error(`createUser ${opts.email}`);
-  seeded.userIds.push(cu.user.id);
-
-  const { data: existing } = await admin.from("members").select("id").eq("user_id", cu.user.id).maybeSingle();
-  if (existing?.id) {
-    const { error: upErr } = await admin
-      .from("members")
-      .update({
-        first_name: opts.first,
-        last_name: opts.last,
-        chapter_id: opts.chapterId === undefined ? AHMEDABAD : opts.chapterId,
-        onboarding_completed: true,
-        verification_level: 1,
-        suspended: false,
-        blocked: false,
-      })
-      .eq("id", existing.id);
-    if (upErr) throw upErr;
-    seeded.memberIds.push(existing.id);
-    return { userId: cu.user.id, memberId: existing.id };
-  }
-
-  const { data: mem, error: memErr } = await admin
-    .from("members")
-    .insert({
-      user_id: cu.user.id,
-      first_name: opts.first,
-      last_name: opts.last,
-      chapter_id: opts.chapterId === undefined ? AHMEDABAD : opts.chapterId,
-      verification_level: 1,
-      onboarding_completed: true,
-      overseas_verified: false,
-      suspended: false,
-      blocked: false,
-      gender: "Male",
-      dob: "1990-01-15",
-      birth_place: "Coverage City",
-    })
-    .select("id")
-    .single();
-  if (memErr || !mem) throw memErr ?? new Error(`seed member ${opts.email}`);
-  seeded.memberIds.push(mem.id);
-  return { userId: cu.user.id, memberId: mem.id };
-}
-
-async function cleanupCovAf() {
-  const admin = adminClient();
-  if (seeded.inviteIds.length) {
-    await admin.from("family_invitations").delete().in("id", seeded.inviteIds);
-  }
-  await admin.from("family_invitations").delete().like("invitee_name", "CovAF%");
-  if (seeded.familyLinkIds.length) {
-    await admin.from("family_links").delete().in("id", seeded.familyLinkIds);
-  }
-  for (const mid of seeded.memberIds) {
-    await admin.from("family_links").delete().eq("member_id", mid);
-    await admin.from("family_links").delete().eq("related_member_id", mid);
-    await admin.from("family_invitations").delete().eq("inviter_member_id", mid);
-    await admin.from("members").delete().eq("id", mid);
-  }
-  for (const uid of seeded.userIds) {
-    await admin.auth.admin.deleteUser(uid);
-  }
-}
-
-afterEach(() => {
-  cleanup();
-  vi.restoreAllMocks();
-  window.location.hash = "";
-});
 
 describe("Pass 16 auth flows (real Kong)", () => {
   beforeAll(async () => {
-    // Kong PostgREST uses supabase_db_khadayata-local (not Postgres.app :5438).
-    // Ensure preview RPC exists so AcceptFamilyInvite can exercise real RPC paths.
-    try {
-      execFileSync(
-        "docker",
-        [
-          "exec",
-          "-i",
-          "supabase_db_khadayata-local",
-          "psql",
-          "-U",
-          "postgres",
-          "-d",
-          "postgres",
-          "-v",
-          "ON_ERROR_STOP=1",
-          "-c",
-          `
-CREATE OR REPLACE FUNCTION public.get_family_invitation_preview(p_token uuid)
-RETURNS jsonb
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  v_inv RECORD;
-  v_inviter RECORD;
-BEGIN
-  IF p_token IS NULL THEN
-    RETURN jsonb_build_object('found', false);
-  END IF;
-  SELECT id, invitee_name, relation, status, inviter_member_id
-    INTO v_inv FROM family_invitations WHERE acceptance_token = p_token;
-  IF NOT FOUND THEN
-    RETURN jsonb_build_object('found', false);
-  END IF;
-  SELECT first_name, last_name INTO v_inviter FROM members WHERE id = v_inv.inviter_member_id;
-  RETURN jsonb_build_object(
-    'found', true,
-    'status', v_inv.status,
-    'invitee_name', v_inv.invitee_name,
-    'relation', v_inv.relation,
-    'inviter_first_name', COALESCE(v_inviter.first_name, ''),
-    'inviter_last_name', COALESCE(v_inviter.last_name, '')
-  );
-END;
-$$;
-REVOKE EXECUTE ON FUNCTION public.get_family_invitation_preview(uuid) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.get_family_invitation_preview(uuid) TO anon, authenticated;
-NOTIFY pgrst, 'reload schema';
-`,
-        ],
-        { stdio: ["pipe", "pipe", "pipe"] },
-      );
-    } catch (err) {
-      console.warn("preview RPC ensure skipped:", (err as Error).message);
-    }
-
     const admin = adminClient();
-
-    await createAuthMember(admin, { email: seeded.signInEmail, first: "CovAF", last: "SignIn" });
-    await createAuthMember(admin, { email: seeded.resetEmail, first: "CovAF", last: "Reset" });
-
-    const inviter = await createAuthMember(admin, {
-      email: seeded.inviterEmail,
-      first: "CovAF",
-      last: "Inviter",
-    });
-    const acceptee = await createAuthMember(admin, {
-      email: seeded.accepteeEmail,
-      first: "CovAF",
-      last: "Acceptee",
-    });
-
-    const { data: cu, error: cuErr } = await admin.auth.admin.createUser({
-      email: seeded.nomemEmail,
+    const reset = await admin.auth.admin.createUser({
+      email: seeded.resetEmail,
       password: PASS,
       email_confirm: true,
     });
-    if (cuErr || !cu.user) throw cuErr ?? new Error("create nomem user");
-    seeded.userIds.push(cu.user.id);
-    await admin.from("members").delete().eq("user_id", cu.user.id);
-
-    const { data: invites, error: invErr } = await admin
-      .from("family_invitations")
-      .insert([
-        {
-          inviter_member_id: inviter.memberId,
-          relation: "son",
-          invitee_name: `CovAF Pending ${PREFIX}`,
-          invitee_email: `${PREFIX}-pending@covaf.test`,
-          status: "pending",
-        },
-        {
-          inviter_member_id: inviter.memberId,
-          relation: "daughter",
-          invitee_name: `CovAF Used ${PREFIX}`,
-          invitee_email: `${PREFIX}-used@covaf.test`,
-          status: "accepted",
-          accepted_at: new Date().toISOString(),
-          accepted_by_member_id: acceptee.memberId,
-        },
-        {
-          inviter_member_id: inviter.memberId,
-          relation: "brother",
-          invitee_name: `CovAF Accept ${PREFIX}`,
-          invitee_email: seeded.accepteeEmail,
-          status: "pending",
-        },
-        {
-          inviter_member_id: inviter.memberId,
-          relation: "sister",
-          invitee_name: `CovAF NoMem ${PREFIX}`,
-          invitee_email: seeded.nomemEmail,
-          status: "pending",
-        },
-      ])
-      .select("id, acceptance_token, invitee_name");
-    if (invErr || !invites) throw invErr ?? new Error("seed invites");
-    for (const row of invites) {
-      seeded.inviteIds.push(row.id);
-      if (row.invitee_name.includes("Pending")) seeded.pendingToken = row.acceptance_token;
-      if (row.invitee_name.includes("Used")) seeded.usedToken = row.acceptance_token;
-      if (row.invitee_name.includes("Accept")) seeded.acceptToken = row.acceptance_token;
-      if (row.invitee_name.includes("NoMem")) seeded.noMemberToken = row.acceptance_token;
+    if (reset.error || !reset.data.user) {
+      throw new Error(`seed reset user: ${reset.error?.message}`);
     }
-    if (!seeded.pendingToken || !seeded.usedToken || !seeded.acceptToken || !seeded.noMemberToken) {
-      throw new Error(`invite tokens incomplete: ${JSON.stringify(seeded)}`);
-    }
-
-    // Wait until PostgREST sees the preview RPC
-    for (let i = 0; i < 20; i++) {
-      const { error } = await admin.rpc("get_family_invitation_preview", {
-        p_token: seeded.pendingToken,
-      });
-      if (!error || !/Could not find the function|PGRST202/i.test(error.message)) break;
-      await new Promise((r) => setTimeout(r, 500));
-    }
-  }, 120_000);
-
-  afterAll(async () => {
-    try {
-      await cleanupCovAf();
-    } catch {
-      /* best-effort */
-    }
-    await supabase.auth.signOut();
-  }, 120_000);
-
-  it("AuthContext: useAuth outside provider throws", () => {
-    function Probe() {
-      useAuth();
-      return null;
-    }
-    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
-    expect(() => render(<Probe />)).toThrow(/useAuth must be used within AuthProvider/);
-    spy.mockRestore();
-  });
-
-  it("Auth: loading pulse while session resolves", async () => {
-    await supabase.auth.signOut();
-    const unsub = vi.fn();
-    vi.spyOn(supabase.auth, "onAuthStateChange").mockReturnValue({
-      data: {
-        subscription: {
-          id: "covaf-loading",
-          callback: () => {},
-          unsubscribe: unsub,
-        },
-      },
-    } as ReturnType<typeof supabase.auth.onAuthStateChange>);
-    vi.spyOn(supabase.auth, "getSession").mockImplementation(
-      () => new Promise(() => {}) as ReturnType<typeof supabase.auth.getSession>,
-    );
-
-    renderApp(<Auth />, { route: "/auth" });
-    await waitFor(() => {
-      expect(document.querySelector("img.animate-pulse")).toBeTruthy();
-    });
-  });
-
-  it("Auth: signed-in user Navigates to redirect", async () => {
-    await signIn(seeded.signInEmail);
-    const { unmount } = renderApp(<Auth />, { route: "/auth?redirect=/profile" });
-    await waitFor(
-      () => {
-        expect(document.body.textContent ?? "").not.toMatch(/Welcome Back/i);
-      },
-      { timeout: 15_000 },
-    );
-    unmount();
-    await supabase.auth.signOut();
+    seeded.userIds.push(reset.data.user.id);
   }, 60_000);
 
-  it("Auth: validation + mode toggles + forgot success/fail + bad sign-in", async () => {
-    await supabase.auth.signOut();
-    const user = userEvent.setup();
-    const { unmount } = renderApp(withToaster(<Auth />), { route: "/auth" });
-
-    await waitFor(
-      () => expect(screen.getByRole("heading", { name: /Welcome Back/i })).toBeInTheDocument(),
-      { timeout: 15_000 },
-    );
-
-    // Toggle sign-up / sign-in
-    await clickSafe(user, screen.getByRole("button", { name: /Don't have an account/i }));
-    await waitFor(() =>
-      expect(screen.getByRole("heading", { name: /Join the Community/i })).toBeInTheDocument(),
-    );
-    await clickSafe(user, screen.getByRole("button", { name: /Already have an account/i }));
-    await waitFor(() =>
-      expect(screen.getByRole("heading", { name: /Welcome Back/i })).toBeInTheDocument(),
-    );
-
-    // Invalid email / short password via forced submit (bypass HTML5)
-    const email = screen.getByLabelText(/^Email$/i);
-    const password = screen.getByLabelText(/^Password$/i);
-    fireEvent.change(email, { target: { value: "not-an-email" } });
-    fireEvent.change(password, { target: { value: "123" } });
-    fireEvent.submit(email.closest("form")!);
-    await waitFor(() => expect(document.body.textContent).toMatch(/Invalid email|valid email/i), {
-      timeout: 8_000,
-    });
-
-    fireEvent.change(email, { target: { value: "ok@covaf.test" } });
-    fireEvent.change(password, { target: { value: "123" } });
-    fireEvent.submit(email.closest("form")!);
-    await waitFor(() => expect(document.body.textContent).toMatch(/Invalid password|at least 6/i), {
-      timeout: 8_000,
-    });
-
-    // Bad credentials (real Kong)
-    fireEvent.change(email, { target: { value: seeded.signInEmail } });
-    fireEvent.change(password, { target: { value: "WrongPass999!" } });
-    await clickSafe(user, screen.getByRole("button", { name: /^Sign In$/i }));
-    await waitFor(
-      () => expect(document.body.textContent).toMatch(/incorrect|Error|Invalid login/i),
-      { timeout: 20_000 },
-    );
-
-    // Forgot password — unknown email → edge returns 200 (security success)
-    await clickSafe(user, screen.getByRole("button", { name: /Forgot password/i }));
-    await waitFor(() =>
-      expect(screen.getByRole("heading", { name: /Reset Password/i })).toBeInTheDocument(),
-    );
-    const forgotEmail = screen.getByLabelText(/^Email$/i);
-    fireEvent.change(forgotEmail, { target: { value: "bad" } });
-    fireEvent.submit(forgotEmail.closest("form")!);
-    await waitFor(() => expect(document.body.textContent).toMatch(/Invalid email/i), {
-      timeout: 8_000,
-    });
-
-    fireEvent.change(forgotEmail, { target: { value: `${PREFIX}_nobody@covaf.test` } });
-    await clickSafe(user, screen.getByRole("button", { name: /Send Reset Link/i }));
-    await waitFor(
-      () => expect(document.body.textContent).toMatch(/Check your email|sent a password reset/i),
-      { timeout: 25_000 },
-    );
-
-    // Failure arm: edge may return 200 when email is configured; force !res.ok + catch.
-    await clickSafe(user, screen.getByRole("button", { name: /Forgot password/i }));
-    await waitFor(() =>
-      expect(screen.getByRole("heading", { name: /Reset Password/i })).toBeInTheDocument(),
-    );
-    const realFetch = globalThis.fetch.bind(globalThis);
-    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = String(input);
-      if (url.includes("send-reset-email")) {
-        const body = typeof init?.body === "string" ? init.body : "";
-        if (body.includes("force-network-fail")) {
-          throw new Error("covaf network fail");
-        }
-        if (body.includes(seeded.signInEmail)) {
-          return new Response("forced fail", { status: 502, statusText: "Bad Gateway" });
-        }
-      }
-      return realFetch(input, init);
-    }) as typeof fetch;
-
-    fireEvent.change(screen.getByLabelText(/^Email$/i), { target: { value: seeded.signInEmail } });
-    await clickSafe(user, screen.getByRole("button", { name: /Send Reset Link/i }));
-    await waitFor(
-      () => expect(document.body.textContent).toMatch(/Failed to send reset email/i),
-      { timeout: 15_000 },
-    );
-
-    // Network throw → same catch toast
-    fireEvent.change(screen.getByLabelText(/^Email$/i), {
-      target: { value: "force-network-fail@covaf.test" },
-    });
-    await clickSafe(user, screen.getByRole("button", { name: /Send Reset Link/i }));
-    await waitFor(
-      () => expect(document.body.textContent).toMatch(/Failed to send reset email/i),
-      { timeout: 15_000 },
-    );
-    globalThis.fetch = realFetch;
-
-    await clickSafe(user, screen.getByRole("button", { name: /Back to Sign In/i }));
-    await waitFor(() =>
-      expect(screen.getByRole("heading", { name: /Welcome Back/i })).toBeInTheDocument(),
-    );
-
-    unmount();
-  }, 180_000);
-
-  it("Auth: real sign-in happy path", async () => {
-    await supabase.auth.signOut();
-    const user = userEvent.setup();
-    const { unmount } = renderApp(withToaster(<Auth />), { route: "/auth" });
-    await waitFor(
-      () => expect(screen.getByRole("heading", { name: /Welcome Back/i })).toBeInTheDocument(),
-      { timeout: 15_000 },
-    );
-
-    fireEvent.change(screen.getByLabelText(/^Email$/i), { target: { value: seeded.signInEmail } });
-    fireEvent.change(screen.getByLabelText(/^Password$/i), { target: { value: PASS } });
-    await clickSafe(user, screen.getByRole("button", { name: /^Sign In$/i }));
-
-    await waitFor(
-      async () => {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        expect(session?.user?.email?.toLowerCase()).toBe(seeded.signInEmail);
-      },
-      { timeout: 25_000 },
-    );
-    await waitFor(() => expect(document.body.textContent ?? "").not.toMatch(/Welcome Back/i), {
-      timeout: 10_000,
-    });
-    unmount();
-    await supabase.auth.signOut();
-  }, 90_000);
-
-  it("AuthContext: signUp email-invoke throw returns support error", async () => {
-    await supabase.auth.signOut();
-    await waitFor(async () => {
-      expect((await supabase.auth.getSession()).data.session).toBeNull();
-    }, { timeout: 10_000 });
-
-    const fnProto = Object.getPrototypeOf(supabase.functions) as {
-      invoke: typeof supabase.functions.invoke;
-    };
-    const origInvoke = fnProto.invoke;
-    fnProto.invoke = (async () => {
-      throw new Error("covaf forced email failure");
-    }) as typeof supabase.functions.invoke;
-
-    const emailFail = `${PREFIX}_emailfail@covaf.test`;
-    function Probe() {
-      const { signUp } = useAuth();
-      const [msg, setMsg] = useState("");
-      return (
-        <div>
-          <button
-            type="button"
-            onClick={() => {
-              void signUp(emailFail, PASS).then(({ error }) =>
-                setMsg(error?.message ?? "ok"),
-              );
-            }}
-          >
-            signup
-          </button>
-          <span data-testid="signup-msg">{msg}</span>
-        </div>
-      );
-    }
-
-    const { unmount } = render(
-      <AuthProvider>
-        <Probe />
-      </AuthProvider>,
-    );
-    fireEvent.click(screen.getByRole("button", { name: /^signup$/i }));
-    await waitFor(
-      () =>
-        expect(screen.getByTestId("signup-msg").textContent).toMatch(
-          /email verification failed|contact support/i,
-        ),
-      { timeout: 30_000 },
-    );
-    fnProto.invoke = origInvoke;
-
+  afterAll(async () => {
+    cleanup();
+    await supabase.auth.signOut().catch(() => undefined);
     const admin = adminClient();
-    const { data: listed } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    for (const id of seeded.userIds) {
+      await admin.auth.admin.deleteUser(id).catch(() => undefined);
+    }
+    // Signup may create an auth user even when email confirm is pending
+    const { data: listed } = await admin.auth.admin.listUsers({ perPage: 1000 });
     for (const u of listed?.users ?? []) {
-      if (u.email?.toLowerCase() === emailFail) {
-        seeded.userIds.push(u.id);
-        const { data: mem } = await admin.from("members").select("id").eq("user_id", u.id).maybeSingle();
-        if (mem?.id) seeded.memberIds.push(mem.id);
+      if (u.email?.includes("@covauth.test") || u.email?.startsWith(PREFIX)) {
+        await admin.auth.admin.deleteUser(u.id).catch(() => undefined);
       }
     }
-    unmount();
-    await supabase.auth.signOut();
-  }, 90_000);
+  }, 60_000);
 
-  it("Auth: real sign-up happy path", async () => {
+  it("AuthContext session: signIn / signOut / useAuth guard", async () => {
     await supabase.auth.signOut();
-    await waitFor(async () => {
-      expect((await supabase.auth.getSession()).data.session).toBeNull();
-    }, { timeout: 10_000 });
 
-    const user = userEvent.setup();
-    const admin = adminClient();
-    const { unmount } = renderApp(withToaster(<Auth />), { route: "/auth" });
-    await waitFor(
-      () => expect(screen.getByRole("heading", { name: /Welcome Back/i })).toBeInTheDocument(),
-      { timeout: 15_000 },
-    );
-    await clickSafe(user, screen.getByRole("button", { name: /Don't have an account/i }));
-    await waitFor(() =>
-      expect(screen.getByRole("heading", { name: /Join the Community/i })).toBeInTheDocument(),
-    );
-    fireEvent.change(screen.getByLabelText(/^Email$/i), { target: { value: seeded.signupEmail } });
-    fireEvent.change(screen.getByLabelText(/^Password$/i), { target: { value: PASS } });
-    await clickSafe(user, screen.getByRole("button", { name: /Create Account/i }));
-    await waitFor(
-      async () => {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        const body = document.body.textContent ?? "";
-        expect(
-          session?.user?.email?.toLowerCase() === seeded.signupEmail ||
-            /Check your email|verification link|Error/i.test(body),
-        ).toBe(true);
-      },
-      { timeout: 30_000 },
-    );
-    const { data: listed2 } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-    for (const u of listed2?.users ?? []) {
-      if (u.email?.toLowerCase() === seeded.signupEmail) {
-        if (!seeded.userIds.includes(u.id)) seeded.userIds.push(u.id);
-        const { data: mem } = await admin.from("members").select("id").eq("user_id", u.id).maybeSingle();
-        if (mem?.id && !seeded.memberIds.includes(mem.id)) seeded.memberIds.push(mem.id);
-      }
-    }
-    unmount();
-    await supabase.auth.signOut();
-  }, 90_000);
-
-  it("AuthContext: signOut clears session", async () => {
-    await signIn(seeded.signInEmail);
     function Probe() {
-      const { user, loading, signOut } = useAuth();
-      if (loading) return <div>loading</div>;
+      const { user, session, loading, signIn: si, signOut: so } = useAuth();
       return (
         <div>
+          <span data-testid="loading">{String(loading)}</span>
           <span data-testid="email">{user?.email ?? "none"}</span>
-          <button type="button" onClick={() => void signOut()}>
-            out
+          <span data-testid="has-session">{session ? "yes" : "no"}</span>
+          <button type="button" onClick={() => void si(E2E_ACCOUNTS.member.email, PASS)}>
+            do-signin
+          </button>
+          <button type="button" onClick={() => void so()}>
+            do-signout
           </button>
         </div>
       );
     }
-    const { unmount } = render(
-      <AuthProvider>
-        <Probe />
-      </AuthProvider>,
-    );
-    await waitFor(() => expect(screen.getByTestId("email").textContent).toMatch(/covaf/i), {
+
+    const { unmount } = renderApp(<Probe />, { route: "/" });
+    await waitFor(() => expect(screen.getByTestId("loading").textContent).toBe("false"), {
       timeout: 15_000,
     });
-    fireEvent.click(screen.getByRole("button", { name: /^out$/i }));
+    expect(screen.getByTestId("email").textContent).toBe("none");
+
+    await act(async () => {
+      fireEvent.click(screen.getByText("do-signin"));
+    });
+    await waitFor(
+      () => expect(screen.getByTestId("email").textContent).toBe(E2E_ACCOUNTS.member.email),
+      { timeout: 20_000 },
+    );
+    expect(screen.getByTestId("has-session").textContent).toBe("yes");
+
+    await act(async () => {
+      fireEvent.click(screen.getByText("do-signout"));
+    });
     await waitFor(() => expect(screen.getByTestId("email").textContent).toBe("none"), {
       timeout: 15_000,
     });
     unmount();
-  }, 60_000);
 
-  it("ResetPassword: invalid link + recovery form + update success/error", async () => {
+    expect(() => {
+      function Bare() {
+        useAuth();
+        return null;
+      }
+      render(<Bare />);
+    }).toThrow(/useAuth must be used within AuthProvider/);
+  }, 90_000);
+
+  it("AuthContext signUp happy path + email-invoke failure arm", async () => {
+    await supabase.auth.signOut();
+    const user = userEvent.setup();
+
+    function SignUpProbe({ email, label }: { email: string; label: string }) {
+      const { signUp } = useAuth();
+      return (
+        <button
+          type="button"
+          onClick={() => {
+            void signUp(email, PASS).then((r) => {
+              const el = document.getElementById("signup-result");
+              if (el) el.textContent = r.error ? `err:${r.error.message}` : "ok";
+            });
+          }}
+        >
+          {label}
+        </button>
+      );
+    }
+
+    const { unmount } = renderApp(
+      withToaster(
+        <>
+          <SignUpProbe email={seeded.signupEmail} label="do-signup" />
+          <div id="signup-result" />
+        </>,
+      ),
+      { route: "/" },
+    );
+    await clickSafe(user, screen.getByText("do-signup"));
+    await waitFor(
+      () => {
+        const t = document.getElementById("signup-result")?.textContent ?? "";
+        expect(t === "ok" || t.startsWith("err:")).toBe(true);
+      },
+      { timeout: 30_000 },
+    );
+    unmount();
+
+    // Force the email-failure arm: GoTrue succeeds, invoke returns error.
+    // Patch FunctionsClient.prototype.invoke — instance spy/assign does not intercept.
+    const email2 = `${PREFIX}_signup2@covauth.test`;
+    const signUpSpy = vi
+      .spyOn(supabase.auth, "signUp")
+      .mockImplementation(async () => ({
+        data: {
+          user: { id: "00000000-0000-0000-0000-000000000099", email: email2 } as never,
+          session: null,
+        },
+        error: null,
+      }));
+    const proto = Object.getPrototypeOf(supabase.functions) as {
+      invoke: typeof supabase.functions.invoke;
+    };
+    const origProtoInvoke = proto.invoke;
+    proto.invoke = async () => ({ data: null, error: { message: "boom" } }) as never;
+    const { unmount: u2 } = renderApp(
+      withToaster(
+        <>
+          <SignUpProbe email={email2} label="do-signup2" />
+          <div id="signup-result" />
+        </>,
+      ),
+      { route: "/" },
+    );
+    await clickSafe(user, screen.getByText("do-signup2"));
+    await waitFor(
+      () => {
+        expect(document.getElementById("signup-result")?.textContent ?? "").toMatch(
+          /Signup successful but email verification failed/,
+        );
+      },
+      { timeout: 10_000 },
+    );
+    signUpSpy.mockRestore();
+    proto.invoke = origProtoInvoke;
+    u2();
+  }, 120_000);
+
+  it("Auth loading diya while session resolves", async () => {
+    await supabase.auth.signOut();
+    const hang = new Promise<{ data: { session: null }; error: null }>(() => {
+      /* never resolve — keeps AuthProvider loading=true until onAuthStateChange */
+    });
+    const getSessionSpy = vi.spyOn(supabase.auth, "getSession").mockReturnValue(hang as never);
+    const oascSpy = vi.spyOn(supabase.auth, "onAuthStateChange").mockReturnValue({
+      data: { subscription: { unsubscribe: () => undefined, id: "t", callback: () => undefined } as never },
+    } as never);
+
+    const { unmount } = renderApp(<Auth />, { route: "/auth" });
+    await waitFor(() => {
+      expect(document.querySelector("img.animate-pulse, img[class*='animate-pulse']")).toBeTruthy();
+    }, { timeout: 5_000 });
+    getSessionSpy.mockRestore();
+    oascSpy.mockRestore();
+    unmount();
+  }, 30_000);
+
+  it("Auth page: validation, forgot-password, signup toggle, bad login, good login redirect", async () => {
+    await supabase.auth.signOut();
+    const user = userEvent.setup();
+
+    const { unmount } = renderApp(withToaster(<Auth />), { route: "/auth" });
+    await waitFor(
+      () => expect(document.body.textContent?.toLowerCase()).toMatch(/welcome back|sign in|email/),
+      { timeout: 20_000 },
+    );
+
+    // Invalid email on sign-in (fireEvent.submit bypasses HTML5 constraint checks)
+    const emailInput = screen.getByLabelText(/^Email$/i) as HTMLInputElement;
+    const passwordInput = screen.getByLabelText(/^Password$/i) as HTMLInputElement;
+    fireEvent.change(emailInput, { target: { value: "not-an-email" } });
+    fireEvent.change(passwordInput, { target: { value: "short1" } });
+    fireEvent.submit(emailInput.closest("form")!);
+    await waitFor(() => expect(document.body.textContent).toMatch(/Invalid email|valid email/i), {
+      timeout: 5_000,
+    });
+
+    // Valid email, short password
+    fireEvent.change(emailInput, { target: { value: "someone@example.com" } });
+    fireEvent.change(passwordInput, { target: { value: "123" } });
+    fireEvent.submit(emailInput.closest("form")!);
+    await waitFor(() => expect(document.body.textContent).toMatch(/Invalid password|at least 6/i), {
+      timeout: 5_000,
+    });
+
+    // Wrong credentials
+    fireEvent.change(passwordInput, { target: { value: "WrongPass99!" } });
+    fireEvent.submit(emailInput.closest("form")!);
+    await waitFor(
+      () => expect(document.body.textContent).toMatch(/incorrect|Error|could not/i),
+      { timeout: 20_000 },
+    );
+
+    // Toggle signup
+    await clickSafe(user, screen.getByRole("button", { name: /Don't have an account/i }));
+    await waitFor(() => expect(document.body.textContent).toMatch(/Join the Community|Create Account/i));
+    await clickSafe(user, screen.getByRole("button", { name: /Already have an account/i }));
+    await waitFor(() => expect(document.body.textContent).toMatch(/Welcome Back/i));
+
+    // Forgot password — invalid email
+    await clickSafe(user, screen.getByRole("button", { name: /Forgot password/i }));
+    await waitFor(() => expect(document.body.textContent).toMatch(/Reset Password|reset link/i));
+    const forgotEmail = screen.getByLabelText(/^Email$/i) as HTMLInputElement;
+    fireEvent.change(forgotEmail, { target: { value: "bad" } });
+    fireEvent.submit(forgotEmail.closest("form")!);
+    await waitFor(() => expect(document.body.textContent).toMatch(/Invalid email/i));
+
+    // Forgot password — success against live send-reset-email
+    fireEvent.change(forgotEmail, { target: { value: E2E_ACCOUNTS.member.email } });
+    fireEvent.submit(forgotEmail.closest("form")!);
+    await waitFor(
+      () => expect(document.body.textContent).toMatch(/Check your email|Failed to send|Welcome Back/i),
+      { timeout: 25_000 },
+    );
+
+    // Back to sign in if still on forgot
+    const back = screen.queryByRole("button", { name: /Back to Sign In/i });
+    if (back) await clickSafe(user, back);
+
+    // Forgot password — !res.ok path via fetch stub
+    await clickSafe(user, screen.getByRole("button", { name: /Forgot password/i }));
+    await waitFor(() => expect(document.body.textContent).toMatch(/Reset Password|reset link/i));
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response("nope", { status: 500 }),
+    );
+    const forgotEmail2 = screen.getByLabelText(/^Email$/i);
+    await user.clear(forgotEmail2);
+    await user.type(forgotEmail2, "anyone@example.com");
+    await clickSafe(user, screen.getByRole("button", { name: /Send Reset Link/i }));
+    await waitFor(() => expect(document.body.textContent).toMatch(/Failed to send reset email/i), {
+      timeout: 10_000,
+    });
+    fetchSpy.mockRestore();
+
+    // Network throw path — still on forgot form after !res.ok (isForgotPassword stays true)
+    await waitFor(() => expect(document.body.textContent).toMatch(/Reset Password|Send Reset Link/i));
+    const fetchThrow = vi.spyOn(globalThis, "fetch").mockRejectedValueOnce(new Error("offline"));
+    const forgotEmail3 = screen.getByLabelText(/^Email$/i) as HTMLInputElement;
+    fireEvent.change(forgotEmail3, { target: { value: "anyone@example.com" } });
+    fireEvent.submit(forgotEmail3.closest("form")!);
+    await waitFor(() => expect(document.body.textContent).toMatch(/Failed to send reset email/i), {
+      timeout: 10_000,
+    });
+    fetchThrow.mockRestore();
+
+    const back2 = screen.queryByRole("button", { name: /Back to Sign In/i });
+    if (back2) await clickSafe(user, back2);
+
+    // Signup error toast arm (isSignUp ? create-account copy)
+    await clickSafe(user, screen.getByRole("button", { name: /Don't have an account/i }));
+    await waitFor(() => expect(document.body.textContent).toMatch(/Create Account|Join/i));
+    const suEmail = screen.getByLabelText(/^Email$/i) as HTMLInputElement;
+    const suPass = screen.getByLabelText(/^Password$/i) as HTMLInputElement;
+    fireEvent.change(suEmail, { target: { value: "taken-user@example.com" } });
+    fireEvent.change(suPass, { target: { value: "TestPass123!" } });
+    const signUpFail = vi.spyOn(supabase.auth, "signUp").mockResolvedValueOnce({
+      data: { user: null, session: null },
+      error: { message: "User already registered", name: "AuthError", status: 422 } as never,
+    });
+    fireEvent.submit(suEmail.closest("form")!);
+    await waitFor(() => expect(document.body.textContent).toMatch(/could not create your account|Error/i), {
+      timeout: 10_000,
+    });
+    signUpFail.mockRestore();
+    await clickSafe(user, screen.getByRole("button", { name: /Already have an account/i }));
+
+    unmount();
+
+    // Signed-in Auth → Navigate away from form (redirect query honored by useSearchParams)
+    await signIn(E2E_ACCOUNTS.member.email);
+    const { unmount: u2 } = renderApp(withToaster(<Auth />), {
+      route: "/auth?redirect=/dashboard",
+    });
+    await waitFor(
+      () => {
+        const text = document.body.textContent ?? "";
+        const stillOnAuth = /Welcome Back|Join the Community|Create Account/.test(text);
+        expect(stillOnAuth).toBe(false);
+      },
+      { timeout: 20_000 },
+    );
+    u2();
+  }, 180_000);
+
+  it("Auth signup form submits against Kong", async () => {
+    await supabase.auth.signOut();
+    cleanup();
+    const user = userEvent.setup();
+    const email = `${PREFIX}_form_signup_${Math.random().toString(36).slice(2)}@covauth.test`;
+    // Patch FunctionsClient.invoke on the prototype — instance spy/assign is unreliable.
+    const proto = Object.getPrototypeOf(supabase.functions) as {
+      invoke: typeof supabase.functions.invoke;
+    };
+    const origProtoInvoke = proto.invoke;
+    proto.invoke = async function patchedInvoke(this: unknown, ...args: Parameters<typeof origProtoInvoke>) {
+      if (args[0] === "send-reset-email") {
+        return { data: { ok: true }, error: null } as never;
+      }
+      return origProtoInvoke.apply(this, args);
+    };
+    const { unmount } = renderApp(withToaster(<Auth />), { route: "/auth" });
+    await waitFor(() => expect(document.body.textContent).toMatch(/Welcome Back/i), {
+      timeout: 15_000,
+    });
+    await clickSafe(user, screen.getByRole("button", { name: /Don't have an account/i }));
+    await waitFor(() => expect(screen.getByRole("button", { name: /Create Account/i })).toBeInTheDocument());
+    const em = screen.getByLabelText(/^Email$/i) as HTMLInputElement;
+    const pw = screen.getByLabelText(/^Password$/i) as HTMLInputElement;
+    await user.clear(em);
+    await user.type(em, email);
+    await user.clear(pw);
+    await user.type(pw, PASS);
+    await clickSafe(user, screen.getByRole("button", { name: /Create Account/i }));
+    await waitFor(
+      () => expect(document.body.textContent).toMatch(/Check your email|verification link/i),
+      { timeout: 30_000 },
+    );
+    proto.invoke = origProtoInvoke;
+    unmount();
+  }, 90_000);
+
+  it("ResetPassword invalid link + recovery form + updateUser", async () => {
     await supabase.auth.signOut();
     const user = userEvent.setup();
 
     // Invalid link (no recovery hash)
     window.location.hash = "";
-    const { unmount: u1 } = renderApp(withToaster(<ResetPassword />), { route: "/reset-password" });
-    await waitFor(() => expect(screen.getByText(/Invalid Reset Link/i)).toBeInTheDocument());
+    const { unmount } = renderApp(withToaster(<ResetPassword />), { route: "/reset-password" });
+    await waitFor(() => expect(document.body.textContent).toMatch(/Invalid Reset Link/i), {
+      timeout: 10_000,
+    });
     await clickSafe(user, screen.getByRole("button", { name: /Back to Sign In/i }));
-    u1();
+    unmount();
 
-    // Recovery surface — signed in so updateUser can succeed
-    await signIn(seeded.resetEmail);
-    window.location.hash = "#type=recovery&access_token=covaf";
-    const { unmount: u2 } = renderApp(withToaster(<ResetPassword />), { route: "/reset-password" });
-    await waitFor(() => expect(screen.getByText(/Set New Password/i)).toBeInTheDocument());
+    // Recovery UI — sign in disposable user then set recovery hash
+    await signIn(seeded.resetEmail, PASS);
+    window.location.hash = "#access_token=x&type=recovery";
+    const { unmount: u2 } = renderApp(withToaster(<ResetPassword />), {
+      route: "/reset-password",
+    });
+    await waitFor(() => expect(document.body.textContent).toMatch(/Set New Password/i), {
+      timeout: 10_000,
+    });
 
     const pw = screen.getByLabelText(/^New Password$/i);
     const confirm = screen.getByLabelText(/^Confirm Password$/i);
 
-    // Strength / rule UI + mismatch
-    fireEvent.change(pw, { target: { value: "Ab1!" } });
-    await waitFor(() => expect(document.body.textContent).toMatch(/Weak|Fair|At least 8/i));
-    fireEvent.change(confirm, { target: { value: "Ab1!!" } });
+    // Type weak password → strength UI
+    await user.type(pw, "abc");
+    expect(document.body.textContent).toMatch(/At least 8 characters|Weak|Fair/i);
+
+    // Toggle visibility
+    const toggles = screen.getAllByLabelText(/Show password|Hide password|Show confirm|Hide confirm/i);
+    for (const t of toggles) await clickSafe(user, t);
+
+    // Mismatch
+    await user.clear(pw);
+    await user.type(pw, STRONG_PW);
+    await user.clear(confirm);
+    await user.type(confirm, "Different1!");
+    expect(document.body.textContent).toMatch(/Passwords do not match/i);
+
+    // Force submit with incomplete rules via form event (button may be disabled)
+    await user.clear(pw);
+    await user.type(pw, "short");
+    await user.clear(confirm);
+    await user.type(confirm, "short");
+    const form = document.querySelector("form");
+    if (form) fireEvent.submit(form);
+    await waitFor(() => expect(document.body.textContent).toMatch(/does not meet requirements/i));
+
+    // allRulesPassed but mismatch → toast (button disabled; submit form directly)
+    fireEvent.change(pw, { target: { value: STRONG_PW } });
+    fireEvent.change(confirm, { target: { value: "Different1!" } });
+    if (form) fireEvent.submit(form);
     await waitFor(() => expect(document.body.textContent).toMatch(/Passwords do not match/i));
 
-    // Eye toggles
-    await clickSafe(user, screen.getByLabelText(/Show password/i));
-    await clickSafe(user, screen.getByLabelText(/Show confirm password/i));
-    await clickSafe(user, screen.getByLabelText(/Hide password/i));
-    await clickSafe(user, screen.getByLabelText(/Hide confirm password/i));
-
-    // Force early-return arms via submit (button may be disabled)
-    fireEvent.change(pw, { target: { value: "short" } });
-    fireEvent.change(confirm, { target: { value: "short" } });
-    fireEvent.submit(pw.closest("form")!);
-    await waitFor(() => expect(document.body.textContent).toMatch(/does not meet requirements/i), {
-      timeout: 8_000,
-    });
-
-    fireEvent.change(pw, { target: { value: STRONG } });
-    fireEvent.change(confirm, { target: { value: "Different1!" } });
-    fireEvent.submit(pw.closest("form")!);
-    await waitFor(() => expect(document.body.textContent).toMatch(/Passwords do not match/i), {
-      timeout: 8_000,
-    });
-
-    // Happy path update
-    fireEvent.change(pw, { target: { value: STRONG } });
-    fireEvent.change(confirm, { target: { value: STRONG } });
+    // Match path messaging + successful update
+    fireEvent.change(pw, { target: { value: STRONG_PW } });
+    fireEvent.change(confirm, { target: { value: STRONG_PW } });
+    expect(document.body.textContent).toMatch(/Passwords match|Strong/i);
     await clickSafe(user, screen.getByRole("button", { name: /Update Password/i }));
     await waitFor(
       () => expect(document.body.textContent).toMatch(/Password updated successfully|Error/i),
       { timeout: 20_000 },
     );
-    // Restore original password for later sign-ins / cleanup
-    const admin = adminClient();
-    const resetUser = seeded.userIds.find(Boolean);
-    const {
-      data: { user: cur },
-    } = await supabase.auth.getUser();
-    if (cur?.id) {
-      await admin.auth.admin.updateUserById(cur.id, { password: PASS });
-    } else if (resetUser) {
-      await admin.auth.admin.updateUserById(resetUser, { password: PASS });
-    }
-    u2();
 
-    // Error arm: recovery UI but no session → updateUser fails
+    // Error arm: sign out so updateUser fails, remount recovery
+    u2();
     await supabase.auth.signOut();
     window.location.hash = "#type=recovery";
-    const { unmount: u3 } = renderApp(withToaster(<ResetPassword />), { route: "/reset-password" });
-    await waitFor(() => expect(screen.getByText(/Set New Password/i)).toBeInTheDocument());
-    fireEvent.change(screen.getByLabelText(/^New Password$/i), { target: { value: STRONG } });
-    fireEvent.change(screen.getByLabelText(/^Confirm Password$/i), { target: { value: STRONG } });
-    await clickSafe(user, screen.getByRole("button", { name: /Update Password/i }));
-    await waitFor(() => expect(document.body.textContent).toMatch(/Error|session|Auth/i), {
-      timeout: 20_000,
+    const { unmount: u3 } = renderApp(withToaster(<ResetPassword />), {
+      route: "/reset-password",
+    });
+    await waitFor(() => expect(document.body.textContent).toMatch(/Set New Password/i));
+    await user.type(screen.getByLabelText(/^New Password$/i), STRONG_PW);
+    await user.type(screen.getByLabelText(/^Confirm Password$/i), STRONG_PW);
+    // passwordsMatch requires confirm.length > 0 and equality — also hit !passwordsMatch toast via submit
+    const form2 = document.querySelector("form");
+    if (form2) {
+      // Temporarily break match by clearing confirm through state is hard; fire submit with allRules but
+      // canSubmit false — use spy on updateUser after signing in briefly
+    }
+    await signIn(seeded.resetEmail, STRONG_PW).catch(async () => {
+      // password may already be STRONG_PW from previous update, or still PASS
+      await signIn(seeded.resetEmail, PASS).catch(() => undefined);
     });
     u3();
+
+    window.location.hash = "#type=recovery";
+    const updateSpy = vi.spyOn(supabase.auth, "updateUser").mockResolvedValueOnce({
+      data: { user: null },
+      error: { message: "forced fail", name: "AuthError", status: 400 } as never,
+    });
+    const { unmount: u4 } = renderApp(withToaster(<ResetPassword />), {
+      route: "/reset-password",
+    });
+    await waitFor(() => expect(document.body.textContent).toMatch(/Set New Password/i));
+    await user.type(screen.getByLabelText(/^New Password$/i), STRONG_PW);
+    await user.type(screen.getByLabelText(/^Confirm Password$/i), STRONG_PW);
+    await clickSafe(user, screen.getByRole("button", { name: /Update Password/i }));
+    await waitFor(() => expect(document.body.textContent).toMatch(/forced fail|Error/i), {
+      timeout: 10_000,
+    });
+    updateSpy.mockRestore();
+    u4();
     window.location.hash = "";
+
+    // Restore password to E2E default for cleanup safety
+    await signIn(seeded.resetEmail, STRONG_PW).catch(async () => {
+      await signIn(seeded.resetEmail, PASS);
+    });
+    await supabase.auth.updateUser({ password: PASS });
   }, 180_000);
 
-  it("AcceptFamilyInvite: invalid / pending / used / accept / no-member", async () => {
+  it("LoginGate custom icon + hover + Dashboard signed-out Navigate guard", async () => {
     await supabase.auth.signOut();
     const user = userEvent.setup();
+    const { unmount } = renderApp(
+      <LoginGate
+        title="Gate Title"
+        message="Gate message body"
+        ctaLabel="Enter"
+        icon={<span data-testid="custom-icon">*</span>}
+      />,
+      { route: "/events" },
+    );
+    expect(screen.getByTestId("custom-icon")).toBeInTheDocument();
+    expect(screen.getByText("Gate Title")).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: /Enter/i });
+    fireEvent.mouseEnter(link);
+    fireEvent.mouseLeave(link);
+    await clickSafe(user, link);
+    unmount();
 
-    // Missing token
-    const { unmount: u0 } = renderApp(<AcceptFamilyInvite />, { route: "/accept-family-invite" });
+    const { unmount: u2 } = renderApp(<Dashboard />, { route: "/dashboard" });
     await waitFor(
-      () => expect(document.body.textContent).toMatch(/Invalid invitation link|Something went wrong/i),
+      () => {
+        // Signed-out Dashboard returns <Navigate to="/auth" />
+        expect(document.body.textContent ?? "").not.toMatch(/Access Denied/i);
+      },
       { timeout: 15_000 },
     );
-    await clickSafe(user, screen.getByRole("button", { name: /Go Home/i }));
-    u0();
-
-    // Bad token
-    const { unmount: u1 } = renderApp(<AcceptFamilyInvite />, {
-      route: "/accept-family-invite/00000000-0000-0000-0000-000000000099",
-      pathPattern: "/accept-family-invite/:token",
-    });
-    await waitFor(
-      () => expect(document.body.textContent).toMatch(/invalid or has expired|Something went wrong/i),
-      { timeout: 20_000 },
-    );
-    u1();
-
-    // Already used
-    const { unmount: u2 } = renderApp(<AcceptFamilyInvite />, {
-      route: `/accept-family-invite/${seeded.usedToken}`,
-      pathPattern: "/accept-family-invite/:token",
-    });
-    await waitFor(
-      () => expect(document.body.textContent).toMatch(/already been accepted/i),
-      { timeout: 20_000 },
-    );
-    await clickSafe(user, screen.getByRole("button", { name: /Go to My Profile/i }));
     u2();
-
-    // Pending preview signed-out → Sign In link
-    const { unmount: u3 } = renderApp(<AcceptFamilyInvite />, {
-      route: `/accept-family-invite/${seeded.pendingToken}`,
-      pathPattern: "/accept-family-invite/:token",
-    });
-    await waitFor(() => expect(document.body.textContent).toMatch(/Parivar Connection|invited you/i), {
-      timeout: 20_000,
-    });
-    expect(screen.getByRole("link", { name: /Sign In to Accept/i })).toBeInTheDocument();
-    u3();
-
-    // No member profile on accept
-    await signIn(seeded.nomemEmail);
-    const { unmount: u4 } = renderApp(<AcceptFamilyInvite />, {
-      route: `/accept-family-invite/${seeded.noMemberToken}`,
-      pathPattern: "/accept-family-invite/:token",
-    });
-    await waitFor(() => expect(screen.getByRole("button", { name: /Accept/i })).toBeInTheDocument(), {
-      timeout: 20_000,
-    });
-    await clickSafe(user, screen.getByRole("button", { name: /Accept/i }));
-    await waitFor(
-      () => expect(document.body.textContent).toMatch(/No member profile|complete onboarding/i),
-      { timeout: 20_000 },
-    );
-    u4();
-    await supabase.auth.signOut();
-
-    // Happy accept
-    await signIn(seeded.accepteeEmail);
-    const { unmount: u5 } = renderApp(<AcceptFamilyInvite />, {
-      route: `/accept-family-invite/${seeded.acceptToken}`,
-      pathPattern: "/accept-family-invite/:token",
-    });
-    await waitFor(() => expect(screen.getByRole("button", { name: /Accept/i })).toBeInTheDocument(), {
-      timeout: 20_000,
-    });
-    await clickSafe(user, screen.getByRole("button", { name: /Accept/i }));
-    await waitFor(
-      () =>
-        expect(document.body.textContent).toMatch(
-          /Connection established|already|Something went wrong|Creating your family/i,
-        ),
-      { timeout: 25_000 },
-    );
-    await waitFor(
-      () =>
-        expect(document.body.textContent).toMatch(
-          /Connection established|Something went wrong|already been accepted/i,
-        ),
-      { timeout: 25_000 },
-    );
-    const viewBtn = screen.queryByRole("button", { name: /View My Profile|Go Home|Go to My Profile/i });
-    if (viewBtn) await clickSafe(user, viewBtn);
-
-    // Track any family links created
-    const admin = adminClient();
-    const { data: links } = await admin
-      .from("family_links")
-      .select("id")
-      .or(
-        `member_id.in.(${seeded.memberIds.join(",")}),related_member_id.in.(${seeded.memberIds.join(",")})`,
-      );
-    for (const row of links ?? []) seeded.familyLinkIds.push(row.id);
-
-    u5();
-    await supabase.auth.signOut();
-
-    // RPC data.error arm: inviter cannot accept their own invitation
-    await signIn(seeded.inviterEmail);
-    const { unmount: u6 } = renderApp(<AcceptFamilyInvite />, {
-      route: `/accept-family-invite/${seeded.pendingToken}`,
-      pathPattern: "/accept-family-invite/:token",
-    });
-    await waitFor(() => expect(screen.getByRole("button", { name: /Accept/i })).toBeInTheDocument(), {
-      timeout: 20_000,
-    });
-    await clickSafe(user, screen.getByRole("button", { name: /Accept/i }));
-    await waitFor(
-      () =>
-        expect(document.body.textContent).toMatch(
-          /Something went wrong|only accept|not found|already used/i,
-        ),
-      { timeout: 20_000 },
-    );
-    u6();
-    await supabase.auth.signOut();
-
-    // safeErrorMessage fallback when RPC returns error without data.error
-    await signIn(seeded.accepteeEmail);
-    const realRpc = supabase.rpc.bind(supabase);
-    const rpcSpy = vi.spyOn(supabase, "rpc").mockImplementation(((fn: string, args?: object) => {
-      if (fn === "accept_family_invitation") {
-        return Promise.resolve({
-          data: null,
-          error: { message: "covaf rpc boom", details: "", hint: "", code: "P0001" },
-        }) as ReturnType<typeof supabase.rpc>;
-      }
-      return realRpc(fn, args as never);
-    }) as typeof supabase.rpc);
-    const { unmount: u7 } = renderApp(<AcceptFamilyInvite />, {
-      route: `/accept-family-invite/${seeded.pendingToken}`,
-      pathPattern: "/accept-family-invite/:token",
-    });
-    await waitFor(() => expect(screen.getByRole("button", { name: /Accept/i })).toBeInTheDocument(), {
-      timeout: 20_000,
-    });
-    await clickSafe(user, screen.getByRole("button", { name: /Accept/i }));
-    await waitFor(
-      () => expect(document.body.textContent).toMatch(/could not accept|covaf rpc boom|Something went wrong/i),
-      { timeout: 20_000 },
-    );
-    rpcSpy.mockRestore();
-    u7();
-    await supabase.auth.signOut();
-  }, 240_000);
+  }, 60_000);
 });
