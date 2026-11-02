@@ -730,6 +730,11 @@ describe("Pass 14 MemberProfile + Verification* (real Kong)", () => {
     const admin = adminClient();
 
     await signIn(E2E_ACCOUNTS.globalAdmin.email);
+    // Disposable seeds default onboarding_completed=true; flip one so the
+    // chapter-scoped queue is non-empty for select-all / mass send.
+    if (seeded.l0MemberId) {
+      await admin.from("members").update({ onboarding_completed: false }).eq("id", seeded.l0MemberId);
+    }
     // Chapter-scoped mount for mass reminders — global send_to_all hits 50–300+
     // pending rows and Emailit rate limits (~74s), flaking the 45s toast wait.
     let view = renderApp(
