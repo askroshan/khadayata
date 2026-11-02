@@ -45,6 +45,16 @@ export default function ObituaryForm({ onClose, onSuccess }: ObituaryFormProps) 
     setError(null);
     setSaving(true);
     try {
+      // posted_by FK → members.id (not auth.users.id)
+      let postedBy: string | null = null;
+      if (user?.id) {
+        const { data: memberRow } = await supabase
+          .from("members")
+          .select("id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        postedBy = memberRow?.id ?? null;
+      }
       const { error: err } = await supabase.from("obituaries").insert({
         full_name: form.full_name.trim(),
         also_known_as: form.also_known_as.trim() || null,
@@ -57,7 +67,7 @@ export default function ObituaryForm({ onClose, onSuccess }: ObituaryFormProps) 
         tribute: form.tribute.trim() || null,
         family_message: form.family_message.trim() || null,
         status: "published",
-        posted_by: user?.id ?? null,
+        posted_by: postedBy,
       });
       if (err) throw err;
       onSuccess();
