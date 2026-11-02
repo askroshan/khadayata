@@ -671,8 +671,11 @@ describe("Pass 12 — feature pages (real Kong data)", () => {
       },
       { timeout: 25_000 },
     );
-    // Public member profile for a real (non-E2E) member must not render E2E first_name
-    expect(document.body.textContent ?? "").not.toMatch(/\bE2E\b/);
+    // Subject is the real member; E2E accounts may appear later as voucher names.
+    const profileText = document.body.textContent ?? "";
+    expect(profileText).toMatch(new RegExp(REAL_MEMBER_FIRST, "i"));
+    const beforeVouches = profileText.split(/Vouches\b/i)[0] ?? profileText;
+    expect(beforeVouches).not.toMatch(/\bE2E\b/);
     for (const b of screen.queryAllByRole("button").slice(0, 8)) {
       if ((b as HTMLButtonElement).disabled) continue;
       const label = b.textContent ?? b.getAttribute("aria-label") ?? "";

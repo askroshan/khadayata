@@ -44,21 +44,24 @@ describe("Interaction / mutation branches (real sessions + data)", () => {
       (document.querySelector("#global-search-input") as HTMLInputElement | null) ||
       (screen.queryByPlaceholderText(/Search by name/i) as HTMLInputElement | null);
     expect(input).toBeTruthy();
-    await user.clear(input!);
-    await user.type(input!, "Shah");
+    // fireEvent: user.type is too slow under coverage + live search fan-out
+    fireEvent.change(input!, { target: { value: "Shah" } });
     await waitFor(() => {
       expect(input!.value).toMatch(/Shah/);
-    });
+    }, { timeout: 10_000 });
     const eventsBtn = screen.getAllByRole("button").find((b) => /^Events/i.test(b.textContent ?? ""));
     if (eventsBtn) await user.click(eventsBtn);
     const advanced = screen.queryByRole("button", { name: /Advanced Filters/i });
     if (advanced) {
       await user.click(advanced);
-      await waitFor(() => {
-        expect(document.body.textContent?.toLowerCase()).toMatch(/country|date of birth/);
-      });
+      await waitFor(
+        () => {
+          expect(document.body.textContent?.toLowerCase()).toMatch(/country|date of birth/);
+        },
+        { timeout: 15_000 },
+      );
     }
-  }, 60_000);
+  }, 120_000);
 
   it("Settings: tab switches + notification toggles + privacy save path", async () => {
     await signIn(E2E_ACCOUNTS.member.email);
