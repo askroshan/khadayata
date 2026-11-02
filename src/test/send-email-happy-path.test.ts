@@ -35,7 +35,12 @@ function redact(s: string) {
   return s.replace(/secret_[A-Za-z0-9]+/g, "secret_***").replace(/Bearer\s+\S+/gi, "Bearer ***");
 }
 
-describe("send-email happy path (EMAILIT_API_KEY available)", () => {
+const emailOutboundDisabled =
+  !emailitKey ||
+  process.env.DISABLE_OUTBOUND_EMAIL === "1" ||
+  envFromDotenv("DISABLE_OUTBOUND_EMAIL") === "1";
+
+describe.skipIf(emailOutboundDisabled)("send-email happy path (EMAILIT_API_KEY available)", () => {
   beforeAll(() => {
     expect(emailitKey, "EMAILIT_API_KEY must be in untracked .env").toBeTruthy();
   });
