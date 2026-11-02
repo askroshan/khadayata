@@ -1,8 +1,9 @@
-import { describe, it, expect, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { waitFor, screen } from "@testing-library/react";
 import { renderApp } from "@/test/helpers/render-app";
 import { supabase } from "@/integrations/supabase/client";
 import { E2E_ACCOUNTS, E2E_PASSWORD } from "@/test/helpers/e2e-accounts";
+import { ensureE2eMemberUnprivileged } from "@/test/helpers/ensure-e2e-member-unprivileged";
 import Admin from "@/pages/Admin";
 import ModeratorDashboard from "@/pages/ModeratorDashboard";
 import Directory from "@/pages/Directory";
@@ -17,6 +18,11 @@ async function signIn(email: string) {
 }
 
 describe("Admin / signed-in page mounts with real role sessions", () => {
+  beforeAll(() => {
+    // Moderator (etc.) left on the E2E member makes canAccessAdmin true.
+    ensureE2eMemberUnprivileged();
+  });
+
   afterAll(async () => {
     await supabase.auth.signOut();
   });

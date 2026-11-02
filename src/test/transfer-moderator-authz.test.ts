@@ -95,6 +95,21 @@ BEGIN
   RETURN NEW;
 END;
 $function$;
+
+-- Function replace alone is not enough if the trigger was dropped on a restore.
+DROP TRIGGER IF EXISTS trg_guard_privileged_member_columns ON public.members;
+CREATE TRIGGER trg_guard_privileged_member_columns
+  BEFORE UPDATE ON public.members
+  FOR EACH ROW EXECUTE FUNCTION public.guard_privileged_member_columns();
+
+-- E2E regular member must stay unprivileged (coverage suites sometimes leave roles behind).
+DELETE FROM public.role_assignments ra
+USING public.members m
+WHERE ra.member_id = m.id
+  AND m.user_id IN (
+    SELECT id FROM auth.users WHERE email = 'member@khadayataonline.com'
+  );
+
 NOTIFY pgrst, 'reload schema';
 `;
   try {

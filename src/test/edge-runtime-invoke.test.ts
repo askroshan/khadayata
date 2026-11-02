@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import { E2E_ACCOUNTS, E2E_PASSWORD } from "@/test/helpers/e2e-accounts";
+import { ensureE2eMemberUnprivileged } from "@/test/helpers/ensure-e2e-member-unprivileged";
 
 const url = process.env.VITE_SUPABASE_URL ?? import.meta.env.VITE_SUPABASE_URL;
 const anon = process.env.VITE_SUPABASE_ANON_KEY ?? import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -49,6 +50,9 @@ describe("edge runtime HTTP invokes (live functions)", () => {
   let memberId: string;
 
   beforeAll(async () => {
+    // Coverage suites may leave Moderator (etc.) on the E2E member — bulk-invite
+    // allows Moderator, so deny assertions need a clean unprivileged seed.
+    ensureE2eMemberUnprivileged();
     const authOpts = { auth: { persistSession: false, autoRefreshToken: false } } as const;
     const client = createClient(url, anon, authOpts);
     const { data, error } = await client.auth.signInWithPassword({
