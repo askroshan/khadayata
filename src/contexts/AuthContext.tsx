@@ -42,9 +42,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     if (!error) {
       try {
-        await supabase.functions.invoke("send-reset-email", {
+        const { error: emailErr } = await supabase.functions.invoke("send-reset-email", {
           body: { email, type: "signup" },
         });
+        if (emailErr) throw emailErr;
       } catch (emailErr) {
         console.error("Failed to send verification email:", emailErr);
         return { error: new Error("Signup successful but email verification failed. Please contact support.") };

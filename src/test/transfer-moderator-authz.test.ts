@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { execFileSync } from "node:child_process";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 /**
@@ -24,7 +25,99 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
  * accounts were removed from production on 2026-09-30 (see migration
  * remove_test_seed_data_20260930 and AGENTS.md section 3.1). When the
  * accounts don't exist, these suites skip automatically.
+ *
+ * Local Kong DB restores sometimes omit the 2026-09-15 policies; beforeAll
+ * re-applies them idempotently against supabase_db_khadayata-local.
  */
+
+/** Idempotent product policies from 20260915 transfer + moderator migrations. */
+function ensureAuthzPoliciesOnKong() {
+  const sql = `
+DROP POLICY IF EXISTS "Global admins decide chapter transfers" ON public.chapter_transfers;
+CREATE POLICY "Global admins decide chapter transfers"
+  ON public.chapter_transfers FOR UPDATE TO authenticated
+  USING (has_role(auth.uid(), 'Global Admin') AND status = 'pending')
+  WITH CHECK (has_role(auth.uid(), 'Global Admin') AND status IN ('pending', 'approved', 'rejected'));
+
+DROP POLICY IF EXISTS "Users can update own and admins can update any member" ON public.members;
+CREATE POLICY "Users can update own and admins can update any member"
+  ON public.members FOR UPDATE TO authenticated
+  USING (
+    (SELECT auth.uid()) = user_id
+    OR has_role((SELECT auth.uid()), 'Global Admin')
+    OR has_role((SELECT auth.uid()), 'Data Steward')
+    OR has_role((SELECT auth.uid()), 'Chapter Admin')
+    OR has_role((SELECT auth.uid()), 'Moderator')
+  )
+  WITH CHECK (
+    (SELECT auth.uid()) = user_id
+    OR has_role((SELECT auth.uid()), 'Global Admin')
+    OR has_role((SELECT auth.uid()), 'Data Steward')
+    OR has_role((SELECT auth.uid()), 'Chapter Admin')
+    OR has_role((SELECT auth.uid()), 'Moderator')
+  );
+
+CREATE OR REPLACE FUNCTION public.guard_privileged_member_columns()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $function$
+DECLARE
+  is_privileged boolean;
+  is_moderator  boolean;
+BEGIN
+  SELECT EXISTS (
+    SELECT 1 FROM role_assignments ra
+    JOIN roles r ON r.id = ra.role_id
+    JOIN members m ON m.id = ra.member_id
+    WHERE m.user_id = auth.uid()
+      AND r.name IN ('Global Admin', 'Data Steward')
+      AND (ra.end_date IS NULL OR ra.end_date >= CURRENT_DATE)
+  ) INTO is_privileged;
+  SELECT EXISTS (
+    SELECT 1 FROM role_assignments ra
+    JOIN roles r ON r.id = ra.role_id
+    JOIN members m ON m.id = ra.member_id
+    WHERE m.user_id = auth.uid()
+      AND r.name = 'Moderator'
+      AND (ra.end_date IS NULL OR ra.end_date >= CURRENT_DATE)
+  ) INTO is_moderator;
+  IF NOT is_privileged THEN
+    IF NEW.verification_level IS DISTINCT FROM OLD.verification_level THEN
+      IF NOT is_moderator THEN
+        RAISE EXCEPTION 'Only Global Admin, Data Steward, or Moderator can change verification_level'
+          USING ERRCODE = 'check_violation';
+      END IF;
+    END IF;
+    IF NEW.blocked IS DISTINCT FROM OLD.blocked
+       OR NEW.suspended IS DISTINCT FROM OLD.suspended THEN
+      RAISE EXCEPTION 'Only Global Admin or Data Steward can block or suspend members'
+        USING ERRCODE = 'check_violation';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$function$;
+NOTIFY pgrst, 'reload schema';
+`;
+  try {
+    execFileSync(
+      "docker",
+      [
+        "exec",
+        "supabase_db_khadayata-local",
+        "psql",
+        "-U",
+        "postgres",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-c",
+        sql,
+      ],
+      { stdio: ["ignore", "pipe", "pipe"] },
+    );
+  } catch (err) {
+    // Host without the local Kong container — live suite will fail/skip as before.
+    console.warn("ensureAuthzPoliciesOnKong:", (err as Error).message);
+  }
+}
 
 const url = process.env.VITE_SUPABASE_URL ?? import.meta.env.VITE_SUPABASE_URL;
 const anonKey = process.env.VITE_SUPABASE_ANON_KEY ?? import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -106,6 +199,7 @@ describe("chapter transfer approvals (live DB, behavioral)", () => {
   let shouldSkip = false;
 
   beforeAll(async () => {
+    ensureAuthzPoliciesOnKong();
     if (!(await testAccountsExist())) {
       shouldSkip = true;
       return;
@@ -217,6 +311,7 @@ describe("moderator verification rights (live DB, behavioral)", () => {
   let shouldSkip = false;
 
   beforeAll(async () => {
+    ensureAuthzPoliciesOnKong();
     if (!(await testAccountsExist())) {
       shouldSkip = true;
       return;
