@@ -741,6 +741,7 @@ describe("Pass 14 — Matrimonial (+ related) real Kong", () => {
 
   it("Matrimonial member: matches filters/introduce/rishta + intros accept/decline + my profile", async () => {
     await signIn(E2E_ACCOUNTS.member.email);
+    const admin = adminClient();
     const user = userEvent.setup();
     renderApp(withToaster(<Matrimonial />), { route: "/matrimonial/manage" });
 
@@ -828,30 +829,35 @@ describe("Pass 14 — Matrimonial (+ related) real Kong", () => {
       }, { timeout: 15_000 });
     }
 
-    // Formal Rishta dialog
+    // Formal Rishta dialog — clear seeded outbound rows so insert hits onSuccess (lines 203–206)
+    if (seeded.memberProfileId) {
+      await admin
+        .from("rishta_requests")
+        .delete()
+        .eq("from_profile_id", seeded.memberProfileId);
+    }
     const rishtaBtn =
       screen.queryAllByRole("button", { name: /Send formal Rishta/i })[0] ??
       screen.queryAllByRole("button").find((b) => /rishta|formal/i.test(b.getAttribute("aria-label") ?? ""));
-    if (rishtaBtn) {
-      await clickSafe(user, rishtaBtn);
-      await waitFor(() => {
-        expect(document.body.textContent ?? "").toMatch(/Formal Rishta|Family Contact/i);
-      }, { timeout: 10_000 });
-      const name = document.querySelector('input[placeholder*="Father" i]') as HTMLInputElement | null;
-      if (name) fireEvent.change(name, { target: { value: `${MARKER} Father Contact` } });
-      const phone = document.querySelector('input[placeholder*="+91" i]') as HTMLInputElement | null;
-      if (phone) fireEvent.change(phone, { target: { value: "+91 90000 11111" } });
-      const msg = document.querySelector("textarea") as HTMLTextAreaElement | null;
-      if (msg) fireEvent.change(msg, { target: { value: `${MARKER} rishta message` } });
-      const send = screen.queryByRole("button", { name: /Send Rishta Request/i });
-      if (send && !(send as HTMLButtonElement).disabled) {
-        await clickSafe(user, send);
-        await waitFor(() => {
-          expect(document.body.textContent?.toLowerCase() ?? "").toMatch(/rishta request sent|sent to family|error/);
-        }, { timeout: 15_000 });
-      }
-      await closeDialogs(user);
-    }
+    expect(rishtaBtn).toBeTruthy();
+    await clickSafe(user, rishtaBtn!);
+    await waitFor(() => {
+      expect(document.body.textContent ?? "").toMatch(/Formal Rishta|Family Contact/i);
+    }, { timeout: 10_000 });
+    const name = document.querySelector('input[placeholder*="Father" i]') as HTMLInputElement | null;
+    expect(name).toBeTruthy();
+    fireEvent.change(name!, { target: { value: `${MARKER} Father Contact` } });
+    const phone = document.querySelector('input[placeholder*="+91" i]') as HTMLInputElement | null;
+    if (phone) fireEvent.change(phone, { target: { value: "+91 90000 11111" } });
+    const msg = document.querySelector("textarea") as HTMLTextAreaElement | null;
+    if (msg) fireEvent.change(msg, { target: { value: `${MARKER} rishta message` } });
+    const send = screen.getByRole("button", { name: /Send Rishta Request/i });
+    expect((send as HTMLButtonElement).disabled).toBe(false);
+    await clickSafe(user, send);
+    await waitFor(() => {
+      expect(screen.getByText("Rishta request sent to family!")).toBeTruthy();
+    }, { timeout: 15_000 });
+    await closeDialogs(user);
 
     // Intros tab — Accept pending inbound (toast is the hard signal)
     await clickSafe(user, screen.getByRole("tab", { name: /Intro/i }));
