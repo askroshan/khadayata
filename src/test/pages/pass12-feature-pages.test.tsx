@@ -671,11 +671,11 @@ describe("Pass 12 — feature pages (real Kong data)", () => {
       },
       { timeout: 25_000 },
     );
-    // Subject is the real member; E2E accounts may appear later as voucher names.
-    const profileText = document.body.textContent ?? "";
-    expect(profileText).toMatch(new RegExp(REAL_MEMBER_FIRST, "i"));
-    const beforeVouches = profileText.split(/Vouches\b/i)[0] ?? profileText;
-    expect(beforeVouches).not.toMatch(/\bE2E\b/);
+    // Subject identity must be the real member — do not scan whole body (voucher names /
+    // AppLayout session chrome can legitimately include the signed-in "E2E Member").
+    const profileHeading = screen.getByRole("heading", { level: 1 });
+    expect(profileHeading.textContent).toMatch(new RegExp(REAL_MEMBER_FIRST, "i"));
+    expect(profileHeading.textContent).not.toMatch(/\bE2E\b/);
     for (const b of screen.queryAllByRole("button").slice(0, 8)) {
       if ((b as HTMLButtonElement).disabled) continue;
       const label = b.textContent ?? b.getAttribute("aria-label") ?? "";
