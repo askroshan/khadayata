@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useParams, Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,14 +40,20 @@ export default function NewsDetail() {
   });
 
   const incrementViews = useMutation({
-    mutationFn: async () => {
-      if (!article) return;
+    mutationFn: async (payload: { id: string; views_count: number | null }) => {
       await supabase
         .from("content_news")
-        .update({ views_count: (article.views_count ?? 0) + 1 })
-        .eq("id", article.id);
+        .update({ views_count: (payload.views_count ?? 0) + 1 })
+        .eq("id", payload.id);
     },
   });
+
+  useEffect(() => {
+    if (!article?.id) return;
+    incrementViews.mutate({ id: article.id, views_count: article.views_count ?? 0 });
+    // Count once per article id; omit mutate identity from deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [article?.id]);
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href);
