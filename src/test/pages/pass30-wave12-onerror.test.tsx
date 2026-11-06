@@ -2,7 +2,7 @@
  * Pass 30 — Wave 12: remaining mutation onError + leftover select arrows.
  * EMAILIT blank. Writes are forced to fail so no email/SMS/notify fires.
  */
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, afterEach } from "vitest";
 import type { ReactNode } from "react";
 import { readFileSync } from "node:fs";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
@@ -179,13 +179,31 @@ function boomChain(message: string) {
   return chain;
 }
 
+const REAL_FROM = supabase.from.bind(supabase);
+const REAL_RPC = supabase.rpc.bind(supabase);
+const REAL_INVOKE = supabase.functions.invoke.bind(supabase.functions);
+
+function restoreWrites() {
+  const client = supabase as unknown as Record<string, unknown>;
+  if (Object.prototype.hasOwnProperty.call(client, "from")) delete client.from;
+  if (Object.prototype.hasOwnProperty.call(client, "rpc")) delete client.rpc;
+  const fns = supabase.functions as unknown as Record<string, unknown>;
+  if (Object.prototype.hasOwnProperty.call(fns, "invoke")) delete fns.invoke;
+  if (typeof supabase.from !== "function") {
+    (supabase as { from: typeof supabase.from }).from = REAL_FROM as typeof supabase.from;
+  }
+  if (typeof supabase.rpc !== "function") {
+    (supabase as { rpc: typeof supabase.rpc }).rpc = REAL_RPC as typeof supabase.rpc;
+  }
+  if (typeof supabase.functions.invoke !== "function") {
+    supabase.functions.invoke = REAL_INVOKE;
+  }
+}
+
 function forceWritesFail() {
-  const origFrom = supabase.from.bind(supabase);
-  const origRpc = supabase.rpc.bind(supabase);
-  const origInvoke = supabase.functions.invoke.bind(supabase.functions);
   const message = `${PREFIX} boom`;
   (supabase as { from: typeof supabase.from }).from = ((table: string) => {
-    const q = origFrom(table);
+    const q = REAL_FROM(table);
     const boom = () => boomChain(message);
     (q as { insert: unknown }).insert = boom;
     (q as { update: unknown }).update = boom;
@@ -201,24 +219,23 @@ function forceWritesFail() {
     data: null,
     error: { message },
   })) as typeof supabase.functions.invoke;
-  return () => {
-    (supabase as { from: typeof supabase.from }).from = origFrom;
-    (supabase as { rpc: typeof supabase.rpc }).rpc = origRpc;
-    supabase.functions.invoke = origInvoke;
-  };
+  return restoreWrites;
 }
 
 async function submitFailing(name: RegExp | string) {
   const restore = forceWritesFail();
-  const btn =
-    typeof name === "string"
-      ? screen.queryByRole("button", { name })
-      : screen.queryAllByRole("button", { name })[0];
-  hardClick(btn);
-  await waitFor(() => expect(document.body.textContent).toMatch(new RegExp(`${PREFIX} boom|Error`)), {
-    timeout: 8_000,
-  }).catch(() => undefined);
-  restore();
+  try {
+    const btn =
+      typeof name === "string"
+        ? screen.queryByRole("button", { name })
+        : screen.queryAllByRole("button", { name })[0];
+    hardClick(btn);
+    await waitFor(() => expect(document.body.textContent).toMatch(new RegExp(`${PREFIX} boom`)), {
+      timeout: 8_000,
+    }).catch(() => undefined);
+  } finally {
+    restore();
+  }
 }
 
 let lastSignInAt = 0;
@@ -244,6 +261,10 @@ async function signIn(email: string) {
 }
 
 describe("Pass 30 — Wave 12 onError + leftover arrows", () => {
+  afterEach(() => {
+    restoreWrites();
+  });
+
   beforeAll(async () => {
     const admin = adminClient();
     await signIn(E2E_ACCOUNTS.globalAdmin.email);
@@ -327,6 +348,7 @@ describe("Pass 30 — Wave 12 onError + leftover arrows", () => {
     if (seeded.templateId) await admin.from("whatsapp_templates").delete().eq("id", seeded.templateId);
     if (seeded.oralId) await admin.from("oral_histories").delete().eq("id", seeded.oralId);
     if (seeded.inviteId) await admin.from("family_invitations").delete().eq("id", seeded.inviteId);
+    restoreWrites();
     await supabase.auth.signOut().catch(() => undefined);
   }, 60_000);
 
@@ -365,7 +387,7 @@ describe("Pass 30 — Wave 12 onError + leftover arrows", () => {
 
     const restoreToggle = forceWritesFail();
     hardClick(screen.queryAllByLabelText(/Deactivate chapter|Activate chapter/i)[0]);
-    await waitFor(() => expect(document.body.textContent).toMatch(new RegExp(`${PREFIX} boom|Error`)), {
+    await waitFor(() => expect(document.body.textContent).toMatch(new RegExp(`${PREFIX} boom`)), {
       timeout: 8_000,
     }).catch(() => undefined);
     restoreToggle();
@@ -393,7 +415,7 @@ describe("Pass 30 — Wave 12 onError + leftover arrows", () => {
       }
       const restoreVerify = forceWritesFail();
       hardClick(screen.queryAllByRole("button", { name: /^Verify$/i })[0]);
-      await waitFor(() => expect(document.body.textContent).toMatch(new RegExp(`${PREFIX} boom|Error`)), {
+      await waitFor(() => expect(document.body.textContent).toMatch(new RegExp(`${PREFIX} boom`)), {
         timeout: 8_000,
       }).catch(() => undefined);
       restoreVerify();
@@ -459,7 +481,7 @@ describe("Pass 30 — Wave 12 onError + leftover arrows", () => {
       }
       const restoreCancel = forceWritesFail();
       hardClick(screen.queryAllByRole("button", { name: /Cancel campaign|Cancel$/i })[0]);
-      await waitFor(() => expect(document.body.textContent).toMatch(new RegExp(`${PREFIX} boom|Error`)), {
+      await waitFor(() => expect(document.body.textContent).toMatch(new RegExp(`${PREFIX} boom`)), {
         timeout: 6_000,
       }).catch(() => undefined);
       restoreCancel();
@@ -553,7 +575,7 @@ describe("Pass 30 — Wave 12 onError + leftover arrows", () => {
       }
       const restoreLvl = forceWritesFail();
       hardClick(screen.queryAllByLabelText(/Downgrade verification level/i)[0]);
-      await waitFor(() => expect(document.body.textContent).toMatch(new RegExp(`${PREFIX} boom|Error`)), {
+      await waitFor(() => expect(document.body.textContent).toMatch(new RegExp(`${PREFIX} boom`)), {
         timeout: 8_000,
       }).catch(() => undefined);
       restoreLvl();
@@ -603,7 +625,7 @@ describe("Pass 30 — Wave 12 onError + leftover arrows", () => {
       await waitFor(() => expect(document.body.textContent).toMatch(/Tag|Pending/i), { timeout: 20_000 });
       const restore = forceWritesFail();
       hardClick(screen.queryAllByRole("button", { name: /^Approve$/i })[0]);
-      await waitFor(() => expect(document.body.textContent).toMatch(new RegExp(`${PREFIX} boom|Error`)), {
+      await waitFor(() => expect(document.body.textContent).toMatch(new RegExp(`${PREFIX} boom`)), {
         timeout: 8_000,
       }).catch(() => undefined);
       restore();
@@ -653,7 +675,7 @@ describe("Pass 30 — Wave 12 onError + leftover arrows", () => {
       hardClick(screen.queryAllByRole("button", { name: /Assign|Revoke|Save/i })[0]);
       const restore = forceWritesFail();
       hardClick(screen.queryAllByRole("button", { name: /Assign|Save|Revoke|Confirm/i })[0]);
-      await waitFor(() => expect(document.body.textContent).toMatch(new RegExp(`${PREFIX} boom|Error`)), {
+      await waitFor(() => expect(document.body.textContent).toMatch(new RegExp(`${PREFIX} boom`)), {
         timeout: 6_000,
       }).catch(() => undefined);
       restore();
@@ -786,7 +808,7 @@ describe("Pass 30 — Wave 12 onError + leftover arrows", () => {
       }
       const restore = forceWritesFail();
       hardClick(screen.queryByRole("button", { name: /Downgrade verification level/i }));
-      await waitFor(() => expect(document.body.textContent).toMatch(new RegExp(`${PREFIX} boom|Error`)), {
+      await waitFor(() => expect(document.body.textContent).toMatch(new RegExp(`${PREFIX} boom`)), {
         timeout: 8_000,
       }).catch(() => undefined);
       restore();
@@ -835,7 +857,7 @@ describe("Pass 30 — Wave 12 onError + leftover arrows", () => {
       }
       const restore = forceWritesFail();
       hardClick(screen.queryAllByRole("button", { name: /Accept/i })[0]);
-      await waitFor(() => expect(document.body.textContent).toMatch(new RegExp(`${PREFIX} boom|Error`)), {
+      await waitFor(() => expect(document.body.textContent).toMatch(new RegExp(`${PREFIX} boom`)), {
         timeout: 6_000,
       }).catch(() => undefined);
       restore();
@@ -847,7 +869,7 @@ describe("Pass 30 — Wave 12 onError + leftover arrows", () => {
       await waitFor(() => expect(document.body.textContent).toMatch(/Mentor/i), { timeout: 45_000 });
       const restore = forceWritesFail();
       hardClick(screen.queryAllByRole("button", { name: /Request|Ask to be mentored/i })[0]);
-      await waitFor(() => expect(document.body.textContent).toMatch(new RegExp(`${PREFIX} boom|Error`)), {
+      await waitFor(() => expect(document.body.textContent).toMatch(new RegExp(`${PREFIX} boom`)), {
         timeout: 6_000,
       }).catch(() => undefined);
       restore();
