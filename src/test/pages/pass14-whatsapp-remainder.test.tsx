@@ -356,6 +356,9 @@ describe("Pass 14 — WhatsApp remainder + leftover panels (real Kong)", () => {
       expect(document.body.textContent?.toLowerCase()).toMatch(/blast complete|send failed|whatsapp|error|fail/);
     }, { timeout: 60_000 });
     await user.keyboard("{Escape}");
+    const sendClose = screen.queryByRole("button", { name: /Close/i });
+    if (sendClose) await clickSafe(user, sendClose);
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull(), { timeout: 8_000 }).catch(() => undefined);
 
     // History tab — status icons + delete message
     await clickSafe(user, screen.getByRole("tab", { name: /Message History|History/i }));

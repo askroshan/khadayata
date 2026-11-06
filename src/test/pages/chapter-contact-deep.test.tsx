@@ -54,7 +54,7 @@ describe("ChapterContact + FamilyTree + QR deep", () => {
       auth: { persistSession: false, autoRefreshToken: false },
     });
     // Ensure member@ has a matrimonial profile + at least one other profile for send dialog.
-    const { data: authUsers } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
+    const { data: authUsers } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
     const memberUser = authUsers?.users?.find(
       (u) => u.email?.toLowerCase() === E2E_ACCOUNTS.member.email.toLowerCase(),
     );
@@ -92,7 +92,7 @@ describe("ChapterContact + FamilyTree + QR deep", () => {
       .neq("member_id", memberRow.id)
       .limit(1);
     if (!others?.length) {
-      const { data: gaUser } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
+      const { data: gaUser } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
       const ga = gaUser?.users?.find(
         (u) => u.email?.toLowerCase() === E2E_ACCOUNTS.globalAdmin.email.toLowerCase(),
       );

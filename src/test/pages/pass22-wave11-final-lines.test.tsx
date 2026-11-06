@@ -61,7 +61,7 @@ function adminClient(): SupabaseClient {
 }
 
 async function memberIdForEmail(admin: SupabaseClient, email: string): Promise<string | null> {
-  const { data } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
+  const { data } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
   const user = data?.users?.find((u) => u.email?.toLowerCase() === email.toLowerCase());
   if (!user) return null;
   const { data: mem } = await admin.from("members").select("id").eq("user_id", user.id).maybeSingle();
