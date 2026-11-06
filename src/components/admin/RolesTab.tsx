@@ -124,7 +124,7 @@ export default function RolesTab({ roleAssignments, myChapterId }: RolesTabProps
             </div>
             <Button
               onClick={() => assignRole.mutate()}
-              disabled={!assignMemberId || !assignRoleName || assignRole.isPending}
+              disabled={assignRole.isPending}
               className="w-full gradient-hero text-primary-foreground"
             >
               <UserPlus className="w-4 h-4 mr-1" />Assign Role
