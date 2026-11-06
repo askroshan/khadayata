@@ -183,4 +183,11 @@ function useToast() {
   };
 }
 
-export { useToast, toast };
+/** Drop in-memory toasts and queued remove timers. Used by the test harness so leftover Error toasts cannot match later waitFors. */
+function clearToasts() {
+  for (const timeout of toastTimeouts.values()) clearTimeout(timeout);
+  toastTimeouts.clear();
+  dispatch({ type: "REMOVE_TOAST" });
+}
+
+export { useToast, toast, clearToasts };

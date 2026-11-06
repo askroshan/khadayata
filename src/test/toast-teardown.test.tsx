@@ -6,7 +6,7 @@
 import { describe, it } from "vitest";
 import { render, cleanup } from "@testing-library/react";
 import { Toaster } from "@/components/ui/toaster";
-import { toast } from "@/hooks/use-toast";
+import { toast, clearToasts } from "@/hooks/use-toast";
 
 describe("toast teardown", () => {
   it("does not touch document after unmount past the default 5s duration", async () => {
@@ -14,6 +14,7 @@ describe("toast teardown", () => {
     toast({ title: "teardown probe" });
     unmount();
     cleanup();
+    clearToasts();
     await new Promise((r) => setTimeout(r, 5500));
   });
 });
