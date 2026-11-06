@@ -5,7 +5,7 @@ export function Toaster() {
   const { toasts } = useToast();
 
   return (
-    <ToastProvider>
+    <ToastProvider duration={import.meta.env.MODE === "test" ? Number.POSITIVE_INFINITY : undefined}>
       {toasts.map(function ({ id, title, description, action, ...props }) {
         return (
           <Toast key={id} {...props}>
