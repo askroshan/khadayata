@@ -1174,7 +1174,8 @@ describe("Pass 14 — Matrimonial (+ related) real Kong", () => {
     const deleteBtn = neevRow2?.querySelector('button[aria-label="Delete profile"]') as HTMLButtonElement | null;
     expect(deleteBtn).toBeTruthy();
     const before = seeded.deleteProfileId!;
-    await clickSafe(user, deleteBtn!);
+    await waitFor(() => expect(deleteBtn && !deleteBtn.disabled).toBe(true), { timeout: 10_000 });
+    fireEvent.click(deleteBtn!);
     await waitFor(async () => {
       const { data } = await admin.from("matrimonial_profiles").select("id").eq("id", before).maybeSingle();
       expect(data).toBeNull();

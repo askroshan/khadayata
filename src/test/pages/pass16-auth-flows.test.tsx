@@ -2,7 +2,7 @@
  * Pass 16 — Auth flows (login / signup / password / session / guards) → ~100%
  * against real Kong :54331. Reversible covauth_* users; no mock view data.
  */
-import { describe, it, expect, afterAll, beforeAll, vi } from "vitest";
+import { describe, it, expect, afterAll, afterEach, beforeAll, vi } from "vitest";
 import type { ReactNode } from "react";
 import { screen, waitFor, fireEvent, cleanup, act, render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -113,6 +113,10 @@ describe("Pass 16 auth flows (real Kong)", () => {
     }
     seeded.userIds.push(reset.data.user.id);
   }, 60_000);
+
+  afterEach(() => {
+    cleanup();
+  });
 
   afterAll(async () => {
     cleanup();

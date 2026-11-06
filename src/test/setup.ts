@@ -1,4 +1,12 @@
 import "@testing-library/jest-dom";
+import { afterEach } from "vitest";
+import { cleanup } from "@testing-library/react";
+import { clearToasts } from "@/hooks/use-toast";
+
+afterEach(() => {
+  cleanup();
+  clearToasts();
+});
 
 Object.defineProperty(window, "matchMedia", {
   writable: true,
