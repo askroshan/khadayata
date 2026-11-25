@@ -13,6 +13,7 @@ import PublicLayout from "@/components/PublicLayout";
 import SEOMeta from "@/components/SEOMeta";
 import { useTotalMemberCount, useTotalChapterCount, useTotalCountryCount } from "@/hooks/useChapter";
 import { safeErrorMessage } from "@/lib/error-utils";
+import { normalizeOtpCode } from "@/lib/admin-otp";
 
 const LOGO = "/Screenshot_2026-03-16_at_9.18.14_AM.png";
 
@@ -20,16 +21,16 @@ const emailSchema = z.string().trim().email("Please enter a valid email");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
 
 export default function Auth() {
-  const { user, loading } = useAuth();
+  const { user, loading, pendingAdminOtp, signUp, signIn, verifyAdminOtp, resendAdminOtp, cancelAdminOtp } = useAuth();
   const [searchParams] = useSearchParams();
   const redirectTo = searchParams.get("redirect") ?? "/dashboard";
   const [isSignUp, setIsSignUp] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [otpCode, setOtpCode] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
-  const { signUp, signIn } = useAuth();
   const { data: totalMembers } = useTotalMemberCount();
   const { data: totalChapters } = useTotalChapterCount();
   const { data: totalCountries } = useTotalCountryCount();
@@ -39,7 +40,7 @@ export default function Auth() {
       <img src={diyaLamp} alt="" className="w-16 h-16 animate-pulse" />
     </div>
   );
-  if (user) return <Navigate to={redirectTo} replace />;
+  if (user && !pendingAdminOtp) return <Navigate to={redirectTo} replace />;
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,10 +82,35 @@ export default function Auth() {
     const pwResult = passwordSchema.safeParse(password);
     if (!pwResult.success) { toast({ title: "Invalid password", description: pwResult.error.errors[0].message, variant: "destructive" }); return; }
     setSubmitting(true);
-    const { error } = isSignUp ? await signUp(email, password) : await signIn(email, password);
+    const result = isSignUp ? await signUp(email, password) : await signIn(email, password);
     setSubmitting(false);
-    if (error) { toast({ title: "Error", description: safeErrorMessage(error, isSignUp ? "We could not create your account. Please try again." : "The email or password you entered is incorrect."), variant: "destructive" }); }
+    if (result.error) { toast({ title: "Error", description: safeErrorMessage(result.error, isSignUp ? "We could not create your account. Please try again." : "The email or password you entered is incorrect."), variant: "destructive" }); }
     else if (isSignUp) { toast({ title: "Check your email", description: "We've sent you a verification link." }); }
+    else if ("otpRequired" in result && result.otpRequired) {
+      setOtpCode("");
+      toast({ title: "Verification code sent", description: "Check your email for your 6-digit admin login code." });
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    const { error } = await verifyAdminOtp(otpCode);
+    setSubmitting(false);
+    if (error) {
+      toast({ title: "Verification failed", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setSubmitting(true);
+    const { error } = await resendAdminOtp();
+    setSubmitting(false);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Code resent", description: "A new 6-digit verification code was sent to your email." });
+    }
   };
 
   return (
@@ -132,10 +158,12 @@ export default function Auth() {
                 <img src={LOGO} alt="Khadayata" style={{ height: 52, mixBlendMode: "multiply" }} />
               </div>
               <CardTitle className="text-2xl font-display">
-                {isForgotPassword ? "Reset Password" : isSignUp ? "Join the Community" : "Welcome Back"}
+                {pendingAdminOtp ? "Admin Verification" : isForgotPassword ? "Reset Password" : isSignUp ? "Join the Community" : "Welcome Back"}
               </CardTitle>
               <CardDescription>
-                {isForgotPassword
+                {pendingAdminOtp
+                  ? "Enter the 6-digit verification code sent to your email"
+                  : isForgotPassword
                   ? "Enter your email and we'll send you a reset link"
                   : isSignUp
                   ? "Create your account to connect with the Khadayata family"
@@ -143,7 +171,36 @@ export default function Auth() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {isForgotPassword ? (
+              {pendingAdminOtp ? (
+                <form onSubmit={handleVerifyOtp} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="admin-otp">6-Digit Verification Code</Label>
+                    <Input
+                      id="admin-otp"
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      placeholder="123456"
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(normalizeOtpCode(e.target.value))}
+                      required
+                      maxLength={6}
+                      className="h-11 text-center text-lg tracking-widest"
+                    />
+                  </div>
+                  <Button type="submit" className="w-full h-12 gradient-hero text-primary-foreground shadow-glow text-base" disabled={submitting || otpCode.length !== 6}>
+                    {submitting ? "Verifying..." : "Verify & Continue"}
+                  </Button>
+                  <div className="flex items-center justify-between text-sm">
+                    <button type="button" onClick={handleResendOtp} disabled={submitting} className="text-primary hover:underline">
+                      Resend code
+                    </button>
+                    <button type="button" onClick={() => { setOtpCode(""); void cancelAdminOtp(); }} disabled={submitting} className="text-muted-foreground hover:text-primary transition-colors">
+                      Cancel sign in
+                    </button>
+                  </div>
+                </form>
+              ) : isForgotPassword ? (
                 <form onSubmit={handleForgotPassword} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>

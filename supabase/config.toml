@@ -1,5 +1,8 @@
 project_id = "zwiewldqgfqapwuqtsqb"
 
+[functions.admin-login-otp]
+verify_jwt = true
+
 [functions.bulk-invite]
 verify_jwt = true
 

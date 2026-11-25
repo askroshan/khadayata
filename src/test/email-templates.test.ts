@@ -46,6 +46,7 @@ const ALL_TEMPLATES: EmailTemplate[] = [
   "membership_renewal", "new_message", "contact_form_confirmation",
   "contact_form_admin", "global_id_assigned", "family_invitation_sent",
   "chapter_admin_invite", "member_invitation", "chapter_transfer_history_update",
+  "admin_login_otp", "nri_matrimonial_invite",
 ];
 
 const ESCAPED_MARKUP = [

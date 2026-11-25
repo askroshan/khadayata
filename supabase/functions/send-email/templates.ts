@@ -340,7 +340,9 @@ export type EmailTemplate =
   | "family_invitation_sent"
   | "chapter_admin_invite"
   | "member_invitation"
-  | "chapter_transfer_history_update";
+  | "chapter_transfer_history_update"
+  | "admin_login_otp"
+  | "nri_matrimonial_invite";
 
 export function buildEmailHtml(template: EmailTemplate, vars: Record<string, string>): { subject: string; html: string } {
   const name = vars.name ?? "Member";
@@ -1042,6 +1044,46 @@ export function buildEmailHtml(template: EmailTemplate, vars: Record<string, str
       alert("This change has been permanently recorded in your membership history. You can view your full chapter transfer history in your profile settings.", "info") +
       btn("View Membership History", WEBSITE + "/profile");
     return { subject: "Chapter membership updated — " + COMMUNITY_NAME, html: baseTemplate(content, "Your chapter membership has been updated.") };
+  }
+
+  if (template === "admin_login_otp") {
+    const otpCode = vars.otp_code ?? "000000";
+    const expiresMinutes = vars.expires_minutes ?? "10";
+    const content =
+      h1("Admin Login Verification Code") +
+      prt(["Hi ", name, { raw: ",<br/><br/>Use the verification code below to complete your site admin sign-in to <strong>" }, COMMUNITY_NAME, { raw: "</strong>." }]) +
+      kvGrid([{ label: "Verification Code", value: otpCode }]) +
+      alert("This code expires in " + expiresMinutes + " minutes. Never share this code with anyone.", "warning") +
+      p("If you did not attempt to sign in, please reset your password immediately.", "font-size:13px;color:" + TEXT_FAINT + ";margin-top:16px;");
+    return {
+      subject: "Your Admin Login Verification Code — " + COMMUNITY_NAME,
+      html: baseTemplate(content, "Your verification code expires in " + expiresMinutes + " minutes."),
+    };
+  }
+
+  if (template === "nri_matrimonial_invite") {
+    const globalId = vars.global_id ?? "";
+    const chapterName = vars.chapter_name ?? "Global";
+    const loginEmail = vars.login_email ?? "";
+    const tempPassword = vars.temp_password ?? "";
+    const profileUrl = vars.profile_url ?? (WEBSITE + "/matrimonial");
+    const rows: Array<{ label: string; value: string }> = [];
+    if (globalId) rows.push({ label: "Global Member ID", value: globalId });
+    if (chapterName) rows.push({ label: "Local Chapter", value: chapterName });
+    if (loginEmail) rows.push({ label: "Sign-in Email", value: loginEmail });
+    if (tempPassword) rows.push({ label: "Temporary Password", value: tempPassword });
+    const content =
+      h1("Your Khadayata NRI Matrimonial Profile Is Live") +
+      prt(["Hi ", name, { raw: ",<br/><br/>Your profile from the <strong>Khadayata NRI Matrimony Directory</strong> has been migrated to <strong>" }, COMMUNITY_NAME, { raw: "</strong> — including your member profile, local chapter membership, photo, and partner preferences." }]) +
+      (rows.length ? infoRows(rows) : "") +
+      alert("For your security, please sign in with your temporary password above and update your password right away. You can also update your photo, bio, and partner preferences anytime.", "info") +
+      pt("Click below to sign in and review or update your matrimonial profile:") +
+      btn("Sign In & Update My Profile", profileUrl) +
+      p("Need help? Reply to this email or contact roshan@khadayataonline.com.", "font-size:13px;color:" + TEXT_FAINT + ";margin-top:16px;");
+    return {
+      subject: "Action Required: Review Your Khadayata NRI Matrimonial Profile — " + COMMUNITY_NAME,
+      html: baseTemplate(content, "Your Khadayata NRI Matrimonial profile is ready. Sign in with your temporary password to review and update."),
+    };
   }
 
   const content =
