@@ -1,0 +1,65 @@
+name: Deploy Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "${{ secrets.VPS_SSH_PORT }}" -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Sync project files to VPS
+        run: |
+          ssh -i ~/.ssh/deploy_key -p "${{ secrets.VPS_SSH_PORT }}" "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            "mkdir -p /opt/khadayataonline/app"
+          rsync -az --delete \
+            --exclude='.git' \
+            --exclude='node_modules' \
+            --exclude='dist' \
+            --exclude='.env*' \
+            -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.VPS_SSH_PORT }}" \
+            ./ "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/opt/khadayataonline/app/"
+
+      - name: Build and restart container on VPS
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          VITE_SENTRY_RELEASE: ${{ github.sha }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -p "${{ secrets.VPS_SSH_PORT }}" "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" bash -s <<'EOF'
+          set -euo pipefail
+          cd /opt/khadayataonline/app
+          cat > .env.prod <<ENVEOF
+          VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+          VITE_SUPABASE_PUBLISHABLE_KEY=${VITE_SUPABASE_PUBLISHABLE_KEY}
+          VITE_SUPABASE_PROJECT_ID=khadayataonline
+          VITE_SENTRY_DSN=${VITE_SENTRY_DSN}
+          VITE_SENTRY_ENVIRONMENT=production
+          VITE_SENTRY_RELEASE=${VITE_SENTRY_RELEASE}
+          ENVEOF
+          printf '%s' "${SENTRY_AUTH_TOKEN}" > /tmp/sentry_auth_token
+          trap 'rm -f /tmp/sentry_auth_token' EXIT
+          DOCKER_BUILDKIT=1 docker build \
+            --build-arg VITE_SUPABASE_URL="${VITE_SUPABASE_URL}" \
+            --build-arg VITE_SUPABASE_PUBLISHABLE_KEY="${VITE_SUPABASE_PUBLISHABLE_KEY}" \
+            --build-arg VITE_SUPABASE_PROJECT_ID="khadayataonline" \
+            --build-arg VITE_SENTRY_DSN="${VITE_SENTRY_DSN}" \
+            --build-arg VITE_SENTRY_ENVIRONMENT="production" \
+            --build-arg VITE_SENTRY_RELEASE="${VITE_SENTRY_RELEASE}" \
+            --secret id=sentry_auth_token,src=/tmp/sentry_auth_token \
+            -t khadayataonline-web:latest .
+          docker rm -f khadayataonline-web 2>/dev/null || true
+          docker run -d --name khadayataonline-web --restart unless-stopped -p 127.0.0.1:11900:80 khadayataonline-web:latest
+          EOF

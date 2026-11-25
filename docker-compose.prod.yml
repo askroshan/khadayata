@@ -1,0 +1,16 @@
+services:
+  khadayataonline-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+        VITE_SUPABASE_PUBLISHABLE_KEY: ${VITE_SUPABASE_PUBLISHABLE_KEY}
+        VITE_SUPABASE_PROJECT_ID: ${VITE_SUPABASE_PROJECT_ID:-khadayataonline}
+        VITE_SENTRY_DSN: ${VITE_SENTRY_DSN}
+        VITE_SENTRY_ENVIRONMENT: ${VITE_SENTRY_ENVIRONMENT:-production}
+        VITE_SENTRY_RELEASE: ${VITE_SENTRY_RELEASE:-latest}
+    container_name: khadayataonline-web
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:11900:80"
