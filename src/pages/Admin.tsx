@@ -1,4 +1,4 @@
-import { Navigate, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRoles, usePermissions } from "@/hooks/useRoles";
 import { supabase } from "@/integrations/supabase/client";
@@ -70,9 +70,9 @@ export default function Admin() {
 
   const rawTab = searchParams.get("tab");
   const requestedTab = resolveAdminTab(rawTab);
-  // Bare /admin lands on a role-appropriate tab (not empty "stats").
+  // Bare /admin, explicit ?tab=stats, or invalid ?tab= lands on a role-appropriate tab (never an empty panel).
   const activeTab: AdminTab =
-    rawTab === null || rawTab === ""
+    rawTab === null || rawTab === "" || requestedTab === "stats"
       ? firstAccessibleAdminTab(userRoles)
       : canAccessTab(userRoles, requestedTab)
         ? requestedTab
@@ -286,6 +286,7 @@ export default function Admin() {
               {canAccessTab(userRoles, "members") && <TabsTrigger value="members" className="text-xs sm:text-sm">Members</TabsTrigger>}
               {canAccessTab(userRoles, "roles") && <TabsTrigger value="roles" className="text-xs sm:text-sm">Roles</TabsTrigger>}
               {canAccessTab(userRoles, "reports") && <TabsTrigger value="reports" className="gap-1 text-xs sm:text-sm"><Flag className="w-3.5 h-3.5" />Reports</TabsTrigger>}
+              {canAccessTab(userRoles, "moderator") && <TabsTrigger value="moderator" className="gap-1 text-xs sm:text-sm"><Shield className="w-3.5 h-3.5" />Moderation</TabsTrigger>}
               {canAccessTab(userRoles, "transfers") && <TabsTrigger value="transfers" className="text-xs sm:text-sm">Transfers</TabsTrigger>}
               {canAccessTab(userRoles, "audits") && <TabsTrigger value="audits" className="text-xs sm:text-sm">Audit Log</TabsTrigger>}
               {canAccessTab(userRoles, "tag-requests") && <TabsTrigger value="tag-requests" className="text-xs sm:text-sm">Tags</TabsTrigger>}
@@ -331,6 +332,22 @@ export default function Admin() {
           )}
           {canAccessTab(userRoles, "reports") && (
             <TabsContent value="reports" className="mt-4">
+              <ReportsTab />
+            </TabsContent>
+          )}
+          {canAccessTab(userRoles, "moderator") && (
+            <TabsContent value="moderator" className="mt-4 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-card p-4">
+                <div>
+                  <h2 className="text-sm font-semibold">Moderation Queue</h2>
+                  <p className="text-xs text-muted-foreground">
+                    Review flagged content below or open the dedicated Moderator Dashboard for full queue controls.
+                  </p>
+                </div>
+                <Button asChild size="sm" variant="outline">
+                  <Link to="/moderation">Open Moderator Dashboard</Link>
+                </Button>
+              </div>
               <ReportsTab />
             </TabsContent>
           )}

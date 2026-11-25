@@ -86,10 +86,10 @@
   - *Confirmed already working from previous session — Admin.tsx shows proper Access Denied page for non-admins.*
 - [x] **US-229** — Seva Points system for donors (gamified giving)
   - *Delivered: `SEVA_THRESHOLDS` system in Temple.tsx — Maha Patron (≥₹1L), Dharmaada Patron (≥₹10K), Sahayogi (≥₹1K), Donor. Shows Seva level card on Temple page. Donor Wall uses same tiers.*
-- [ ] **US-230** — Trust Corpus Fund module — *Deferred: Complex endowment/board-approval workflow, out of scope for current sprint*
+- [x] **US-230** — Trust Corpus Fund module — *Implemented: `TrustCorpusPanel.tsx` wired into `FinanceTab.tsx` and covered in `deferred-features.test.ts`*
 - [ ] **US-231** — FCRA compliance tracking — *Deferred: Legal/regulatory complexity, out of scope*
-- [ ] **US-232** — Paryushan Fundraising Campaign module — *Deferred: Requires campaign-specific UI and scheduling*
-- [ ] **US-233** — Recurring Giving / Masik Sahayog — *Deferred: Requires payment gateway integration for actual standing instructions*
+- [x] **US-232** — Paryushan Fundraising Campaign module — *Implemented: `CampaignsPanel.tsx` wired into `FinanceTab.tsx` and covered in `deferred-features.test.ts`*
+- [x] **US-233** — Recurring Giving / Masik Sahayog — *Implemented: `RecurringPledgesPanel.tsx` and covered in `deferred-features.test.ts` (live payment-gateway auto-debit remains external)*
 
 ---
 

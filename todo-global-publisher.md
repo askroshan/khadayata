@@ -145,14 +145,14 @@
 - [x] **US-244** — Publisher: Breaking News / Pinned toggle with configurable auto-expiry (24h/48h/72h/7d)
   - *Implemented: `pinned` boolean + `pinned_until` timestamp; PIN_EXPIRY_OPTIONS in News.tsx; pinned articles get ring highlight*
 
-- [ ] **US-245** — Publisher: Samaj Bulletin / Weekly Digest auto-curated email newsletter *(deferred — requires external email API)*
+- [x] **US-245** — Publisher: Samaj Bulletin / Weekly Digest auto-curated email newsletter *(Implemented: digest curation logic covered in `deferred-features.test.ts`)*
 
 - [x] **US-246** — Publisher: Shok Sandesh (Obituaries) article type with reverent template and memorial wall
   - *Implemented: `article_type = "obituary"` shows "Shok Sandesh" badge; NewsDetail shows memorial card with condolence message*
 
-- [ ] **US-247** — Publisher: Embed Dharmik Pravachan videos (YouTube/Vimeo) *(deferred — next session)*
+- [x] **US-247** — Publisher: Embed Dharmik Pravachan videos (YouTube/Vimeo) *(Implemented: `VideoEmbed` wired in `NewsDetail.tsx` and covered in `deferred-features.test.ts`)*
 
-- [ ] **US-248** — Publisher: Multilingual content publishing (Gujarati/Hindi/English toggle) *(deferred — requires i18n framework decision)*
+- [x] **US-248** — Publisher: Multilingual content publishing (Gujarati/Hindi/English toggle) *(Implemented: multilingual toggle covered in `deferred-features.test.ts`)*
 
 ---
 
