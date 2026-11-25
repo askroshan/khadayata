@@ -17,9 +17,17 @@ export function ProfileDetailDialog({ profile, children }: { profile: Matrimonia
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-display text-xl flex items-center gap-3">
-            <div className="w-14 h-14 rounded-full gradient-jewel flex items-center justify-center text-primary-foreground font-bold text-lg shrink-0">
-              {m?.first_name?.[0]}{m?.last_name?.[0]}
-            </div>
+            {m?.photo_url ? (
+              <img
+                src={m.photo_url}
+                alt={`${m?.first_name ?? ""} ${m?.last_name ?? ""}`.trim() || "Member photo"}
+                className="w-14 h-14 rounded-full object-cover shrink-0 border-2 border-border bg-muted"
+              />
+            ) : (
+              <div className="w-14 h-14 rounded-full gradient-jewel flex items-center justify-center text-primary-foreground font-bold text-lg shrink-0">
+                {m?.first_name?.[0]}{m?.last_name?.[0]}
+              </div>
+            )}
             <div>
               {m?.first_name} {m?.last_name}
               {profile.verified && <Badge className="bg-success/20 text-success text-xs ml-2"><Shield className="w-3 h-3 mr-0.5" />Verified</Badge>}

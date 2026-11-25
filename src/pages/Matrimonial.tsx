@@ -51,9 +51,17 @@ function ProfileCard({
           )}
         </div>
         <div className="px-4 pb-4 -mt-8">
-          <div className="w-16 h-16 rounded-full gradient-warm flex items-center justify-center text-primary-foreground font-bold text-lg border-4 border-background shadow-lg">
-            {m?.first_name?.[0]}{m?.last_name?.[0]}
-          </div>
+          {m?.photo_url ? (
+            <img
+              src={m.photo_url}
+              alt={`${m?.first_name ?? ""} ${m?.last_name ?? ""}`.trim() || "Member photo"}
+              className="w-16 h-16 rounded-full object-cover border-4 border-background shadow-lg bg-muted"
+            />
+          ) : (
+            <div className="w-16 h-16 rounded-full gradient-warm flex items-center justify-center text-primary-foreground font-bold text-lg border-4 border-background shadow-lg">
+              {m?.first_name?.[0]}{m?.last_name?.[0]}
+            </div>
+          )}
           <div className="mt-2">
             <div className="flex items-center gap-2">
               <h3 className="font-display font-bold text-sm group-hover:text-secondary transition-colors">
@@ -358,7 +366,12 @@ export default function Matrimonial() {
                 <CardDescription>Fill in your details to find the perfect match within our community</CardDescription>
               </CardHeader>
               <CardContent>
-                <ProfileForm memberId={member?.id ?? ""} onSuccess={() => setShowForm(false)} />
+                <ProfileForm
+                  memberId={member?.id ?? ""}
+                  currentPhotoUrl={member?.photo_url}
+                  initials={`${member?.first_name?.[0] ?? ""}${member?.last_name?.[0] ?? ""}`}
+                  onSuccess={() => setShowForm(false)}
+                />
               </CardContent>
             </Card>
           )}
@@ -542,7 +555,13 @@ export default function Matrimonial() {
                           <DialogTitle className="font-display">Edit Profile</DialogTitle>
                           <DialogDescription>Update your matrimonial profile details</DialogDescription>
                         </DialogHeader>
-                        <ProfileForm initial={myProfile} memberId={member?.id ?? ""} onSuccess={() => {}} />
+                        <ProfileForm
+                          initial={myProfile}
+                          memberId={member?.id ?? ""}
+                          currentPhotoUrl={member?.photo_url}
+                          initials={`${member?.first_name?.[0] ?? ""}${member?.last_name?.[0] ?? ""}`}
+                          onSuccess={() => {}}
+                        />
                       </DialogContent>
                     </Dialog>
                   </CardHeader>

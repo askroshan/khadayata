@@ -117,12 +117,15 @@ export default function Onboarding() {
       // Auto-generate Global ID
       if (member?.id && chapterId) {
         try {
-          await supabase.functions.invoke("generate-global-id", {
+          const { error: gidError } = await supabase.functions.invoke("generate-global-id", {
             body: { member_id: member.id },
           });
-        } catch {
-          // Non-critical - ID can be generated later
-          console.warn("Global ID generation deferred");
+          if (gidError) {
+            console.warn("Global ID generation deferred:", gidError.message);
+          }
+        } catch (err) {
+          // Non-critical - ID can be generated later from Profile
+          console.warn("Global ID generation deferred:", err);
         }
       }
 

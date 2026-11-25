@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { AvatarUpload } from "@/components/AvatarUpload";
 import { ChevronRight, Star, UserCheck } from "lucide-react";
 import { safeErrorMessage } from "@/lib/error-utils";
 import {
@@ -20,16 +21,44 @@ import {
 export function ProfileForm({
   initial,
   memberId,
+  currentPhotoUrl,
+  initials,
   onSuccess,
 }: {
   initial?: MatrimonialProfile | null;
   memberId: string;
+  currentPhotoUrl?: string | null;
+  initials?: string;
   onSuccess: () => void;
 }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isEdit = !!initial;
   const prefs = (initial?.preferences ?? {}) as Record<string, unknown>;
+  const [photoUrl, setPhotoUrl] = useState<string | null>(
+    currentPhotoUrl ?? initial?.member?.photo_url ?? null
+  );
+
+  const handlePhotoUpload = async (url: string) => {
+    setPhotoUrl(url);
+    if (!memberId) return;
+    const { error } = await supabase
+      .from("members")
+      .update({ photo_url: url })
+      .eq("id", memberId);
+    if (error) {
+      toast({
+        title: "Photo save failed",
+        description: safeErrorMessage(error, "Could not update profile photo."),
+        variant: "destructive",
+      });
+      return;
+    }
+    toast({ title: "Profile photo updated" });
+    queryClient.invalidateQueries({ queryKey: ["member"] });
+    queryClient.invalidateQueries({ queryKey: ["my-matrimonial"] });
+    queryClient.invalidateQueries({ queryKey: ["matrimonial-profiles"] });
+  };
 
   // Personal
   const [about, setAbout] = useState(initial?.about ?? "");
@@ -190,6 +219,18 @@ export function ProfileForm({
       {/* Step 0: Personal & Lifestyle */}
       {step === 0 && (
         <div className="space-y-4">
+          <div className="flex items-center gap-4 p-3 rounded-lg border border-border bg-muted/20">
+            <AvatarUpload
+              currentUrl={photoUrl}
+              onUploadComplete={handlePhotoUpload}
+              size="md"
+              initials={initials || `${initial?.member?.first_name?.[0] ?? ""}${initial?.member?.last_name?.[0] ?? ""}`}
+            />
+            <div className="text-xs text-muted-foreground space-y-0.5">
+              <p className="font-medium text-foreground text-sm">Profile Photo</p>
+              <p>Upload a clear, recent photo. It is shown on your matrimonial card and profile.</p>
+            </div>
+          </div>
           <div>
             <Label>About Me / Bio</Label>
             <Textarea placeholder="Tell potential matches about yourself..." value={about} onChange={(e) => setAbout(e.target.value)} className="mt-1.5 min-h-[80px]" maxLength={1000} />

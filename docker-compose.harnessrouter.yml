@@ -1,0 +1,15 @@
+services:
+  harnessrouter:
+    image: harnessrouter/harnessrouter:latest
+    container_name: harnessrouter
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${HR_PORT:-3000}:3000"
+    volumes:
+      - harnessrouter:/data
+    environment:
+      HR_AUTH_PASSWORD: ${HR_AUTH_PASSWORD:-change-me-local}
+
+volumes:
+  harnessrouter:
+    name: harnessrouter

@@ -177,3 +177,21 @@ regular member (plus unverified members).
   via the anon/authenticated REST clients (as `rls-invariants.test.ts` does),
   and verify trigger logic by checking trigger existence plus function
   compilation errors.
+
+## 9. Non-negotiable continuous learning & guardrails
+
+- **Continuous learning log (`docs/learnings.md`)**: Every bug fix, user
+  correction, failed assumption, or production/local-infra gotcha MUST add a
+  short entry to `docs/learnings.md` (date, root cause, guardrail/rule, and
+  regression test path) before the task is considered complete.
+- **Definition of done (enforced)**: Every new feature or bug fix must pass:
+  1. `npm run typecheck` (`tsc --noEmit`)
+  2. `npm run build`
+  3. `npx vitest run` (with a failing-then-passing regression test for bugs)
+  4. Relevant Playwright E2E spec in `e2e/` whenever UI flows are added or
+     modified.
+- **Workspace skills (`.gemini/skills/`)**: Read relevant workspace skills
+  before working in their domain, and update them whenever architecture,
+  security, or testing patterns evolve.
+- **CI gate**: `.github/workflows/ci.yml` enforces typecheck, build, and
+  tests on every push and pull request; never bypass or weaken CI checks.
