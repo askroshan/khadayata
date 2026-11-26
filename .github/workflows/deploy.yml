@@ -90,11 +90,15 @@ jobs:
               else
                 printf '\nACUMBAMAIL_AUTH_TOKEN=%s\n' "${ACUMBAMAIL_AUTH_TOKEN}" >> "${COMPOSE_DIR}/.env"
               fi
+              echo "=== Recent supabase-edge-functions logs BEFORE recreate ==="
+              docker logs --tail 40 "${FN_CONTAINER}" 2>&1 || true
               if [ -n "${COMPOSE_SVC}" ]; then
+                printf 'services:\n  %s:\n    environment:\n      ACUMBAMAIL_AUTH_TOKEN: ${ACUMBAMAIL_AUTH_TOKEN}\n' "${COMPOSE_SVC}" > "${COMPOSE_DIR}/docker-compose.override.yml"
                 (cd "${COMPOSE_DIR}" && docker compose up -d --force-recreate "${COMPOSE_SVC}")
               else
                 docker restart "${FN_CONTAINER}"
               fi
+              echo "ACUMBAMAIL_AUTH_TOKEN present in container: $(docker exec "${FN_CONTAINER}" sh -c 'test -n "$ACUMBAMAIL_AUTH_TOKEN" && echo YES || echo NO' 2>/dev/null || echo UNKNOWN)"
             else
               docker restart "${FN_CONTAINER}"
             fi
