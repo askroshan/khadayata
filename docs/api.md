@@ -7,7 +7,7 @@ This document describes the backend APIs available in the Khadayata Heritage Dir
 ## Base URL
 
 ```
-https://zwiewldqgfqapwuqtsqb.supabase.co/functions/v1
+https://<your-supabase-domain>/functions/v1
 ```
 
 ## Authentication
@@ -345,7 +345,7 @@ All API endpoints follow consistent error response format:
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
-  'https://zwiewldqgfqapwuqtsqb.supabase.co',
+  'https://<your-supabase-domain>',
   'YOUR_ANON_KEY'
 );
 

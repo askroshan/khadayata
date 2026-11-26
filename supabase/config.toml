@@ -1,4 +1,4 @@
-project_id = "zwiewldqgfqapwuqtsqb"
+project_id = "khadayataonline"
 
 [functions.admin-login-otp]
 verify_jwt = true

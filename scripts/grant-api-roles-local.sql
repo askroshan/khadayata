@@ -1,4 +1,4 @@
--- Local-only: Bolt/pg_dump restores often omit GRANTs that hosted Supabase has.
+-- Local-only: pg_dump restores often omit GRANTs that self-hosted Supabase has.
 -- Safe to re-run. Do NOT apply as a production migration.
 GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO anon, authenticated;
