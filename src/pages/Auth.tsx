@@ -13,6 +13,7 @@ import PublicLayout from "@/components/PublicLayout";
 import SEOMeta from "@/components/SEOMeta";
 import { useTotalMemberCount, useTotalChapterCount, useTotalCountryCount } from "@/hooks/useChapter";
 import { safeErrorMessage } from "@/lib/error-utils";
+import { isDisposableEmailDomain } from "../../supabase/functions/send-email/provider";
 import { normalizeOtpCode } from "@/lib/admin-otp";
 
 const LOGO = "/Screenshot_2026-03-16_at_9.18.14_AM.png";
@@ -82,6 +83,45 @@ export default function Auth() {
     const pwResult = passwordSchema.safeParse(password);
     if (!pwResult.success) { toast({ title: "Invalid password", description: pwResult.error.errors[0].message, variant: "destructive" }); return; }
     setSubmitting(true);
+    if (isSignUp) {
+      if (isDisposableEmailDomain(email)) {
+        setSubmitting(false);
+        toast({
+          title: "Temporary email not allowed",
+          description: "Please use a permanent personal or work email address to create an account.",
+          variant: "destructive",
+        });
+        return;
+      }
+      try {
+        const verifyRes = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-email`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+            },
+            body: JSON.stringify({ email }),
+          },
+        );
+        if (verifyRes.status === 422) {
+          const vData = await verifyRes.json().catch(() => ({}));
+          setSubmitting(false);
+          toast({
+            title: "Email address not accepted",
+            description:
+              vData?.is_disposable
+                ? "Temporary or disposable email addresses cannot be used to create an account."
+                : "This email address could not be verified as deliverable. Please use a valid permanent email.",
+            variant: "destructive",
+          });
+          return;
+        }
+      } catch {
+        // If the verification function is unreachable in local dev, local disposable check already ran above.
+      }
+    }
     const result = isSignUp ? await signUp(email, password) : await signIn(email, password);
     setSubmitting(false);
     if (result.error) { toast({ title: "Error", description: safeErrorMessage(result.error, isSignUp ? "We could not create your account. Please try again." : "The email or password you entered is incorrect."), variant: "destructive" }); }

@@ -33,3 +33,25 @@ user correction, or operational gotcha must append an entry here (see
 3. **Global Admin Email OTP 2FA & 100% TDD Coverage**
    - **Guardrail:** Every Global Admin sign-in now triggers `supabase/functions/admin-login-otp` (`action: "send"`), storing a SHA-256 hashed 6-digit OTP in `public.admin_login_otps` (10-minute TTL, max 5 attempts, RLS denies all direct client access) and requiring verification before unlocking the app.
    - **Regression tests:** `src/test/admin-otp.test.ts` (100% statement/branch/function/line coverage on `src/lib/admin-otp.ts`) and `src/test/email-templates.test.ts` (`admin_login_otp` template).
+
+## 2026-11-25 — Duplicate import WSOD & headless Chromium no-WSOD gate
+- **Root cause**: Adding `import { Link } from "react-router-dom"` at the top of `src/pages/Matrimonial.tsx` when it was already imported at line 19 caused `SyntaxError: Identifier 'Link' has already been declared` at runtime in the browser (WSOD on `/`). Checking `curl` against Vite was not sufficient because Vite serves HTML before module execution.
+- **Guardrail**: Before signing off on any frontend change, run a headless Chromium check (via Playwright) against `http://127.0.0.1:8080/` and modified routes asserting `document.body.innerText.trim().length > 0` and zero `console.error` / `pageerror` events. Always check existing imports before adding a new import line.
+- **Verification**: Recorded in `AGENTS.md` Section 9 (No-WSOD live render check).
+
+## 2026-11-25 — Ontology, Single Source of Truth & Khadayata One ID De-duplication
+- **Rule**: Never deduplicate members by `(first_name, last_name, dob)` alone, because two real Khadayata community members can have the exact same name and date of birth.
+- **Canonical Identity**: Uniqueness is governed by `members.user_id` and the permanent **Khadayata One ID** (`members.global_id`, format `KHD-<CC><ST><CITY>-<YY>-<SEQ>-<CHK>`), enforced as `UNIQUE` and immutable for life via `trg_prevent_global_id_change` even across chapter transfers.
+- **Single Source of Truth**: Shared member attributes (such as `members.social_links` JSONB for LinkedIn, Instagram, Facebook, X, Website) live once on `public.members` and are referenced by downstream modules (Directory, Matrimonial, etc.) without duplication.
+- **Canonical Ontology**: All categorical fields (`gender`, `diet`, `marital_status`, `education_level`, `country`, `chapters`) must use canonical Title Case / master-table values (no mixed-case or snake_case variants).
+- **Persisted in**: `AGENTS.md` Section 3.2 and migrations `20261125134500_protect_global_id_immutable.sql`, `20261125135500_add_member_social_links.sql`, `20261125140500_normalize_ontology_values.sql`.
+
+### 2026-11-26 — Matrimonial Shortlists, Member Email Threads, and Monthly PDF Ad Pages
+- **Root cause / need**: Members needed to bookmark/shortlist matrimonial profiles, inspect email communication threads sent to other members, and admins needed to manage A4 ad PDFs appended to automated monthly matrimonial PDFs (NRI Boys/Girls, India Boys/Girls) without exposing candidate emails.
+- **Guardrail**: Keep candidate emails strictly excluded from `scripts/generate_monthly_matrimonial_pdfs.py`, enforce RLS on `matrimonial_shortlists`, `member_email_messages`, and `matrimonial_ad_pdfs`, and keep `role-tab-matrix.test.ts` updated whenever an admin tab is added.
+- **Regression tests**: `src/test/matrimonial-shortlist-messages-ads.test.ts`, `src/test/role-tab-matrix.test.ts`.
+
+### 2026-11-26 — Acumbamail Primary Transactional Email with EmailIT Fallback & Pre-Send Bounce-Risk Gate
+- **Root cause / need**: EmailIT delivery was unreliable/unavailable for KhadayataOnline, while Acumbamail (verified via Acumbamail MCP with 20,000 SMTP credits) is available for responsive transactional HTML emails, and every recipient must pass high-confidence bounce-risk verification before any email is sent.
+- **Guardrail**: Both `supabase/functions/send-email/index.ts` and `supabase/functions/admin-login-otp/index.ts` route through the Deno-free shared module `supabase/functions/send-email/provider.ts`, which first verifies each recipient via EmailIT `/v2/email-verifications` (failing closed unless `result === "safe"`, `risk === "low"`, `score >= 80`, and `is_disposable !== true`), then sends responsive HTML via Acumbamail (`https://acumbamail.com/api/1/sendOne/` with `ACUMBAMAIL_AUTH_TOKEN`, `response_type=json`, form-urlencoded) with automatic fallback to EmailIT (`EMAILIT_API_KEY`).
+- **Regression tests**: `src/test/email-provider.test.ts`, `src/test/email-templates.test.ts`, `src/test/admin-otp.test.ts`.

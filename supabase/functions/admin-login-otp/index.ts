@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildEmailHtml, pickInviteeName } from "../send-email/templates.ts";
+import { sendTransactionalEmail } from "../send-email/provider.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -109,41 +110,52 @@ serve(async (req) => {
         expires_minutes: "10",
       });
 
-      const emailitKey = Deno.env.get("EMAILIT_API_KEY");
+      const acumbamailAuthToken = Deno.env.get("ACUMBAMAIL_AUTH_TOKEN") ?? "";
+      const emailitKey = Deno.env.get("EMAILIT_API_KEY") ?? "";
       const fromEmail = Deno.env.get("EMAIL_FROM") ?? "KhadayataOnline <noreply@khadayataonline.com>";
       const isLocalSupabase =
         supabaseUrl.includes("127.0.0.1") ||
         supabaseUrl.includes("localhost") ||
         supabaseUrl.includes("http://kong:");
 
-      if (!emailitKey) {
+      if (!acumbamailAuthToken && !emailitKey) {
         if (isLocalSupabase) {
-          console.log(`[admin-login-otp] Local dev without EMAILIT_API_KEY; bypassing OTP for ${user.email} (code=${code})`);
+          console.log(`[admin-login-otp] Local dev without email provider keys; bypassing OTP for ${user.email} (code=${code})`);
           return jsonResponse({ required: false, verified: true, local_dev_bypass: true });
         }
-        return jsonResponse({ error: "Email delivery is not configured (missing EMAILIT_API_KEY)" }, 500);
+        return jsonResponse({ error: "Email delivery is not configured (missing ACUMBAMAIL_AUTH_TOKEN and EMAILIT_API_KEY)" }, 500);
       }
 
-      const mailRes = await fetch("https://api.emailit.com/v2/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${emailitKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: fromEmail,
+      const delivery = await sendTransactionalEmail(
+        {
+          fromName: "KhadayataOnline",
+          fromEmail,
           to: [user.email],
           subject,
           html,
-        }),
-      });
+          category: "admin_login_otp",
+        },
+        {
+          acumbamailAuthToken,
+          emailitApiKey: emailitKey,
+          timeoutMs: 30000,
+        },
+      );
 
-      if (!mailRes.ok) {
-        const errText = await mailRes.text().catch(() => "");
-        return jsonResponse({ error: `Failed to send OTP email (${mailRes.status}): ${errText}` }, 502);
+      if (!delivery.ok) {
+        return jsonResponse(
+          { error: `Failed to send OTP email (${delivery.status}): ${JSON.stringify(delivery.details ?? delivery.error)}` },
+          502,
+        );
       }
 
-      return jsonResponse({ required: true, sent: true, email: user.email });
+      return jsonResponse({
+        required: true,
+        sent: true,
+        email: user.email,
+        provider: delivery.provider,
+        fallback_used: delivery.fallbackUsed,
+      });
     }
 
     if (action === "verify") {

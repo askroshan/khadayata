@@ -36,5 +36,8 @@ verify_jwt = true
 [functions.sitemap]
 verify_jwt = false
 
+[functions.verify-email]
+verify_jwt = false
+
 [functions.weekly-digest]
 verify_jwt = true

@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { buildEmailHtml, type EmailTemplate } from "./templates.ts";
+import { sendTransactionalEmail } from "./provider.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,7 +8,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-const EMAILIT_API = "https://api.emailit.com/v2/emails";
 const MAX_RECIPIENTS_FOR_USER_CALLERS = 1;
 const FROM_NAME = "KhadayataOnline";
 const FROM_EMAIL = "noreply@khadayataonline.com";
@@ -68,9 +68,10 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const emailitKey = Deno.env.get("EMAILIT_API_KEY");
-    if (!emailitKey) {
-      const errMsg = "Email not configured. Add EMAILIT_API_KEY secret.";
+    const acumbamailAuthToken = Deno.env.get("ACUMBAMAIL_AUTH_TOKEN") ?? "";
+    const emailitKey = Deno.env.get("EMAILIT_API_KEY") ?? "";
+    if (!acumbamailAuthToken && !emailitKey) {
+      const errMsg = "Email not configured. Add ACUMBAMAIL_AUTH_TOKEN or EMAILIT_API_KEY secret.";
       console.error(errMsg);
       return new Response(
         JSON.stringify({ error: errMsg }),
@@ -143,42 +144,67 @@ Deno.serve(async (req: Request) => {
 
     const { subject, html } = buildEmailHtml(template, vars);
 
-    const payload = {
-      from: FROM_NAME + " <" + FROM_EMAIL + ">",
-      to: recipients,
-      subject: (isInternalCaller ? override_subject : undefined) ?? subject,
-      html: (isInternalCaller ? override_html : undefined) ?? html,
-      reply_to: REPLY_TO,
-    };
+    console.log("Sending transactional email for template:", template, {
+      primary: acumbamailAuthToken ? "acumbamail" : "emailit",
+      fallbackAvailable: Boolean(acumbamailAuthToken && emailitKey),
+    });
 
-    console.log("Calling Emailit API for template:", template);
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
+    const minScoreEnv = Number(Deno.env.get("EMAIL_MIN_CONFIDENCE_SCORE") ?? "80");
+    const minConfidenceScore = Number.isFinite(minScoreEnv) ? minScoreEnv : 80;
+    const verificationMode = Deno.env.get("EMAIL_VERIFICATION_MODE") === "full" ? "full" : "fast";
 
-    const emailRes = await fetch(EMAILIT_API, {
-      method: "POST",
-      headers: {
-        Authorization: "Bearer " + emailitKey,
-        "Content-Type": "application/json",
+    const delivery = await sendTransactionalEmail(
+      {
+        fromName: FROM_NAME,
+        fromEmail: Deno.env.get("EMAIL_FROM") ?? FROM_EMAIL,
+        replyTo: REPLY_TO,
+        to: recipients,
+        subject: (isInternalCaller ? override_subject : undefined) ?? subject,
+        html: (isInternalCaller ? override_html : undefined) ?? html,
+        category: template,
       },
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    }).finally(() => clearTimeout(timeout));
+      {
+        acumbamailAuthToken,
+        emailitApiKey: emailitKey,
+        timeoutMs: 30000,
+        requireVerification: true,
+        minConfidenceScore,
+        verificationMode,
+      },
+    );
 
-    const emailResult = await emailRes.json().catch(() => ({}));
-    console.log("Emailit response status:", emailRes.status, "result:", emailResult);
-
-    if (!emailRes.ok) {
-      console.error("Emailit API error", { status: emailRes.status, details: emailResult });
+    if (!delivery.ok) {
+      console.error("Email delivery failed", {
+        provider: delivery.provider,
+        fallbackUsed: delivery.fallbackUsed,
+        status: delivery.status,
+        details: delivery.details,
+        rejectedRecipients: delivery.rejectedRecipients,
+      });
       return new Response(
-        JSON.stringify({ error: "Emailit error", details: emailResult }),
-        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        JSON.stringify({
+          error: delivery.error ?? "Email delivery failed",
+          provider: delivery.provider,
+          fallback_used: delivery.fallbackUsed,
+          details: delivery.details,
+          rejected_recipients: delivery.rejectedRecipients,
+        }),
+        { status: delivery.status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    console.log("Email sent successfully:", emailResult.id);
+    console.log("Email sent successfully via", delivery.provider, {
+      fallback_used: delivery.fallbackUsed,
+      rejected_count: delivery.rejectedRecipients?.length ?? 0,
+    });
     return new Response(
-      JSON.stringify({ success: true, result: emailResult }),
+      JSON.stringify({
+        success: true,
+        provider: delivery.provider,
+        fallback_used: delivery.fallbackUsed,
+        rejected_recipients: delivery.rejectedRecipients,
+        result: delivery.result,
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {
