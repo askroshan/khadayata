@@ -93,12 +93,17 @@ jobs:
               echo "=== Recent supabase-edge-functions logs BEFORE recreate ==="
               docker logs --tail 40 "${FN_CONTAINER}" 2>&1 || true
               if [ -n "${COMPOSE_SVC}" ]; then
-                printf 'services:\n  %s:\n    environment:\n      ACUMBAMAIL_AUTH_TOKEN: ${ACUMBAMAIL_AUTH_TOKEN}\n' "${COMPOSE_SVC}" > "${COMPOSE_DIR}/docker-compose.override.yml"
-                (cd "${COMPOSE_DIR}" && docker compose up -d --force-recreate "${COMPOSE_SVC}")
+                printf 'services:\n  %s:\n    environment:\n      - ACUMBAMAIL_AUTH_TOKEN=%s\n' "${COMPOSE_SVC}" "${ACUMBAMAIL_AUTH_TOKEN}" > "${COMPOSE_DIR}/docker-compose.override.yml"
+                (cd "${COMPOSE_DIR}" && docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --force-recreate "${COMPOSE_SVC}")
               else
                 docker restart "${FN_CONTAINER}"
               fi
-              echo "ACUMBAMAIL_AUTH_TOKEN present in container: $(docker exec "${FN_CONTAINER}" sh -c 'test -n "$ACUMBAMAIL_AUTH_TOKEN" && echo YES || echo NO' 2>/dev/null || echo UNKNOWN)"
+              HAS_TOKEN=$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "${FN_CONTAINER}" | grep -c '^ACUMBAMAIL_AUTH_TOKEN=.' || true)
+              echo "ACUMBAMAIL_AUTH_TOKEN present in container: ${HAS_TOKEN}"
+              if [ "${HAS_TOKEN}" -eq 0 ]; then
+                echo "ERROR: ACUMBAMAIL_AUTH_TOKEN was not injected into ${FN_CONTAINER}" >&2
+                exit 1
+              fi
             else
               docker restart "${FN_CONTAINER}"
             fi
