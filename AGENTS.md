@@ -79,6 +79,20 @@ regular member (plus unverified members).
   `funds`) are master data. Seeding changes go in migrations, are idempotent
   (`WHERE NOT EXISTS`), and must keep `chapters.country_id/state_id/city_id`
   complete — location filters and chapter pages depend on it.
+- **Ontology, Single Source of Truth, and De-duplication**:
+  - Always normalize categorical fields to canonical ontology values (`Male`/
+    `Female`, `Never Married`/`Divorced`/`Widowed`, `Vegetarian`/`Jain`/
+    `Eggetarian`/`Non-Vegetarian`, `PhD`/`Masters`/`Bachelors`/`Diploma`,
+    canonical country/chapter master records) — never mix casing or snake_case.
+  - Maintain a **single source of truth** with zero cross-table duplication
+    (e.g., member social links live canonically in `members.social_links` JSONB
+    and are read from there by directory, profile, and matrimonial pages).
+  - **Person uniqueness & de-duplication**: Never assume `(first_name,
+    last_name, dob)` uniquely identifies a person — two real community members
+    can share the same name and date of birth. Person identity and uniqueness
+    are anchored on `members.user_id` and the permanent, checksum-verified
+    **Khadayata One ID (`members.global_id`, `KHD-XXXXXXX-YY-NNNNNN-C`)**,
+    which is immutable for life even across chapter transfers.
 
 ## 4. Edge functions
 
@@ -150,6 +164,26 @@ regular member (plus unverified members).
   one screen; use dialogs/drawers for secondary actions.
 - No emojis in UI copy or agent responses. Plain-language summaries for the
   user; code comments only for non-obvious constraints.
+- **Responsive design**:
+  - Mobile-first: every page must be usable on a 375px viewport; test layouts
+    at 375px, 768px, 1024px, and 1280px widths using Tailwind breakpoints
+    (`sm:`, `md:`, `lg:`, `xl:`).
+  - Collapse navigation to a hamburger/sheet on mobile; never let nav links
+    overflow horizontally.
+  - Minimum 44x44px touch targets for interactive elements; set explicit image
+    `width`/`height` or `aspect-ratio` to prevent layout shift (CLS), and use
+    WebP for generated images.
+- **WCAG 2.2 AA compliance**:
+  - Maintain >= 4.5:1 contrast for body text (3:1 for large text/UI controls),
+    including hover/active transition states.
+  - Visible focus indicators (`focus-visible:ring`); never remove outlines
+    without a replacement. Full keyboard navigation with no keyboard traps.
+  - Semantic HTML (`<nav>`, `<main>`, `<section>`, `<article>`, `<button>`,
+    `<a>`; avoid `<div onClick>`), strict heading hierarchy (no skipped levels),
+    descriptive `alt` text (`alt=""` for decorative images), associated
+    `<label>`/`aria-label` on inputs, `aria-describedby` + `role="alert"` on
+    form errors, a "Skip to main content" link, `lang` on `<html>`, and
+    `prefers-reduced-motion` support.
 
 ## 7. Workflow for any change
 
@@ -190,6 +224,13 @@ regular member (plus unverified members).
   3. `npx vitest run` (with a failing-then-passing regression test for bugs)
   4. Relevant Playwright E2E spec in `e2e/` whenever UI flows are added or
      modified.
+  5. **No-WSOD live render + visual check**: Before signing off or asking the
+     user to test on localhost, run `npm run verify:nowsod` (headless Chromium
+     asserting visible body text, zero `console.error`/`pageerror`, and
+     screenshots in `.tmp/nowsod/` for visual inspection).
+  6. **Pre-signoff code review**: Review the `git diff` (or delegate to the
+     `code-reviewer` subagent) for duplicate imports, design patterns, RLS/auth
+     correctness, and best practices before signing off.
 - **Workspace skills (`.gemini/skills/`)**: Read relevant workspace skills
   before working in their domain, and update them whenever architecture,
   security, or testing patterns evolve.
