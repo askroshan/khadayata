@@ -59,3 +59,10 @@ user correction, or operational gotcha must append an entry here (see
 ### 2026-11-26 — Production Supabase is Self-Hosted on VPS (Never Use supabase.com Login)
 - **Root cause / correction**: `supabase/config.toml` still contains a legacy `project_id` (`zwiewldqgfqapwuqtsqb`), which led to suggesting `supabase login` / `supabase functions deploy` against Supabase Cloud. Production Supabase is **self-hosted on the VPS**.
 - **Guardrail**: Never tell the user to run `supabase login` or deploy to `supabase.com`. For production edge function changes, `deploy.yml` syncs `supabase/functions/` to `/opt/khadayataonline/app/supabase/functions/`; secrets (like `ACUMBAMAIL_AUTH_TOKEN`) belong in the VPS self-hosted Supabase `.env` and are picked up by restarting the self-hosted `edge-functions` container.
+
+### 2026-11-26 — Admin OTP Failure RCA (Deploy Heredoc + Self-Hosted Functions Sync + OTP Verification Bypass)
+- **Root causes**:
+  1. `.github/workflows/deploy.yml` used a single-quoted heredoc (`<<'EOF'`) without forwarding environment variables to the remote SSH shell, causing `VITE_SUPABASE_URL: unbound variable` on every deploy so production was never updated.
+  2. `deploy.yml` did not sync `supabase/functions/` or `ACUMBAMAIL_AUTH_TOKEN` into the self-hosted Supabase `functions` container on the VPS, leaving production `admin-login-otp` on the old EmailIT-only code.
+  3. `admin-login-otp` inherited `requireVerification: true`, which would fail closed and lock out Global Admins if EmailIT's verification API is down.
+- **Guardrail**: Forward env vars safely into SSH in `deploy.yml`, auto-sync `supabase/functions/` and `ACUMBAMAIL_AUTH_TOKEN` into the self-hosted Supabase `functions` container, and keep `requireVerification: false` on `admin-login-otp` so Global Admin 2FA OTPs always send via Acumbamail directly.

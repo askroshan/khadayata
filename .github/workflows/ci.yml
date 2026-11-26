@@ -26,4 +26,7 @@ jobs:
         run: npm run build
 
       - name: Unit & static invariant tests
-        run: npx vitest run src/test/global-id-hardening.test.ts src/test/matrimonial-constants.test.ts src/test/matrimonial-photo.test.tsx src/test/email-templates.test.ts src/test/navigation-integrity.test.ts src/test/role-tab-matrix.test.ts src/test/permissions-matrix.test.ts src/test/route-guards.test.ts
+        env:
+          VITE_SUPABASE_URL: http://127.0.0.1:54321
+          VITE_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+        run: npx vitest run src/test/global-id-hardening.test.ts src/test/matrimonial-constants.test.ts src/test/matrimonial-photo.test.tsx src/test/email-templates.test.ts src/test/email-provider.test.ts src/test/admin-otp.test.ts src/test/navigation-integrity.test.ts src/test/role-tab-matrix.test.ts src/test/permissions-matrix.test.ts src/test/route-guards.test.ts

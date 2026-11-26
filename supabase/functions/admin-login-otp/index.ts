@@ -139,6 +139,8 @@ serve(async (req) => {
           acumbamailAuthToken,
           emailitApiKey: emailitKey,
           timeoutMs: 30000,
+          // Never block a known Global Admin's 2FA login OTP on external EmailIT verification
+          requireVerification: false,
         },
       );
 

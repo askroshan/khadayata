@@ -30,17 +30,27 @@ jobs:
             -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.VPS_SSH_PORT }}" \
             ./ "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/opt/khadayataonline/app/"
 
-      - name: Build and restart container on VPS
+      - name: Build web container and sync self-hosted Supabase Edge Functions on VPS
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
           VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          ACUMBAMAIL_AUTH_TOKEN: ${{ secrets.ACUMBAMAIL_AUTH_TOKEN }}
           VITE_SENTRY_RELEASE: ${{ github.sha }}
         run: |
-          ssh -i ~/.ssh/deploy_key -p "${{ secrets.VPS_SSH_PORT }}" "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" bash -s <<'EOF'
+          ssh -i ~/.ssh/deploy_key -p "${{ secrets.VPS_SSH_PORT }}" "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            "VITE_SUPABASE_URL=$(printf '%q' "$VITE_SUPABASE_URL") \
+             VITE_SUPABASE_PUBLISHABLE_KEY=$(printf '%q' "$VITE_SUPABASE_PUBLISHABLE_KEY") \
+             VITE_SENTRY_DSN=$(printf '%q' "$VITE_SENTRY_DSN") \
+             SENTRY_AUTH_TOKEN=$(printf '%q' "$SENTRY_AUTH_TOKEN") \
+             ACUMBAMAIL_AUTH_TOKEN=$(printf '%q' "$ACUMBAMAIL_AUTH_TOKEN") \
+             VITE_SENTRY_RELEASE=$(printf '%q' "$VITE_SENTRY_RELEASE") \
+             bash -s" <<'EOF'
           set -euo pipefail
           cd /opt/khadayataonline/app
+
+          # 1. Build and restart frontend web container
           cat > .env.prod <<ENVEOF
           VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
           VITE_SUPABASE_PUBLISHABLE_KEY=${VITE_SUPABASE_PUBLISHABLE_KEY}
@@ -62,4 +72,33 @@ jobs:
             -t khadayataonline-web:latest .
           docker rm -f khadayataonline-web 2>/dev/null || true
           docker run -d --name khadayataonline-web --restart unless-stopped -p 127.0.0.1:11900:80 khadayataonline-web:latest
+
+          # 2. Sync Edge Functions and ACUMBAMAIL_AUTH_TOKEN to self-hosted Supabase container
+          FN_CONTAINER=$(docker ps --format '{{.Names}}' | grep -E 'edge[-_]?functions|supabase.*functions' | head -n 1 || true)
+          if [ -n "${FN_CONTAINER}" ]; then
+            echo "Found self-hosted Supabase functions container: ${FN_CONTAINER}"
+            FN_MOUNT=$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/home/deno/functions"}}{{.Source}}{{end}}{{end}}' "${FN_CONTAINER}" || true)
+            if [ -n "${FN_MOUNT}" ] && [ -d "${FN_MOUNT}" ]; then
+              echo "Syncing edge functions to ${FN_MOUNT}"
+              rsync -az --exclude='main' --exclude='.env' /opt/khadayataonline/app/supabase/functions/ "${FN_MOUNT}/"
+            fi
+            COMPOSE_DIR=$(docker inspect -f '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' "${FN_CONTAINER}" || true)
+            COMPOSE_SVC=$(docker inspect -f '{{index .Config.Labels "com.docker.compose.service"}}' "${FN_CONTAINER}" || true)
+            if [ -n "${COMPOSE_DIR}" ] && [ -f "${COMPOSE_DIR}/.env" ] && [ -n "${ACUMBAMAIL_AUTH_TOKEN}" ]; then
+              if grep -q '^ACUMBAMAIL_AUTH_TOKEN=' "${COMPOSE_DIR}/.env"; then
+                sed -i "s|^ACUMBAMAIL_AUTH_TOKEN=.*|ACUMBAMAIL_AUTH_TOKEN=${ACUMBAMAIL_AUTH_TOKEN}|" "${COMPOSE_DIR}/.env"
+              else
+                printf '\nACUMBAMAIL_AUTH_TOKEN=%s\n' "${ACUMBAMAIL_AUTH_TOKEN}" >> "${COMPOSE_DIR}/.env"
+              fi
+              if [ -n "${COMPOSE_SVC}" ]; then
+                (cd "${COMPOSE_DIR}" && docker compose up -d --force-recreate "${COMPOSE_SVC}")
+              else
+                docker restart "${FN_CONTAINER}"
+              fi
+            else
+              docker restart "${FN_CONTAINER}"
+            fi
+          else
+            echo "Warning: No self-hosted Supabase functions container found on VPS"
+          fi
           EOF
