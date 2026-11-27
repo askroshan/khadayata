@@ -142,7 +142,7 @@ export default function PublicLayout({ children, title, description }: {
             </Link>
             <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", lineHeight: 1.7, maxWidth: 560, marginBottom: 14, marginTop: 0 }} itemProp="description">
               Khadayata Online is the world's most comprehensive platform for the Khadayata community —
-              connecting families across 28 countries through a verified global identity, events, business, and heritage.
+              connecting families worldwide through a verified global identity, events, business, and heritage.
             </p>
             <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", lineHeight: 1.9, display: "flex", flexWrap: "wrap", gap: "0 32px" }} itemProp="address" itemScope itemType="https://schema.org/PostalAddress">
               <span itemProp="streetAddress">Fort Worth, <span itemProp="addressLocality">TX</span></span>

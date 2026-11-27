@@ -12,7 +12,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { Heart, Shield, Send, Check, X, Sparkles, User, MapPin, GraduationCap, Briefcase, Ruler, Scale, UtensilsCrossed, Star, Users, Eye, Pencil, Calendar, Gem, BookOpen, Chrome as Home, UserCheck, MessageCircle, Glasses, Car, Globe, Building, BadgeDollarSign, Linkedin, Phone, Crown, Flag, Trash2 } from "lucide-react";
+import { Heart, Shield, Send, Check, X, Sparkles, User, MapPin, GraduationCap, Briefcase, Ruler, Scale, UtensilsCrossed, Star, Users, Eye, Pencil, Calendar, Gem, BookOpen, Chrome as Home, UserCheck, MessageCircle, Glasses, Car, Globe, Building, BadgeDollarSign, Linkedin, Phone, Crown, Flag, Trash2, Bookmark, Mail } from "lucide-react";
+import { EmailMessageThreads } from "@/components/messaging/EmailMessageThreads";
 import matrimonialHero from "@/assets/matrimonial-hero.jpg";
 import { usePermissions } from "@/hooks/useRoles";
 import { Link } from "react-router-dom";
@@ -28,15 +29,17 @@ import { RishtaWorkflow } from "@/components/matrimonial/RishtaWorkflow";
 
 // ── Profile Card ─────────────────────────────────────────────────────
 function ProfileCard({
-  profile, score, alreadySent, onSendIntro, sending, myProfile, onRishta,
+  profile, score, alreadySent, onSendIntro, sending, myProfile, onRishta, isShortlisted, onToggleShortlist,
 }: {
-  profile: MatrimonialProfile; score: number | null; alreadySent: boolean; onSendIntro: () => void; sending: boolean; myProfile: MatrimonialProfile | null | undefined; onRishta?: () => void;
+  profile: MatrimonialProfile; score: number | null; alreadySent: boolean; onSendIntro: () => void; sending: boolean; myProfile: MatrimonialProfile | null | undefined; onRishta?: () => void; isShortlisted?: boolean; onToggleShortlist?: () => void;
 }) {
   const m = profile.member;
   const age = computeAge(m?.dob ?? null);
   const height = cmToFeetInches(profile.height_cm);
   const gotraWarn = myProfile ? hasGotraConflict(myProfile, profile) : false;
   const ekdaWarn = myProfile ? hasEkdaConflict(myProfile, profile) : false;
+  const [imgFailed, setImgFailed] = useState(false);
+  const photoSrc = !imgFailed ? (profile.photos?.[0] || m?.photo_url || null) : null;
 
   return (
     <Card className="border-border hover:border-secondary/40 transition-all group hover:shadow-lg overflow-hidden">
@@ -50,23 +53,26 @@ function ProfileCard({
             </div>
           )}
         </div>
-        <div className="px-4 pb-4 -mt-8">
-          {m?.photo_url ? (
-            <img
-              src={m.photo_url}
-              alt={`${m?.first_name ?? ""} ${m?.last_name ?? ""}`.trim() || "Member photo"}
-              className="w-16 h-16 rounded-full object-cover border-4 border-background shadow-lg bg-muted"
-            />
-          ) : (
-            <div className="w-16 h-16 rounded-full gradient-warm flex items-center justify-center text-primary-foreground font-bold text-lg border-4 border-background shadow-lg">
-              {m?.first_name?.[0]}{m?.last_name?.[0]}
-            </div>
-          )}
+        <div className="px-4 pb-4 -mt-10 relative z-10">
+          <Link to={`/matrimonial/${profile.id}`} className="inline-block">
+            {photoSrc ? (
+              <img
+                src={photoSrc}
+                alt={`${m?.first_name ?? ""} ${m?.last_name ?? ""}`.trim() || "Member photo"}
+                onError={() => setImgFailed(true)}
+                className="w-20 h-20 rounded-full object-cover object-top border-4 border-background shadow-lg bg-muted"
+              />
+            ) : (
+              <div className="w-20 h-20 rounded-full gradient-warm flex items-center justify-center text-primary-foreground font-bold text-lg border-4 border-background shadow-lg">
+                {m?.first_name?.[0]}{m?.last_name?.[0]}
+              </div>
+            )}
+          </Link>
           <div className="mt-2">
             <div className="flex items-center gap-2">
-              <h3 className="font-display font-bold text-sm group-hover:text-secondary transition-colors">
+              <Link to={`/matrimonial/${profile.id}`} className="font-display font-bold text-sm group-hover:text-secondary transition-colors hover:underline">
                 {m?.first_name} {m?.last_name}
-              </h3>
+              </Link>
               {profile.verified && <Shield className="w-3.5 h-3.5 text-success" />}
             </div>
             <p className="text-xs text-muted-foreground">{m?.chapters?.name}</p>
@@ -89,14 +95,26 @@ function ProfileCard({
             </div>
           )}
           <div className="flex gap-2 mt-3">
-            <ProfileDetailDialog profile={profile}>
-              <Button size="sm" variant="outline" className="flex-1 text-xs h-8"><Eye className="w-3 h-3 mr-1" /> View Profile</Button>
-            </ProfileDetailDialog>
+            <Button asChild size="sm" variant="outline" className="flex-1 text-xs h-8">
+              <Link to={`/matrimonial/${profile.id}`}><Eye className="w-3 h-3 mr-1" /> View Profile</Link>
+            </Button>
             {alreadySent ? (
               <Badge variant="outline" className="text-xs py-1.5 px-3">✓ Sent</Badge>
             ) : (
               <Button size="sm" className="flex-1 text-xs h-8 gradient-warm text-primary-foreground" onClick={onSendIntro} disabled={sending}>
                 <Send className="w-3 h-3 mr-1" /> Introduce
+              </Button>
+            )}
+            {onToggleShortlist && (
+              <Button
+                size="sm"
+                variant={isShortlisted ? "secondary" : "outline"}
+                className="text-xs h-8 px-2"
+                onClick={onToggleShortlist}
+                aria-label={isShortlisted ? "Remove from shortlist" : "Like and shortlist profile"}
+                title={isShortlisted ? "Shortlisted" : "Like / Shortlist"}
+              >
+                <Bookmark className={`w-3 h-3 ${isShortlisted ? "fill-current text-primary" : ""}`} />
               </Button>
             )}
             {onRishta && (
@@ -131,6 +149,7 @@ export default function Matrimonial() {
         .from("matrimonial_profiles")
         .select("*")
         .eq("member_id", member.id)
+        .eq("is_deleted", false)
         .maybeSingle();
       return data as MatrimonialProfile | null;
     },
@@ -142,8 +161,9 @@ export default function Matrimonial() {
     queryFn: async () => {
       const { data } = await supabase
         .from("matrimonial_profiles")
-        .select("*, member:members!matrimonial_profiles_member_id_fkey(id, first_name, last_name, gender, dob, photo_url, chapters(name))")
+        .select("*, member:members!matrimonial_profiles_member_id_fkey(id, global_id, first_name, last_name, gender, dob, photo_url, chapters(name))")
         .neq("member_id", member?.id ?? "")
+        .eq("is_deleted", false)
         .order("created_at", { ascending: false });
       return (data ?? []) as MatrimonialProfile[];
     },
@@ -164,6 +184,55 @@ export default function Matrimonial() {
     enabled: !!member,
   });
 
+  const { data: shortlistRows = [] } = useQuery({
+    queryKey: ["my-matrimonial-shortlists", member?.id],
+    queryFn: async () => {
+      if (!member) return [];
+      const { data } = await supabase
+        .from("matrimonial_shortlists" as never)
+        .select("profile_id")
+        .eq("member_id", member.id);
+      return (data ?? []) as unknown as Array<{ profile_id: string }>;
+    },
+    enabled: !!member,
+  });
+
+  const shortlistedIdSet = useMemo(
+    () => new Set(shortlistRows.map((r) => r.profile_id)),
+    [shortlistRows]
+  );
+
+  const shortlistedProfiles = useMemo(
+    () => (profiles ?? []).filter((p) => shortlistedIdSet.has(p.id)),
+    [profiles, shortlistedIdSet]
+  );
+
+  const toggleShortlist = useMutation({
+    mutationFn: async (profileId: string) => {
+      if (!member) throw new Error("Not a member");
+      if (shortlistedIdSet.has(profileId)) {
+        const { error } = await supabase
+          .from("matrimonial_shortlists" as never)
+          .delete()
+          .eq("member_id", member.id)
+          .eq("profile_id", profileId);
+        if (error) throw error;
+        return { removed: true };
+      } else {
+        const { error } = await supabase
+          .from("matrimonial_shortlists" as never)
+          .insert({ member_id: member.id, profile_id: profileId } as never);
+        if (error) throw error;
+        return { removed: false };
+      }
+    },
+    onSuccess: (res) => {
+      toast({ title: res.removed ? "Removed from shortlist" : "Profile liked & shortlisted!" });
+      queryClient.invalidateQueries({ queryKey: ["my-matrimonial-shortlists"] });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
   const { data: allProfiles } = useQuery({
     queryKey: ["admin-matrimonial-profiles"],
     queryFn: async () => {
@@ -179,7 +248,11 @@ export default function Matrimonial() {
   const moderateProfile = useMutation({
     mutationFn: async ({ id, action }: { id: string; action: "verify" | "flag" | "delete" }) => {
       if (action === "delete") {
-        const { error } = await supabase.from("matrimonial_profiles").delete().eq("id", id);
+        // Soft-delete: hide from all searches and listings without permanently deleting the record
+        const { error } = await supabase
+          .from("matrimonial_profiles")
+          .update({ is_deleted: true, deleted_at: new Date().toISOString(), visibility: "private" })
+          .eq("id", id);
         if (error) throw error;
       } else {
         const update = action === "verify" ? { verified: true } : { verified: false };
@@ -421,9 +494,15 @@ export default function Matrimonial() {
           {/* Has profile — show tabs; no profile — show moderator panel or browse-only view */}
           {myProfile ? (
             <Tabs defaultValue="matches" className="space-y-4">
-              <TabsList className={`w-full grid ${canManageMatrimonial ? "grid-cols-5" : "grid-cols-4"}`}>
+              <TabsList className={`w-full grid ${canManageMatrimonial ? "grid-cols-7" : "grid-cols-6"}`}>
                 <TabsTrigger value="matches" className="text-xs sm:text-sm">
                   <Heart className="w-3.5 h-3.5 mr-1 hidden sm:inline" /> Matches
+                </TabsTrigger>
+                <TabsTrigger value="shortlisted" className="text-xs sm:text-sm">
+                  <Bookmark className="w-3.5 h-3.5 mr-1 hidden sm:inline" /> Saved ({shortlistedProfiles.length})
+                </TabsTrigger>
+                <TabsTrigger value="messages" className="text-xs sm:text-sm">
+                  <Mail className="w-3.5 h-3.5 mr-1 hidden sm:inline" /> Messages
                 </TabsTrigger>
                 <TabsTrigger value="rishta" className="text-xs sm:text-sm">
                   <Star className="w-3.5 h-3.5 mr-1 hidden sm:inline" /> Rishta
@@ -470,12 +549,53 @@ export default function Matrimonial() {
                             onSendIntro={() => sendIntro.mutate(p.member_id)} sending={sendIntro.isPending}
                             myProfile={myProfile}
                             onRishta={myProfile ? () => setRishtaTarget(p) : undefined}
+                            isShortlisted={shortlistedIdSet.has(p.id)}
+                            onToggleShortlist={() => toggleShortlist.mutate(p.id)}
                           />
                         );
                       })}
                     </div>
                   </>
                 )}
+              </TabsContent>
+
+              {/* ── Shortlisted / Liked Tab ── */}
+              <TabsContent value="shortlisted" className="space-y-4">
+                {shortlistedProfiles.length === 0 ? (
+                  <Card className="shadow-card">
+                    <CardContent className="text-center py-16">
+                      <Bookmark className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+                      <h3 className="font-display font-semibold text-lg">No shortlisted profiles yet</h3>
+                      <p className="text-muted-foreground text-sm mt-1">
+                        Click the bookmark icon on any profile card or detail page to save it here.
+                      </p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {shortlistedProfiles.map((p) => {
+                      const score = myProfile ? matchScore(myProfile, p, member) : null;
+                      const alreadySent = introductions?.some(
+                        (i) => (i as { to_member_id: string }).to_member_id === p.member_id
+                      );
+                      return (
+                        <ProfileCard
+                          key={p.id} profile={p} score={score} alreadySent={!!alreadySent}
+                          onSendIntro={() => sendIntro.mutate(p.member_id)} sending={sendIntro.isPending}
+                          myProfile={myProfile}
+                          onRishta={myProfile ? () => setRishtaTarget(p) : undefined}
+                          isShortlisted={true}
+                          onToggleShortlist={() => toggleShortlist.mutate(p.id)}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* ── Email Messages Tab ── */}
+              <TabsContent value="messages" className="space-y-4">
+                <EmailMessageThreads />
               </TabsContent>
 
               {/* ── Rishta Tab ── */}
@@ -749,34 +869,82 @@ export default function Matrimonial() {
               )}
             </Tabs>
           ) : !showForm && (
-            /* No profile: browse-only view */
+            /* No profile: browse-only view with Shortlisted & Messages tabs */
             <div className="space-y-4">
               {canManageMatrimonial && <MatrimonialModerationPanel />}
-              <SearchFilters filters={filters} onChange={setFilters} />
-              {filteredProfiles.length === 0 ? (
-                <Card className="shadow-card">
-                  <CardContent className="text-center py-16">
-                    <Heart className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
-                    <h3 className="font-display font-semibold text-lg">No profiles found</h3>
-                    <p className="text-muted-foreground text-sm mt-1">
-                      {filters.search || Object.values(filters).some(v => v) ? "Try adjusting your filters." : "New profiles will appear here as community members join."}
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <>
-                  <p className="text-xs text-muted-foreground">{filteredProfiles.length} profile{filteredProfiles.length !== 1 ? 's' : ''} found</p>
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {filteredProfiles.map((p) => (
-                      <ProfileCard
-                        key={p.id} profile={p} score={null} alreadySent={false}
-                        onSendIntro={() => setShowForm(true)} sending={false}
-                        myProfile={null}
-                      />
-                    ))}
-                  </div>
-                </>
-              )}
+              <Tabs defaultValue="browse" className="space-y-4">
+                <TabsList className="w-full grid grid-cols-3">
+                  <TabsTrigger value="browse" className="text-xs sm:text-sm">
+                    <Heart className="w-3.5 h-3.5 mr-1 hidden sm:inline" /> Browse Profiles
+                  </TabsTrigger>
+                  <TabsTrigger value="shortlisted" className="text-xs sm:text-sm">
+                    <Bookmark className="w-3.5 h-3.5 mr-1 hidden sm:inline" /> Saved ({shortlistedProfiles.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="messages" className="text-xs sm:text-sm">
+                    <Mail className="w-3.5 h-3.5 mr-1 hidden sm:inline" /> Messages
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="browse" className="space-y-4">
+                  <SearchFilters filters={filters} onChange={setFilters} />
+                  {filteredProfiles.length === 0 ? (
+                    <Card className="shadow-card">
+                      <CardContent className="text-center py-16">
+                        <Heart className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+                        <h3 className="font-display font-semibold text-lg">No profiles found</h3>
+                        <p className="text-muted-foreground text-sm mt-1">
+                          {filters.search || Object.values(filters).some(v => v) ? "Try adjusting your filters." : "New profiles will appear here as community members join."}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <>
+                      <p className="text-xs text-muted-foreground">{filteredProfiles.length} profile{filteredProfiles.length !== 1 ? 's' : ''} found</p>
+                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {filteredProfiles.map((p) => (
+                          <ProfileCard
+                            key={p.id} profile={p} score={null} alreadySent={false}
+                            onSendIntro={() => setShowForm(true)} sending={false}
+                            myProfile={null}
+                            isShortlisted={shortlistedIdSet.has(p.id)}
+                            onToggleShortlist={() => toggleShortlist.mutate(p.id)}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="shortlisted" className="space-y-4">
+                  {shortlistedProfiles.length === 0 ? (
+                    <Card className="shadow-card">
+                      <CardContent className="text-center py-16">
+                        <Bookmark className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+                        <h3 className="font-display font-semibold text-lg">No shortlisted profiles yet</h3>
+                        <p className="text-muted-foreground text-sm mt-1">
+                          Click the bookmark icon on any profile to save it here.
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      {shortlistedProfiles.map((p) => (
+                        <ProfileCard
+                          key={p.id} profile={p} score={null} alreadySent={false}
+                          onSendIntro={() => setShowForm(true)} sending={false}
+                          myProfile={null}
+                          isShortlisted={true}
+                          onToggleShortlist={() => toggleShortlist.mutate(p.id)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="messages" className="space-y-4">
+                  <EmailMessageThreads />
+                </TabsContent>
+              </Tabs>
             </div>
           )}
         </div>

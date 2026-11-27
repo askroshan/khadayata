@@ -37,6 +37,7 @@ import BannedKeywordsTab from "@/components/admin/BannedKeywordsTab";
 import ChaptersTab from "@/components/admin/ChaptersTab";
 import AnalyticsTab from "@/components/admin/AnalyticsTab";
 import BulkContentTab from "@/components/admin/BulkContentTab";
+import MatrimonialAdsTab from "@/components/admin/MatrimonialAdsTab";
 
 export default function Admin() {
   const { user, loading } = useAuth();
@@ -302,6 +303,7 @@ export default function Admin() {
               {canAccessTab(userRoles, "bulk-content") && <TabsTrigger value="bulk-content" className="gap-1 text-xs sm:text-sm"><Trash2 className="w-3.5 h-3.5" />Bulk Delete</TabsTrigger>}
               {canAccessTab(userRoles, "banned-keywords") && <TabsTrigger value="banned-keywords" className="text-xs sm:text-sm">Keywords</TabsTrigger>}
               {canAccessTab(userRoles, "analytics") && <TabsTrigger value="analytics" className="gap-1 text-xs sm:text-sm"><BarChart2 className="w-3.5 h-3.5" />Analytics</TabsTrigger>}
+              {canAccessTab(userRoles, "matrimonial-ads") && <TabsTrigger value="matrimonial-ads" className="text-xs sm:text-sm">Matrimonial Ads</TabsTrigger>}
             </TabsList>
           </div>
 
@@ -424,6 +426,11 @@ export default function Admin() {
           {canAccessTab(userRoles, "analytics") && (
             <TabsContent value="analytics" className="mt-4">
               <AnalyticsTab myChapterId={myChapterId} />
+            </TabsContent>
+          )}
+          {canAccessTab(userRoles, "matrimonial-ads") && (
+            <TabsContent value="matrimonial-ads" className="mt-4">
+              <MatrimonialAdsTab />
             </TabsContent>
           )}
         </Tabs>

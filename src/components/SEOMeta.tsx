@@ -17,7 +17,7 @@ interface SEOMetaProps {
 }
 
 const BASE_TITLE = "Khadayata Online";
-const BASE_DESCRIPTION = "Khadayata Online — the global digital home for the Khadayata community. Verified member directory, events, business network, matrimonial, heritage archives, and Kotyark Temple, across 28 countries and 67 chapters.";
+const BASE_DESCRIPTION = "Khadayata Online — the global digital home for the Khadayata community. Verified member directory, events, business network, matrimonial, heritage archives, and Kotyark Temple across chapters worldwide.";
 const BASE_URL = "https://khadayataonline.com";
 const BASE_IMAGE = "/Screenshot_2026-03-16_at_9.18.14_AM.png";
 

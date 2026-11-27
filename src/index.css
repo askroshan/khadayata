@@ -172,3 +172,29 @@
     background-size: 200px 200px;
   }
 }
+
+/* Site-wide subtle micro-interactions & engagement effects */
+@media (prefers-reduced-motion: no-preference) {
+  .card-lift {
+    transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+  }
+  .card-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -10px rgba(200, 94, 10, 0.18);
+  }
+  .cta-shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  .cta-shimmer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.22), transparent);
+    transition: transform 550ms ease;
+  }
+  .cta-shimmer:hover::after {
+    transform: translateX(100%);
+  }
+}

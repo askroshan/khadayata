@@ -220,7 +220,7 @@ describe("Pass 21 — Wave 10 chapters/temple remainder (real Kong)", () => {
     const { data: mem } = await admin
       .from("members")
       .select("id, first_name, last_name")
-      .eq("user_id", (await admin.auth.admin.listUsers({ perPage: 200 })).data.users.find((u) => u.email === E2E_ACCOUNTS.member.email)?.id ?? "")
+      .eq("user_id", (await admin.auth.admin.listUsers({ perPage: 1000 })).data.users.find((u) => u.email === E2E_ACCOUNTS.member.email)?.id ?? "")
       .maybeSingle();
     // Fallback: look up by email contact / known e2e
     if (!mem) {

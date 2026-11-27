@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Globe, Users, Shield, BookOpen, Building2, Briefcase,
@@ -192,14 +192,14 @@ export default function Index() {
     <div style={{ fontFamily: "'Poppins', sans-serif", background: "#FFF7E6", color: "#2E2E2E" }}>
       <SEOMeta
         title={undefined}
-        description="Khadayata Online — the global digital home for the Khadayata community. Verified member directory, events, business network, matrimonial, heritage archives, and Kotyark Temple across 28 countries and 67 chapters."
+        description="Khadayata Online — the global digital home for the Khadayata community. Verified member directory, events, business network, matrimonial, heritage archives, and Kotyark Temple across chapters worldwide."
         keywords="Khadayata, Khadayata community, Khadayata Online, Gujarati community, Indian community, Kotyark Temple, Khadayata chapters, Khadayata members, Hindu community, Indian diaspora, Khadayata heritage directory"
         url="/"
         breadcrumbs={[{ name: "Home", url: "/" }]}
         faq={[
           { question: "What is the Khadayata community?", answer: "The Khadayata community is a Gujarati Hindu community originating from the Kutch and Saurashtra regions of Gujarat, India. They are devotees of Kotyark Surya (Sun God) and have a global diaspora across 28+ countries." },
           { question: "What is Khadayata Online?", answer: "Khadayata Online (khadayataonline.com) is the official global digital platform for the Khadayata community, providing a verified member directory, chapter management, events, matrimonial services, business networking, heritage archives, and community governance." },
-          { question: "How do I find a Khadayata chapter near me?", answer: "Visit the Chapters page at khadayataonline.com/chapters to see all 67+ chapters across 28 countries. Each chapter has its own page with local events, members, and businesses." },
+          { question: "How do I find a Khadayata chapter near me?", answer: "Visit the Chapters page at khadayataonline.com/chapters to browse all active Khadayata chapters worldwide. Each chapter has its own page with local events, members, and businesses." },
           { question: "What is a Khadayata Global ID?", answer: "A Khadayata Global ID (format: KHD-XXXXXX) is a unique verified identifier assigned to community members. It works across all chapters worldwide and persists even if a member transfers between chapters." },
           { question: "What is Kotyark Temple?", answer: "Kotyark Temple is the principal temple of the Khadayata community, dedicated to Kotyark Surya (the Sun God), located in Koteshwar, Gujarat, India. Virtual access and live Aarti streaming are available on Khadayata Online." },
         ]}
@@ -330,20 +330,35 @@ export default function Index() {
                 ))}
               </div>
             </div>
-            <div style={{
-              background: "rgba(255,255,255,0.1)", backdropFilter: "blur(20px)",
-              border: "1px solid rgba(255,255,255,0.2)", borderRadius: 20, padding: "20px 24px",
-              display: "flex", alignItems: "center", gap: 12,
-            }}>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const fd = new FormData(e.currentTarget);
+                const q = String(fd.get("q") ?? "").trim();
+                window.location.assign(q ? `/search?q=${encodeURIComponent(q)}` : "/search");
+              }}
+              style={{
+                background: "rgba(255,255,255,0.1)", backdropFilter: "blur(20px)",
+                border: "1px solid rgba(255,255,255,0.2)", borderRadius: 20, padding: "12px 16px 12px 20px",
+                display: "flex", alignItems: "center", gap: 12,
+              }}
+            >
               <Search size={18} style={{ color: "rgba(255,255,255,0.7)", flexShrink: 0 }} />
-              <Link to="/directory" style={{ flex: 1, color: "rgba(255,255,255,0.7)", fontSize: 14, textDecoration: "none" }}>
-                Search members, businesses, chapters…
-              </Link>
-              <Link to="/directory" style={{
+              <input
+                name="q"
+                type="search"
+                placeholder="Search members, businesses, chapters…"
+                aria-label="Search members, businesses, chapters"
+                style={{
+                  flex: 1, background: "transparent", border: "none", outline: "none",
+                  color: "#fff", fontSize: 14, minWidth: 0,
+                }}
+              />
+              <button type="submit" style={{
                 padding: "8px 18px", borderRadius: 50, fontSize: 12, fontWeight: 700, color: "#2E2E2E",
-                background: "#F4B400", textDecoration: "none",
-              }}>Search</Link>
-            </div>
+                background: "#F4B400", border: "none", cursor: "pointer",
+              }}>Search</button>
+            </form>
           </div>
         </div>
 
@@ -530,13 +545,27 @@ export default function Index() {
           <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: TEXT_ACCENT.blue, textTransform: "uppercase", marginBottom: 10 }}>Find Your People</p>
           <h2 style={{ fontSize: "clamp(1.8rem,3vw,2.5rem)", fontWeight: 800, margin: 0, color: "#2E2E2E" }}>Community Directory</h2>
           <p style={{ color: "rgba(46,46,46,0.7)", marginTop: 12, fontSize: 15, maxWidth: 500, margin: "12px auto 36px" }}>Search members, businesses, and chapters across the entire Khadayata global network.</p>
-          <div style={{ display: "flex", alignItems: "center", background: "#fff", border: "2px solid #E8A317", borderRadius: 60, padding: "6px 8px 6px 20px", boxShadow: "0 8px 32px rgba(232,163,23,0.18)", transition: "box-shadow .2s" }}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.currentTarget);
+              const q = String(fd.get("q") ?? "").trim();
+              window.location.assign(q ? `/search?q=${encodeURIComponent(q)}` : "/search");
+            }}
+            style={{ display: "flex", alignItems: "center", background: "#fff", border: "2px solid #E8A317", borderRadius: 60, padding: "6px 8px 6px 20px", boxShadow: "0 8px 32px rgba(232,163,23,0.18)", transition: "box-shadow .2s" }}
             onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 12px 40px rgba(232,163,23,0.25)")}
-            onMouseLeave={e => (e.currentTarget.style.boxShadow = "0 8px 32px rgba(232,163,23,0.18)")}>
+            onMouseLeave={e => (e.currentTarget.style.boxShadow = "0 8px 32px rgba(232,163,23,0.18)")}
+          >
             <Search size={18} style={{ color: "#757575", flexShrink: 0 }} />
-            <Link to="/directory" style={{ flex: 1, fontSize: 15, color: "#757575", padding: "8px 12px", textDecoration: "none", textAlign: "left" }}>Search members, businesses, chapters...</Link>
-            <Link to="/directory" style={{ padding: "12px 28px", borderRadius: 50, fontSize: 14, fontWeight: 700, color: "#fff", background: "linear-gradient(135deg,#F39C12,#E91E63)", textDecoration: "none" }}>Search</Link>
-          </div>
+            <input
+              name="q"
+              type="search"
+              placeholder="Search members, businesses, chapters..."
+              aria-label="Search community directory"
+              style={{ flex: 1, fontSize: 15, color: "#2E2E2E", padding: "8px 12px", border: "none", outline: "none", background: "transparent", minWidth: 0 }}
+            />
+            <button type="submit" style={{ padding: "12px 28px", borderRadius: 50, fontSize: 14, fontWeight: 700, color: "#fff", background: "linear-gradient(135deg,#F39C12,#E91E63)", border: "none", cursor: "pointer" }}>Search</button>
+          </form>
           <div style={{ display: "flex", justifyContent: "center", gap: 12, marginTop: 24, flexWrap: "wrap" }}>
             {[
               { label: "Find Members", link: "/directory", color: ACCENT.saffron, textColor: TEXT_ACCENT.saffron },

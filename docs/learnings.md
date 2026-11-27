@@ -66,3 +66,8 @@ user correction, or operational gotcha must append an entry here (see
   2. `deploy.yml` did not sync `supabase/functions/` or `ACUMBAMAIL_AUTH_TOKEN` into the self-hosted Supabase `functions` container on the VPS, leaving production `admin-login-otp` on the old EmailIT-only code.
   3. `admin-login-otp` inherited `requireVerification: true`, which would fail closed and lock out Global Admins if EmailIT's verification API is down.
 - **Guardrail**: Forward env vars safely into SSH in `deploy.yml`, auto-sync `supabase/functions/` and `ACUMBAMAIL_AUTH_TOKEN` into the self-hosted Supabase `functions` container, and keep `requireVerification: false` on `admin-login-otp` so Global Admin 2FA OTPs always send via Acumbamail directly.
+
+### 2026-11-27 — Admin OTP Premature Redirect Race Condition in `AuthContext`
+- **Root cause**: `supabase.auth.signInWithPassword()` fires `onAuthStateChange("SIGNED_IN", session)` immediately before `admin-login-otp` responds with `{ required: true }`. Because `AuthContext` exposed `user` while `pendingAdminOtp` was still `false`, `Auth.tsx` immediately redirected to `/dashboard` before the 6-digit OTP form could be displayed.
+- **Guardrail**: Track `checkingAdminOtp` in `AuthContext` before calling `signInWithPassword` and withhold `user`/`session` (`null`) whenever `checkingAdminOtp || pendingAdminOtp` is true, so neither `Auth.tsx` nor any protected route unlocks until `verifyAdminOtp()` succeeds.
+- **Regression test**: `src/test/admin-otp.test.ts` (`AuthContext admin OTP gating (regression)`).

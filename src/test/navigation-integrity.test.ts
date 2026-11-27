@@ -31,6 +31,7 @@ const ROUTE_PATTERNS: RegExp[] = [
   /^\/business\/manage$/,
   /^\/matrimonial$/,
   /^\/matrimonial\/manage$/,
+  /^\/matrimonial\/[^/]+$/,
   /^\/temple$/,
   /^\/search$/,
   /^\/admin$/,

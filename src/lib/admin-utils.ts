@@ -17,7 +17,7 @@ export const VALID_ADMIN_TABS = [
   "news-publisher", "moderator", "announcements", "finance",
   "verification", "reports", "transfers", "audits", "tag-requests",
   "directory", "samiti", "whatsapp", "sms", "bulk-content",
-  "banned-keywords", "analytics",
+  "banned-keywords", "analytics", "matrimonial-ads",
 ] as const;
 
 export type AdminTab = typeof VALID_ADMIN_TABS[number];
@@ -321,6 +321,8 @@ export function canAccessTab(roles: UserRoles, tab: AdminTab): boolean {
       return roles.isGlobalAdmin || roles.isModerator;
     case "analytics":
       return roles.isGlobalAdmin;
+    case "matrimonial-ads":
+      return roles.isGlobalAdmin || roles.isModerator;
     default:
       return false;
   }

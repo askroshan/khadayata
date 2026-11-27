@@ -5,6 +5,7 @@ import { useMember, useChapters } from "@/hooks/useMember";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import AppLayout from "@/components/AppLayout";
+import { SocialLinksEditor } from "@/components/SocialLinksEditor";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -290,11 +291,20 @@ export default function Profile() {
   if (loading || isLoading) return <div className="flex min-h-screen items-center justify-center"><div className="animate-pulse text-muted-foreground">Loading...</div></div>;
   if (!user) return <Navigate to="/auth" replace />;
 
-  // Profile completeness
+  // Profile completeness (includes mandatory contacts, seed location, and social handles)
+  const memberExt = member as unknown as {
+    social_links?: Record<string, string> | null;
+    current_country_id?: string | null;
+    current_city_id?: string | null;
+  } | null;
+  const hasSocialHandle = Object.values(memberExt?.social_links ?? {}).some((v) => Boolean(v?.trim()));
   const fields = [
     !!member?.first_name, !!member?.last_name, !!member?.gender, !!member?.dob,
-    !!member?.chapter_id, !!member?.birth_place, (education?.length ?? 0) > 0,
-    (employment?.length ?? 0) > 0, (skills?.length ?? 0) > 0, (languages?.length ?? 0) > 0,
+    !!member?.chapter_id, !!member?.birth_place,
+    !!memberExt?.current_country_id, !!memberExt?.current_city_id,
+    hasSocialHandle,
+    (education?.length ?? 0) > 0, (employment?.length ?? 0) > 0,
+    (skills?.length ?? 0) > 0, (languages?.length ?? 0) > 0,
   ];
   const completeness = Math.round((fields.filter(Boolean).length / fields.length) * 100);
   const qrData = member?.global_id ?? member?.id ?? "";
@@ -446,6 +456,9 @@ export default function Profile() {
             <Progress value={completeness} className="h-2" />
           </CardContent>
         </Card>
+
+        {/* Contact, Current Location (Seed Data) & Social Media Handles */}
+        <SocialLinksEditor />
 
         {/* Digital Member Card */}
         <Card className="shadow-elevated overflow-hidden">

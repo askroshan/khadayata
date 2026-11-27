@@ -93,3 +93,83 @@ describe("admin-otp helpers (100% coverage)", () => {
     expect(html).toContain("10 minutes");
   });
 });
+
+describe("AuthContext admin OTP gating (regression)", () => {
+  it("does not expose signed-in user before admin OTP is verified", async () => {
+    const { render, act } = await import("@testing-library/react");
+    const React = await import("react");
+    const { vi } = await import("vitest");
+
+    const adminUser = { id: "admin-1", email: "admin@khadayataonline.com" };
+    const adminSession = { user: adminUser, access_token: "tok" };
+    let authListener: ((event: string, session: unknown) => void) | null = null;
+
+    const supabaseMod = await import("@/integrations/supabase/client");
+    const onAuthSpy = vi.spyOn(supabaseMod.supabase.auth, "onAuthStateChange").mockImplementation((cb) => {
+      authListener = cb as (event: string, session: unknown) => void;
+      return { data: { subscription: { unsubscribe: vi.fn() } } } as never;
+    });
+    const getSessionSpy = vi.spyOn(supabaseMod.supabase.auth, "getSession").mockResolvedValue({
+      data: { session: null },
+      error: null,
+    } as never);
+    const signInSpy = vi.spyOn(supabaseMod.supabase.auth, "signInWithPassword").mockImplementation(async () => {
+      // Simulate real Supabase firing onAuthStateChange synchronously during signInWithPassword
+      authListener?.("SIGNED_IN", adminSession);
+      return { data: { user: adminUser, session: adminSession }, error: null } as never;
+    });
+    const invokeMock = vi.fn().mockImplementation(async (_fn, opts) => {
+      const action = (opts?.body as { action?: string } | undefined)?.action;
+      if (action === "send") {
+        return { data: { required: true, sent: true }, error: null };
+      }
+      if (action === "verify") {
+        return { data: { required: true, verified: true }, error: null };
+      }
+      return { data: null, error: null };
+    });
+    const invokeSpy = vi.spyOn(supabaseMod.supabase, "functions", "get").mockReturnValue({
+      invoke: invokeMock,
+    } as never);
+
+    const { AuthProvider, useAuth } = await import("@/contexts/AuthContext");
+    let latestAuth: ReturnType<typeof useAuth> | null = null;
+    const seenSignedInWithoutOtp: boolean[] = [];
+
+    function Harness() {
+      const auth = useAuth();
+      latestAuth = auth;
+      if (auth.user && !auth.pendingAdminOtp) {
+        seenSignedInWithoutOtp.push(true);
+      }
+      return null;
+    }
+
+    await act(async () => {
+      render(React.createElement(AuthProvider, null, React.createElement(Harness)));
+    });
+
+    await act(async () => {
+      const res = await latestAuth!.signIn("admin@khadayataonline.com", "secret123");
+      expect(res.otpRequired).toBe(true);
+    });
+
+    // Must NEVER have exposed a signed-in user before OTP verification
+    expect(seenSignedInWithoutOtp).toEqual([]);
+    expect(latestAuth!.pendingAdminOtp).toBe(true);
+    expect(latestAuth!.user).toBeNull();
+
+    await act(async () => {
+      const res = await latestAuth!.verifyAdminOtp("123456");
+      expect(res.error).toBeNull();
+    });
+
+    expect(latestAuth!.pendingAdminOtp).toBe(false);
+    expect(latestAuth!.user?.id).toBe("admin-1");
+
+    onAuthSpy.mockRestore();
+    getSessionSpy.mockRestore();
+    signInSpy.mockRestore();
+    invokeSpy.mockRestore();
+  });
+});

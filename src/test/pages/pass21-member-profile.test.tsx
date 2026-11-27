@@ -147,7 +147,7 @@ describe("Pass 21 — MemberProfile remainder (real Kong)", () => {
     const admin = adminClient();
     const {
       data: { users },
-    } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
+    } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
     const e2eUid = users.find((u) => u.email === E2E_ACCOUNTS.member.email)?.id;
     if (!e2eUid) throw new Error("E2E member auth missing");
     const { data: e2eMem } = await admin

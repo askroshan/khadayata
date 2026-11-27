@@ -43,6 +43,7 @@ export default function PublicMatrimonial() {
         `)
         .eq("visibility", "members")
         .eq("suspended", false)
+        .eq("is_deleted", false)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data ?? [];

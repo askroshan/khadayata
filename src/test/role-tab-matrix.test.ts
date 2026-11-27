@@ -75,6 +75,7 @@ const EXPECTED_ACCESS: Record<AdminTab, string[]> = {
   "bulk-content": ["Global Admin"],
   "banned-keywords": ["Global Admin", "Moderator"],
   analytics: ["Global Admin"],
+  "matrimonial-ads": ["Global Admin", "Moderator"],
 };
 
 describe("Role-Tab Access Matrix — every role x every tab", () => {

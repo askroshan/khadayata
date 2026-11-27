@@ -28,6 +28,7 @@ import Events from "./pages/Events";
 import Business from "./pages/Business";
 import PublicBusiness from "./pages/PublicBusiness";
 import Matrimonial from "./pages/Matrimonial";
+import MatrimonialProfileDetail from "./pages/MatrimonialProfileDetail";
 import Temple from "./pages/Temple";
 import Archives from "./pages/Archives";
 import GlobalSearch from "./pages/Search";
@@ -89,9 +90,10 @@ const App = () => (
               <Route path="/business" element={<PublicBusiness />} />
               <Route path="/business/manage" element={<Business />} />
 
-              {/* Matrimonial: public listing at /matrimonial, full app at /matrimonial/manage */}
+              {/* Matrimonial: public listing at /matrimonial, full app at /matrimonial/manage, dedicated profile page at /matrimonial/:id */}
               <Route path="/matrimonial" element={<PublicMatrimonial />} />
               <Route path="/matrimonial/manage" element={<Matrimonial />} />
+              <Route path="/matrimonial/:id" element={<MatrimonialProfileDetail />} />
               <Route path="/temple" element={<Temple />} />
               <Route path="/search" element={<GlobalSearch />} />
               <Route path="/admin" element={<Admin />} />

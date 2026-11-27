@@ -113,6 +113,14 @@ export function ChapterContact() {
               },
             },
           });
+          await supabase.from("member_email_messages" as never).insert({
+            from_member_id: member.id,
+            to_member_id: selectedMemberId,
+            context_type: "chapter",
+            context_id: member.chapter_id,
+            subject: subject.trim(),
+            body: body.trim(),
+          } as never);
         } catch {
           // Email failure is non-blocking — bell notification already created
         }

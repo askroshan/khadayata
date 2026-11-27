@@ -18,6 +18,7 @@
     "test:e2e:roles": "playwright test e2e/role-authenticated.spec.ts",
     "test:db": "vitest run src/test/local-db",
     "test:regression:opik": "node scripts/opik-regression-guard.mjs",
+    "verify:nowsod": "node scripts/verify-nowsod.mjs",
     "seed:e2e-users": "node scripts/seed-e2e-role-users.mjs"
   },
   "dependencies": {

@@ -242,7 +242,7 @@ async function cleanupCovMv() {
       .eq("id", TARGET_MEMBER);
   }
   if (seeded.memberOrigLevel != null) {
-    const { data: { users } } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
+    const { data: { users } } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
     const uid = users.find((u) => u.email === E2E_ACCOUNTS.member.email)?.id ?? "";
     const { data: m } = await admin.from("members").select("id").eq("user_id", uid).maybeSingle();
     if (m) setVerificationLevelSql(m.id, seeded.memberOrigLevel);

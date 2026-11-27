@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { useChapters } from "@/hooks/useMember";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MapPin, ChevronRight, Globe, Filter, X } from "lucide-react";
+import { MapPin, ChevronRight, Globe, Filter, X, Users } from "lucide-react";
 import PublicLayout from "@/components/PublicLayout";
 import SEOMeta from "@/components/SEOMeta";
 
@@ -30,6 +32,24 @@ type ChapterWithLocation = {
 
 export default function Chapters() {
   const { data: chapters, isLoading } = useChapters();
+  const { data: memberCountsMap } = useQuery({
+    queryKey: ["chapter-member-counts"],
+    queryFn: async () => {
+      const { data, error } = await (supabase.rpc as unknown as (
+        fn: string
+      ) => Promise<{ data: Array<{ chapter_id: string; member_count: number }> | null; error: unknown }>)(
+        "get_chapter_member_counts"
+      );
+      if (error || !Array.isArray(data)) return new Map<string, number>();
+      const map = new Map<string, number>();
+      for (const row of data) {
+        map.set(row.chapter_id, Number(row.member_count) || 0);
+      }
+      return map;
+    },
+    staleTime: 60_000,
+  });
+  const [failedIcons, setFailedIcons] = useState<Record<string, boolean>>({});
   const [selectedCountry, setSelectedCountry] = useState<string>("all");
   const [selectedState, setSelectedState] = useState<string>("all");
   const [selectedCity, setSelectedCity] = useState<string>("all");
@@ -110,7 +130,7 @@ export default function Chapters() {
     <PublicLayout title="Chapters">
     <SEOMeta
       title="Chapters — Khadayata Community Worldwide"
-      description="Explore all 67+ Khadayata community chapters across 28 countries. Find your local chapter in India (Ahmedabad, Mumbai, Surat, Delhi, Jaipur), USA (New York), UK (London), UAE (Dubai), and more."
+      description={`Explore ${typedChapters.length > 0 ? `${typedChapters.length} ` : ""}Khadayata community chapters${countries.length > 0 ? ` across ${countries.length} countries` : " worldwide"}. Find your local chapter in India, USA, Canada, UK, Australia, UAE, and more.`}
       url="/chapters"
       keywords="Khadayata chapters, Khadayata community worldwide, Indian community chapters, Gujarati community chapters, Khadayata India, Khadayata USA, Khadayata UK, Khadayata Dubai, Khadayata London"
       breadcrumbs={[
@@ -247,21 +267,45 @@ export default function Chapters() {
               const city = ch.cities?.name;
               const state = ch.states?.name;
               const country = ch.countries?.name;
+              const memberCount = memberCountsMap?.get(ch.id) ?? 0;
+              const showLandmarkIcon = !failedIcons[ch.slug];
               return (
                 <Link key={ch.id} to={`/chapters/${ch.slug}`} className="group">
                   <Card className="shadow-card hover:shadow-elevated transition-all group-hover:-translate-y-0.5 h-full">
                     <CardContent className="p-5 flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-xl gradient-hero flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                        <span className="text-primary-foreground font-display font-bold text-lg">
-                          {ch.name.charAt(0)}
-                        </span>
+                      <div className="w-14 h-14 rounded-xl border border-border/60 bg-background overflow-hidden flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                        {showLandmarkIcon ? (
+                          <img
+                            src={`/chapter-icons/${ch.slug}.png`}
+                            alt={`${ch.name} landmark`}
+                            loading="lazy"
+                            className="w-full h-full object-cover"
+                            onError={() =>
+                              setFailedIcons((prev) => ({ ...prev, [ch.slug]: true }))
+                            }
+                          />
+                        ) : (
+                          <div className="w-full h-full gradient-hero flex items-center justify-center">
+                            <span className="text-primary-foreground font-display font-bold text-lg">
+                              {ch.name.charAt(0)}
+                            </span>
+                          </div>
+                        )}
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="font-display font-bold text-sm truncate">{ch.name}</p>
-                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5 truncate">
                           <MapPin className="w-3 h-3 shrink-0" />
-                          {[city, state, country].filter(Boolean).join(", ")}
+                          <span className="truncate">
+                            {[city, state, country].filter(Boolean).join(", ")}
+                          </span>
                         </p>
+                        <div className="mt-1.5 flex items-center gap-1.5">
+                          <Badge variant="secondary" className="text-[11px] font-medium px-2 py-0 h-5 gap-1">
+                            <Users className="w-3 h-3" />
+                            {memberCount} {memberCount === 1 ? "member" : "members"}
+                          </Badge>
+                        </div>
                       </div>
                       <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
                     </CardContent>

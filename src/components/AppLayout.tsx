@@ -11,6 +11,8 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { LogOut, Chrome as Home, Users, Calendar, Briefcase, Heart, BookOpen, Building2, Shield, Bell, Search, Menu, Newspaper, User, Handshake, GraduationCap, TriangleAlert as AlertTriangle, MapPin, BookMarked, IndianRupee, Library, Mic, HeartPulse, Settings, Flag } from "lucide-react";
 const LOGO = "/Screenshot_2026-03-16_at_9.18.14_AM.png";
 import { NotificationsPanel } from "@/components/NotificationsPanel";
+import { ProfileCompletionInterstitial } from "@/components/ProfileCompletionInterstitial";
+import { EngagementCtaBar } from "@/components/EngagementCtaBar";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -238,13 +240,29 @@ export default function AppLayout({ children, title }: { children: ReactNode; ti
             </div>
           )}
           <NavLinks />
+          <div className="px-3 py-4">
+            <div className="rounded-xl bg-primary/5 border border-primary/20 p-3 space-y-2">
+              <p className="text-xs font-semibold text-foreground">Grow Our Khadayata Network</p>
+              <p className="text-[11px] text-muted-foreground leading-snug">
+                Refer known Khadayata family &amp; friends to join, get vouched, and claim their Global ID.
+              </p>
+              <Link
+                to="/settings?tab=verification"
+                className="inline-block text-[11px] font-semibold text-primary hover:underline"
+              >
+                Vouch &amp; Refer →
+              </Link>
+            </div>
+          </div>
         </aside>
 
         {/* Content */}
         <main id="main-content" className="flex-1 min-w-0" tabIndex={-1}>
+          <EngagementCtaBar />
           {children}
         </main>
       </div>
+      <ProfileCompletionInterstitial />
       <footer role="contentinfo" className="sr-only">
         KhadayataOnline — {COMMUNITY_FULL_NAME}
       </footer>

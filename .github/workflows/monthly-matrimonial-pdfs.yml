@@ -1,0 +1,36 @@
+name: Monthly Matrimonial PDFs
+
+on:
+  schedule:
+    # Runs at 06:00 UTC on the 1st of every month
+    - cron: "0 6 1 * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Generate PDFs without emailing (true/false)"
+        required: false
+        default: "false"
+
+jobs:
+  generate-and-email-pdfs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install PDF dependencies
+        run: pip install -r scripts/requirements-matrimonial-pdf.txt
+
+      - name: Generate and email monthly matrimonial PDFs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          EMAILIT_API_KEY: ${{ secrets.EMAILIT_API_KEY }}
+          SITE_BASE_URL: https://khadayataonline.com
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+        run: python scripts/generate_monthly_matrimonial_pdfs.py

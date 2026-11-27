@@ -27,6 +27,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [pendingAdminOtp, setPendingAdminOtp] = useState(false);
+  const [checkingAdminOtp, setCheckingAdminOtp] = useState(false);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -66,38 +67,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      return { error: error as Error };
-    }
+    setCheckingAdminOtp(true);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        return { error: error as Error };
+      }
 
-    const signedInUser = data.user;
-    if (signedInUser) {
-      clearAdminOtpVerifiedInSession(signedInUser.id);
-      const { data: otpData, error: otpErr } = await supabase.functions.invoke("admin-login-otp", {
-        body: { action: "send" },
-      });
-      if (otpErr) {
-        const isLocalDev =
-          import.meta.env.DEV &&
-          /^(https?:\/\/)?(127\.0\.0\.1|localhost)(:\d+)?/i.test(
-            import.meta.env.VITE_SUPABASE_URL ?? ""
-          );
-        if (isLocalDev) {
-          markAdminOtpVerifiedInSession(signedInUser.id);
-          return { error: null, otpRequired: false };
+      const signedInUser = data.user;
+      if (signedInUser) {
+        clearAdminOtpVerifiedInSession(signedInUser.id);
+        const { data: otpData, error: otpErr } = await supabase.functions.invoke("admin-login-otp", {
+          body: { action: "send" },
+        });
+        if (otpErr) {
+          const isLocalDev =
+            import.meta.env.DEV &&
+            /^(https?:\/\/)?(127\.0\.0\.1|localhost)(:\d+)?/i.test(
+              import.meta.env.VITE_SUPABASE_URL ?? ""
+            );
+          if (isLocalDev) {
+            markAdminOtpVerifiedInSession(signedInUser.id);
+            return { error: null, otpRequired: false };
+          }
+          await supabase.auth.signOut();
+          return { error: new Error("Could not send admin verification code. Please try again.") };
         }
-        await supabase.auth.signOut();
-        return { error: new Error("Could not send admin verification code. Please try again.") };
+        if (otpData?.required) {
+          setPendingAdminOtp(true);
+          return { error: null, otpRequired: true };
+        }
+        markAdminOtpVerifiedInSession(signedInUser.id);
       }
-      if (otpData?.required) {
-        setPendingAdminOtp(true);
-        return { error: null, otpRequired: true };
-      }
-      markAdminOtpVerifiedInSession(signedInUser.id);
-    }
 
-    return { error: null, otpRequired: false };
+      return { error: null, otpRequired: false };
+    } finally {
+      setCheckingAdminOtp(false);
+    }
   };
 
   const verifyAdminOtp = async (code: string) => {
@@ -140,11 +146,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
   };
 
+  const isOtpGated = pendingAdminOtp || checkingAdminOtp;
+  const effectiveUser = isOtpGated ? null : user;
+  const effectiveSession = isOtpGated ? null : session;
+
   return (
     <AuthContext.Provider
       value={{
-        user,
-        session,
+        user: effectiveUser,
+        session: effectiveSession,
         loading,
         pendingAdminOtp,
         signUp,

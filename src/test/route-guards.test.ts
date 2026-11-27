@@ -39,6 +39,7 @@ const ROUTES: Array<{
   { path: "/business/manage", component: "Business", category: "signed-in" },
   { path: "/matrimonial", component: "PublicMatrimonial", category: "public" },
   { path: "/matrimonial/manage", component: "Matrimonial", category: "signed-in" },
+  { path: "/matrimonial/:id", component: "MatrimonialProfileDetail", category: "signed-in" },
   { path: "/temple", component: "Temple", category: "signed-in" },
   { path: "/search", component: "Search", category: "signed-in" },
   { path: "/admin", component: "Admin", category: "admin" },

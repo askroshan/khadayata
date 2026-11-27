@@ -200,7 +200,7 @@ async function cleanupCovCm() {
     await admin.from("roles").delete().eq("chapter_id", seeded.chapterId);
     await admin.from("chapters").delete().eq("id", seeded.chapterId);
   }
-  await admin.from("chapters").delete().like("slug", "covcm_%");
+  await admin.from("chapters").delete().or("slug.like.covcm%,name.like.covcm%");
   if (seeded.disposableMemberId) {
     await admin.from("role_assignments").delete().eq("member_id", seeded.disposableMemberId);
     await admin.from("members").delete().eq("id", seeded.disposableMemberId);
